@@ -50,7 +50,7 @@ export default function EarningsScreen({ navigation }) {
         <ErrorView message={error} onRetry={reload} />
       ) : (
         <>
-          <Notice tone="blue" icon="information-circle" text={e.note} />
+          <Notice tone="blue" icon="information-circle" text={t(e.note)} />
           <Row style={{ marginBottom: 12 }}>
             <Stat label={t("Earned")} value={rupees(e.summary.earned)} sub={t("{0} completed", [e.summary.completedBookings])} icon="checkmark-done" tone="green" />
             <Stat label={t("Upcoming")} value={rupees(e.summary.upcoming)} sub={t("{0} confirmed", [e.summary.acceptedBookings])} icon="time" tone="amber" />

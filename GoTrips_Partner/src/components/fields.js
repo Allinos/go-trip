@@ -18,8 +18,8 @@ export function DateField({ label, value, onChange, mode = 'date', minimumDate, 
   const [show, setShow] = useState(null); // 'date' | 'time'
   const text = !value
     ? mode === 'time'
-      ? 'Choose time'
-      : 'Choose date'
+      ? t('Choose time')
+      : t('Choose date')
     : mode === 'time'
       ? value.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })
       : mode === 'datetime'
@@ -159,7 +159,7 @@ export function PlaceInput({ label, value, onChange, placeholder = 'Type a place
       {label && <Text style={s.label}>{label}</Text>}
       <View style={[s.inputWrap, focus && { borderColor: colors.primary }]}>
         <Ionicons name={icon} size={20} color={iconColor} />
-        <TextInput style={[s.input, { marginLeft: 8 }]} value={value} onChangeText={(v) => onChange(v)} placeholder={placeholder} placeholderTextColor={colors.faint} onFocus={() => setFocus(true)} onBlur={() => setTimeout(() => setFocus(false), 200)} />
+        <TextInput style={[s.input, { marginLeft: 8 }]} value={value} onChangeText={(v) => onChange(v)} placeholder={t(placeholder)} placeholderTextColor={colors.faint} onFocus={() => setFocus(true)} onBlur={() => setTimeout(() => setFocus(false), 200)} />
       </View>
       {focus && items.length > 0 && (
         <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, marginTop: 4, overflow: 'hidden' }}>

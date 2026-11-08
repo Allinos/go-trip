@@ -154,20 +154,20 @@ export function Select({ label, value, options, onChange, placeholder = 'Select'
     <View style={[{ marginBottom: space.lg }, style]}>
       {label && (
         <Text style={s.label}>
-          {label}
+          {t(label)}
           {required && <Text style={{ color: colors.primary }}>{" *"}</Text>}
         </Text>
       )}
       <Pressable style={s.inputWrap} onPress={() => setOpen(true)} accessibilityRole="button">
         <Text style={[s.input, { paddingVertical: 14, color: current ? colors.text : colors.faint }]} numberOfLines={1}>
-          {current ? (renderValue ? renderValue(current) : t(current.label)) : placeholder}
+          {current ? (renderValue ? renderValue(current) : t(current.label)) : t(placeholder)}
         </Text>
         <Ionicons name="chevron-down" size={18} color={colors.sub} />
       </Pressable>
       {hint && <Text style={[font.small, { marginTop: 4 }]}>{hint}</Text>}
       <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
         <SafeAreaView style={s.screen}>
-          <Header title={label || placeholder} onBack={() => setOpen(false)} />
+          <Header title={t(label || placeholder)} onBack={() => setOpen(false)} />
           {(searchable || options.length > 12) && (
             <View style={{ paddingHorizontal: space.lg }}>
               <Input placeholder={t("Search…")} value={q} onChangeText={setQ} autoFocus />
@@ -398,7 +398,7 @@ export function PromptModal({ visible, title, message, placeholder, confirmText 
           <Input style={{ marginTop: 12 }} placeholder={placeholder} value={text} onChangeText={setText} multiline maxLength={250} />
           <Row style={{ justifyContent: 'flex-end' }}>
             <Button title={t("Back")} variant="ghost" onPress={onClose} small />
-            <Button title={confirmText} variant={danger ? 'primary' : 'success'} loading={busy} disabled={required && text.trim().length < 3} onPress={submit} small />
+            <Button title={t(confirmText)} variant={danger ? 'primary' : 'success'} loading={busy} disabled={required && text.trim().length < 3} onPress={submit} small />
           </Row>
         </View>
       </KeyboardAvoidingView>

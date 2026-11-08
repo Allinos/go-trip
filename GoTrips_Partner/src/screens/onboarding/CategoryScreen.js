@@ -14,7 +14,7 @@ import { t } from '../../i18n';
 const ICONS = { driver: 'person', taxi: 'car', rental: 'key', commercial: 'bus', steering: 'person', car: 'car', key: 'key', truck: 'bus' };
 
 const capText = (c) =>
-  [c.capabilities.driverProfile && 'Marketplace profile', c.capabilities.vehicles && 'List vehicles', c.capabilities.trips && 'Start & return trips', c.capabilities.rentals && 'Rent out vehicles'].filter(Boolean).join(' · ');
+  [c.capabilities.driverProfile && t('Marketplace profile'), c.capabilities.vehicles && t('List vehicles'), c.capabilities.trips && t('Start & return trips'), c.capabilities.rentals && t('Rent out vehicles')].filter(Boolean).join(' · ');
 
 export default function CategoryScreen({ navigation }) {
   const { onboarding, logout } = useAuth();
@@ -60,7 +60,7 @@ export default function CategoryScreen({ navigation }) {
               <Text style={{ marginTop: 6, fontWeight: '700', color: c.registrationFee ? colors.text : colors.green }}>
                 {c.registrationFee ? t("Registration fee {0}{1}", [
                   paise(c.registrationFee),
-                  c.feeValidityDays ? ` / ${c.feeValidityDays === 365 ? 'year' : `${c.feeValidityDays} days`}` : ''
+                  c.feeValidityDays ? ` / ${c.feeValidityDays === 365 ? t('year') : t('{0} days', [c.feeValidityDays])}` : ''
                 ]) : t("Free to join")}
               </Text>
             </View>
