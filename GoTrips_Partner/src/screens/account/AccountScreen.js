@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Image, Linking, ScrollView, Text, View } from 'react-native';
+import { Image, Linking, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { Badge, Header, MenuItem, Row } from '../../components/ui';
@@ -9,6 +9,7 @@ import { useAuth, useCaps, useCatalog } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { colors, font, space } from '../../theme';
 import { fullDate } from '../../utils/format';
+import { confirm } from '../../utils/confirm';
 
 const Group = ({ title, children }) => (
   <View style={{ marginBottom: space.lg }}>
@@ -24,23 +25,16 @@ export default function AccountScreen({ navigation }) {
   const toast = useToast();
   const goodsOn = caps.goods && config?.features?.goodsOrders;
 
-  const confirmLogout = () => Alert.alert('Log out?', '', [{ text: 'Cancel', style: 'cancel' }, { text: 'Log out', style: 'destructive', onPress: () => logout() }]);
-  const deleteAccount = () =>
-    Alert.alert('Delete your account?', 'Your listings, vehicles and trips will be removed and you will be logged out. This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await meApi.remove();
-            logout('Your account has been deleted.');
-          } catch (e) {
-            toast(errorMessage(e), 'error');
-          }
-        },
-      },
-    ]);
+  const confirmLogout = async () => (await confirm('Log out?', '', { okText: 'Log out', destructive: true })) && logout();
+  const deleteAccount = async () => {
+    if (!(await confirm('Delete your account?', 'Your listings, vehicles and trips will be removed and you will be logged out. This cannot be undone.', { okText: 'Delete', destructive: true }))) return;
+    try {
+      await meApi.remove();
+      logout('Your account has been deleted.');
+    } catch (e) {
+      toast(errorMessage(e), 'error');
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>

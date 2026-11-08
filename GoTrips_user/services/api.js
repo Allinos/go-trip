@@ -1,190 +1,130 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../constants';
 
-// Create axios instance
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
+const ACCESS = 'gt_user_access';
+const REFRESH = 'gt_user_refresh';
+const web = Platform.OS === 'web';
+const store = {
+  get: (k) => (web ? Promise.resolve(globalThis.localStorage?.getItem(k) ?? null) : SecureStore.getItemAsync(k)),
+  set: (k, v) => (web ? Promise.resolve(globalThis.localStorage?.setItem(k, v)) : SecureStore.setItemAsync(k, v)),
+  del: (k) => (web ? Promise.resolve(globalThis.localStorage?.removeItem(k)) : SecureStore.deleteItemAsync(k)),
+};
+
+let accessToken = null;
+let onExpired = () => {};
+export const setSessionExpiredHandler = (fn) => (onExpired = fn);
+export const tokens = {
+  load: async () => (accessToken = await store.get(ACCESS)),
+  save: async ({ accessToken: a, refreshToken: r }) => {
+    accessToken = a;
+    await store.set(ACCESS, a);
+    if (r) await store.set(REFRESH, r);
   },
+  clear: async () => {
+    accessToken = null;
+    await store.del(ACCESS);
+    await store.del(REFRESH);
+  },
+  refresh: () => store.get(REFRESH),
+};
+
+const http = axios.create({ baseURL: API_BASE_URL, timeout: 20000 });
+http.interceptors.request.use((c) => {
+  if (accessToken) c.headers.Authorization = `Bearer ${accessToken}`;
+  return c;
 });
 
-// Request interceptor - Add auth token
-api.interceptors.request.use(
-  async (config) => {
-    try {
-      const token = await AsyncStorage.getItem('accessToken');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    } catch (error) {
-      console.error('Error getting token:', error);
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor - Handle errors
-api.interceptors.response.use(
-  (response) => response.data,
+let refreshing = null;
+http.interceptors.response.use(
+  (r) => r.data,
   async (error) => {
-    const originalRequest = error.config;
-
-    // Handle 401 - Unauthorized
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
+    const cfg = error.config;
+    if (error.response?.status === 401 && cfg && !cfg._retried && !cfg.url.includes('/auth/')) {
+      cfg._retried = true;
       try {
-        const refreshToken = await AsyncStorage.getItem('refreshToken');
-        
-        if (refreshToken) {
-          const response = await axios.post(`${API_BASE_URL}/api/auth/refresh-token`, {
-            refreshToken,
-          });
-
-          const { accessToken } = response.data.data;
-          await AsyncStorage.setItem('accessToken', accessToken);
-
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          return api(originalRequest);
-        }
-      } catch (refreshError) {
-        // Refresh failed - logout user
-        await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'user']);
-        // Navigate to login (will be handled by auth store)
-        return Promise.reject(refreshError);
+        refreshing ||= (async () => {
+          const rt = await tokens.refresh();
+          if (!rt) throw new Error('no refresh');
+          const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken: rt });
+          await tokens.save(data.data);
+        })().finally(() => (refreshing = null));
+        await refreshing;
+        return http(cfg);
+      } catch {
+        await tokens.clear();
+        onExpired();
       }
-    }
-
+    } else if (error.response?.data?.error?.code === 'ACCOUNT_BLOCKED') onExpired(error.response.data.error.message);
     return Promise.reject(error);
   }
 );
 
-// API Methods
+export function errorMessage(e) {
+  if (e?.response?.data?.error?.message) return e.response.data.error.message;
+  if (e?.message === 'Network Error') return 'No internet connection. Please try again.';
+  return e?.message || 'Something went wrong';
+}
+export const errorCode = (e) => e?.response?.data?.error?.code;
+
+const APP = 'user';
+
 export const authAPI = {
-  sendOTP: (phoneNumber) => 
-    api.post('/api/auth/send-otp', { phoneNumber }),
-  
-  verifyOTP: (phoneNumber, otpCode, userData = {}) => 
-    api.post('/api/auth/verify-otp', { 
-      phoneNumber, 
-      otpCode,
-      ...userData 
-    }),
-  
-  logout: (deviceToken) => 
-    api.post('/api/auth/logout', { deviceToken }),
+  sendOtp: (phone) => http.post('/auth/otp/send', { phone, app: APP }),
+  verifyOtp: (phone, otp, deviceInfo) => http.post('/auth/otp/verify', { phone, otp, app: APP, deviceInfo }),
+  me: () => http.get('/auth/me'),
+  logout: (refreshToken, pushToken) => http.post('/auth/logout', { refreshToken, pushToken }),
 };
 
-export const rideAPI = {
-  search: (params) => 
-    api.get('/api/rides/search', { params }),
-  
-  getById: (id) => 
-    api.get(`/api/rides/${id}`),
-  
-  book: (id, data) => 
-    api.post(`/api/rides/${id}/book`, data),
-  
-  getMyBookings: (params) => 
-    api.get('/api/rides/my-bookings', { params }),
-  
-  cancelBooking: (id, reason) => 
-    api.post(`/api/rides/bookings/${id}/cancel`, { cancellationReason: reason }),
-};
-
-export const rentalAPI = {
-  search: (params) => 
-    api.get('/api/rentals/search', { params }),
-  
-  getVehicle: (id) => 
-    api.get(`/api/vehicles/${id}`),
-  
-  book: (id, data) => 
-    api.post(`/api/rentals/${id}/book`, data),
-  
-  getMyRentals: (params) => 
-    api.get('/api/rentals/my-bookings', { params }),
-};
-
-export const marketplaceAPI = {
-  searchDrivers: (params) => 
-    api.get('/api/marketplace/search-drivers', { params }),
-  
-  getDriverProfile: (id) => 
-    api.get(`/api/marketplace/driver/${id}`),
-  
-  unlockDriver: (id) => 
-    api.post(`/api/marketplace/unlock-driver/${id}`),
-  
-  verifyUnlock: (id, paymentData) => 
-    api.post(`/api/marketplace/verify-unlock/${id}`, paymentData),
-  
-  getMyUnlocks: (params) => 
-    api.get('/api/marketplace/my-unlocked-drivers', { params }),
+export const catalogAPI = {
+  config: () => http.get('/config'),
+  districts: () => http.get('/locations/districts'),
+  searchPlaces: (q) => http.get('/locations/search', { params: { q } }),
+  faqs: () => http.get('/faqs', { params: { audience: 'user' } }),
 };
 
 export const userAPI = {
-  getProfile: () => 
-    api.get('/api/users/profile'),
-  
-  updateProfile: (data) => 
-    api.put('/api/users/profile', data),
-  
-  uploadPhoto: (formData) => 
-    api.post('/api/users/upload-photo', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
-  
-  getSavedLocations: () => 
-    api.get('/api/users/saved-locations'),
-  
-  addSavedLocation: (data) => 
-    api.post('/api/users/saved-locations', data),
-  
-  updateSavedLocation: (id, data) => 
-    api.put(`/api/users/saved-locations/${id}`, data),
-  
-  deleteSavedLocation: (id) => 
-    api.delete(`/api/users/saved-locations/${id}`),
+  update: (body) => http.patch('/me', body),
+  remove: () => http.delete('/me'),
+  registerPush: (token, platform) => http.post('/me/push-tokens', { token, platform, app: APP }),
+  notifications: (page = 1) => http.get('/me/notifications', { params: { app: APP, page } }),
+  unread: () => http.get('/me/notifications/unread-count', { params: { app: APP } }),
+  markRead: () => http.post('/me/notifications/read', { app: APP }),
+  savedPlaces: () => http.get('/me/saved-places'),
+  addPlace: (body) => http.post('/me/saved-places', body),
+  updatePlace: (id, body) => http.put(`/me/saved-places/${id}`, body),
+  deletePlace: (id) => http.delete(`/me/saved-places/${id}`),
+  tickets: () => http.get('/me/tickets'),
+  createTicket: (body) => http.post('/me/tickets', { ...body, app: APP }),
 };
 
-export const locationAPI = {
-  getAll: (params) => 
-    api.get('/api/locations', { params }),
-  
-  search: (query) => 
-    api.get('/api/locations/search', { params: { query } }),
+export const tripAPI = {
+  search: (params) => http.get('/trips/search', { params }),
+  get: (id) => http.get(`/trips/${id}`),
 };
 
-export const notificationAPI = {
-  registerDevice: (deviceToken, deviceType) => 
-    api.post('/api/notifications/register-device', { deviceToken, deviceType }),
-  
-  getAll: (params) => 
-    api.get('/api/notifications', { params }),
-  
-  markAsRead: (id) => 
-    api.put(`/api/notifications/${id}/read`),
-  
-  markAllAsRead: () => 
-    api.put('/api/notifications/read-all'),
+export const bookingAPI = {
+  create: (body) => http.post('/bookings', body),
+  list: (params) => http.get('/bookings', { params }),
+  get: (id) => http.get(`/bookings/${id}`),
+  location: (id) => http.get(`/bookings/${id}/location`),
+  cancel: (id, reason) => http.post(`/bookings/${id}/cancel`, { reason }),
 };
 
-export const paymentAPI = {
-  createOrder: (data) => 
-    api.post('/api/payments/create-order', data),
-  
-  verifyPayment: (data) => 
-    api.post('/api/payments/verify', data),
-  
-  getHistory: (params) => 
-    api.get('/api/payments/my-payments', { params }),
+export const rentalAPI = {
+  search: (params) => http.get('/rentals', { params }),
+  get: (id) => http.get(`/rentals/${id}`),
 };
 
-export default api;
+export const marketplaceAPI = {
+  drivers: (params) => http.get('/marketplace/drivers', { params }),
+  driver: (id) => http.get(`/marketplace/drivers/${id}`),
+  contact: (targetType, targetId, channel = 'call') => http.post('/marketplace/contact', { targetType, targetId, channel }),
+};
+
+export const goodsAPI = {
+  create: (body) => http.post('/goods-orders', body),
+  list: () => http.get('/goods-orders'),
+  close: (id, status) => http.post(`/goods-orders/${id}/close`, { status }),
+};

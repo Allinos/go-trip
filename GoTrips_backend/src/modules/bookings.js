@@ -111,7 +111,10 @@ userRouter.get('/:id', validate({ params: idParam }), async (req, res) => {
   const b = await prisma.booking.findFirst({ where: { id: req.params.id, userId: req.user.id }, include: { trip: { include: { ...tripInclude, partner: { select: contactSelect } } } } });
   if (!b) throw notFound('Booking');
   const live = ['accepted'].includes(b.status) && ['scheduled', 'ongoing'].includes(b.trip.status) ? await sharedLocation(b.partnerId, b.tripId) : null;
-  res.json({ success: true, data: { ...serializeBooking(b), trip: await serializeTrip(b.trip, { loggedIn: true }), liveLocation: live } });
+  const trip = await serializeTrip(b.trip, { loggedIn: true });
+  // Confirmed passengers see the full number plate so they can check the vehicle before boarding.
+  if (['accepted', 'completed'].includes(b.status)) trip.vehicle.registrationNumber = b.trip.vehicle.registrationNumber;
+  res.json({ success: true, data: { ...serializeBooking(b), trip, liveLocation: live } });
 });
 
 userRouter.get('/:id/location', validate({ params: idParam }), async (req, res) => {

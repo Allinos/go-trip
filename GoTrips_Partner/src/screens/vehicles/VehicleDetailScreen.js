@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { useApi } from '../../hooks/useApi';
 import { useToast } from '../../context/ToastContext';
 import { colors, font } from '../../theme';
 import { fullDate, rupees, titleCase, VEHICLE_LABELS } from '../../utils/format';
+import { confirm } from '../../utils/confirm';
 
 export default function VehicleDetailScreen({ navigation, route }) {
   const { id, justAdded } = route.params;
@@ -40,7 +41,7 @@ export default function VehicleDetailScreen({ navigation, route }) {
     if (r.canceled) return;
     run('photos', () => vehicleApi.addPhotos(v.id, r.assets.map((a) => a.uri)), 'Photos added');
   };
-  const removePhoto = (i) => Alert.alert('Remove photo?', '', [{ text: 'Cancel', style: 'cancel' }, { text: 'Remove', style: 'destructive', onPress: () => run('photo', () => vehicleApi.removePhoto(v.id, i)) }]);
+  const removePhoto = async (i) => (await confirm('Remove photo?', '', { okText: 'Remove', destructive: true })) && run('photo', () => vehicleApi.removePhoto(v.id, i));
   const setRentalLocation = async () => {
     const perm = await Location.requestForegroundPermissionsAsync();
     if (!perm.granted) return toast('Location permission needed', 'error');
@@ -56,11 +57,7 @@ export default function VehicleDetailScreen({ navigation, route }) {
       setBusy(null);
     }
   };
-  const remove = () =>
-    Alert.alert('Remove this vehicle?', 'It will be hidden from customers.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => run('del', async () => (await vehicleApi.remove(v.id), navigation.goBack()), 'Vehicle removed') },
-    ]);
+  const remove = async () => (await confirm('Remove this vehicle?', 'It will be hidden from customers.', { okText: 'Remove', destructive: true })) && run('del', async () => (await vehicleApi.remove(v.id), navigation.goBack()), 'Vehicle removed');
 
   const missingDocs = v.documents.filter((d) => d.requirement.isRequired && (!d.document || d.document.status === 'rejected'));
   return (

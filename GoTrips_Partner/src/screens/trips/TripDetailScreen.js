@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Linking, Text, View } from 'react-native';
+import { Linking, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Badge, Button, Card, ErrorView, KV, Loading, PromptModal, Row, Screen, Section, ToggleRow } from '../../components/ui';
 import BookingCard from '../../components/BookingCard';
@@ -10,6 +10,7 @@ import { useApi } from '../../hooks/useApi';
 import { useToast } from '../../context/ToastContext';
 import { colors, font } from '../../theme';
 import { dateTimeLabel, rupees } from '../../utils/format';
+import { confirm } from '../../utils/confirm';
 
 export default function TripDetailScreen({ navigation, route }) {
   const { id } = route.params;
@@ -37,8 +38,8 @@ export default function TripDetailScreen({ navigation, route }) {
   const pending = t.bookings.filter((b) => b.status === 'pending');
   const confirmed = t.bookings.filter((b) => b.status === 'accepted' || b.status === 'completed');
   const others = t.bookings.filter((b) => !['pending', 'accepted', 'completed'].includes(b.status));
-  const confirmStart = () => Alert.alert('Start this trip?', 'Passengers with confirmed seats will be notified. Unanswered requests will close.', [{ text: 'Not yet', style: 'cancel' }, { text: 'Start trip', onPress: () => run('start', () => tripApi.start(t.id), 'Trip started. Have a safe journey!') }]);
-  const confirmComplete = () => Alert.alert('Mark trip as completed?', 'Confirmed bookings will be counted in your earnings.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Complete', onPress: () => run('complete', () => tripApi.complete(t.id), 'Trip completed') }]);
+  const confirmStart = async () => (await confirm('Start this trip?', 'Passengers with confirmed seats will be notified. Unanswered requests will close.', { okText: 'Start trip', cancelText: 'Not yet' })) && run('start', () => tripApi.start(t.id), 'Trip started. Have a safe journey!');
+  const confirmComplete = async () => (await confirm('Mark trip as completed?', 'Confirmed bookings will be counted in your earnings.', { okText: 'Complete' })) && run('complete', () => tripApi.complete(t.id), 'Trip completed');
 
   return (
     <Screen title={t.tripType === 'return' ? 'Return trip' : 'Trip'} refreshing={refreshing} onRefresh={refresh} right={t.status === 'scheduled' && <Button small variant="ghost" title="Edit" icon="create-outline" onPress={() => navigation.navigate('TripForm', { trip: t })} />}>

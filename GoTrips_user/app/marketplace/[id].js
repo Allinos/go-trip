@@ -1,281 +1,78 @@
-import { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Image,
-  Alert,
-  Modal,
-  TouchableOpacity,
-  Linking,
-} from 'react-native';
-import { useLocalSearchParams, Stack } from 'expo-router';
+import { Image, ScrollView, Text, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants';
-import { marketplaceAPI, paymentAPI } from '../../services/api';
-import LoadingSpinner from '../../components/LoadingSpinner';
-import CustomButton from '../../components/CustomButton';
+import { Button, Card, ErrorView, Header, KV, Loading, Pill, Row } from '../../components/ui';
+import useFetch from '../../hooks/useFetch';
+import useRequireLogin from '../../hooks/useRequireLogin';
+import { marketplaceAPI } from '../../services/api';
+import { contactPartner } from '../../utils/contact';
+import { COLORS, SPACING, TYPOGRAPHY } from '../../constants';
+import { fullDate, rupees, titleCase } from '../../utils/format';
 
-export default function DriverProfileScreen() {
+const DOC_LABEL = { driving_license: 'Driving licence', aadhaar: 'Aadhaar', pan: 'PAN', police_verification: 'Police verification' };
+
+export default function DriverProfile() {
   const { id } = useLocalSearchParams();
-  const driverId = Array.isArray(id) ? id[0] : id;
-
-  const [driver, setDriver] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [unlocked, setUnlocked] = useState(false);
-  const [phone, setPhone] = useState(null);
-  const [payOpen, setPayOpen] = useState(false);
-  const [paying, setPaying] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await marketplaceAPI.getDriverProfile(driverId);
-        const data = res?.data ?? res;
-        const d = data?.driver ?? data;
-        if (!cancelled) {
-          setDriver(d);
-          setUnlocked(!!d?.unlocked || !!d?.phoneVisible);
-          setPhone(d?.phone || d?.phoneNumber || null);
-        }
-      } catch (e) {
-        Alert.alert('Error', e.response?.data?.error || 'Something went wrong');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [driverId]);
-
-  const startUnlock = () => {
-    setPayOpen(true);
-  };
-
-  const confirmSimulatedRazorpay = async () => {
-    try {
-      setPaying(true);
-      try {
-        await paymentAPI.createOrder({
-          amount: 4900,
-          currency: 'INR',
-          purpose: 'unlock_driver',
-          driverId,
-        });
-      } catch {
-        /* optional before unlock */
-      }
-      await marketplaceAPI.unlockDriver(driverId);
-      await paymentAPI.verifyPayment({
-        driverId,
-        razorpay_order_id: 'simulated',
-        razorpay_payment_id: 'simulated',
-        razorpay_signature: 'simulated',
-      });
-      const res = await marketplaceAPI.getDriverProfile(driverId);
-      const data = res?.data ?? res;
-      const d = data?.driver ?? data;
-      setUnlocked(true);
-      setPhone(d?.phone || d?.phoneNumber || '+91 98765 43210');
-      setPayOpen(false);
-    } catch (e) {
-      Alert.alert('Error', e.response?.data?.error || 'Something went wrong');
-    } finally {
-      setPaying(false);
-    }
-  };
-
-  if (loading || !driver) {
-    return (
-      <>
-        <Stack.Screen options={{ title: 'Driver' }} />
-        <LoadingSpinner />
-      </>
-    );
-  }
-
-  const skills = driver.skills || driver.specializations || ['City rides', 'Airport'];
-  const langs = (driver.languages || ['Hindi', 'English']).join(', ');
-  const vehicles = driver.vehicles || [];
-
+  const requireLogin = useRequireLogin();
+  const { data: d, error, loading, reload } = useFetch(() => marketplaceAPI.driver(id), [id]);
+  if (loading) return (<><Header title="Driver" /><Loading /></>);
+  if (error) return (<><Header title="Driver" /><ErrorView message={error} onRetry={reload} /></>);
   return (
-    <>
-      <Stack.Screen options={{ title: driver.name || 'Driver' }} />
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.avatarWrap}>
-          {driver.photoUrl || driver.avatar ? (
-            <Image source={{ uri: driver.photoUrl || driver.avatar }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarPh]}>
-              <MaterialIcons name="person" size={56} color={COLORS.text.tertiary} />
-            </View>
-          )}
-        </View>
-        <Text style={styles.name}>{driver.name || driver.fullName}</Text>
-        <View style={styles.rRow}>
-          <MaterialIcons name="star" size={18} color={COLORS.warning} />
-          <Text style={styles.rating}>{Number(driver.rating || 4.9).toFixed(1)}</Text>
-          <Text style={styles.exp}>{driver.experience || '5+ years'}</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.h}>About</Text>
-          <Text style={styles.bio}>{driver.bio || driver.description || 'Professional driver.'}</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.h}>Skills</Text>
-          <View style={styles.chips}>
-            {skills.map((s) => (
-              <View key={s} style={styles.chip}>
-                <Text style={styles.chipTxt}>{s}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.h}>Languages</Text>
-          <Text style={styles.body}>{langs}</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.h}>Vehicles</Text>
-          {vehicles.length === 0 ? (
-            <Text style={styles.body}>Sedan · White Dzire</Text>
-          ) : (
-            vehicles.map((v, i) => (
-              <Text key={i} style={styles.body}>
-                {v.name || v.model}
-              </Text>
+    <View style={{ flex: 1, backgroundColor: COLORS.surface }}>
+      <Header title="Driver profile" />
+      <ScrollView contentContainerStyle={{ padding: SPACING.md, paddingBottom: 120 }}>
+        <Card style={{ alignItems: 'center', marginBottom: SPACING.md }}>
+          {d.photoUrl ? <Image source={{ uri: d.photoUrl }} style={{ width: 96, height: 96, borderRadius: 48 }} /> : <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: COLORS.primary, fontSize: 36, fontWeight: '700' }}>{(d.name || 'D')[0]}</Text></View>}
+          <Row gap={6} style={{ marginTop: 10 }}>
+            <Text style={TYPOGRAPHY.h3}>{d.name}</Text>
+            {d.isVerified && <MaterialIcons name="verified" size={22} color={COLORS.success} />}
+          </Row>
+          {d.headline ? <Text style={[TYPOGRAPHY.caption, { color: COLORS.text.secondary, textAlign: 'center' }]}>{d.headline}</Text> : null}
+          <Row style={{ marginTop: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <Pill text={d.hasPriorExperience ? `${d.experienceYears} years experience` : 'New driver'} icon="work" />
+            {d.isAvailable ? <Pill text="Available" color={COLORS.success} bg="#ECFDF5" /> : <Pill text="Busy" color={COLORS.text.secondary} bg={COLORS.divider} />}
+            {d.age ? <Pill text={`${d.age} yrs`} color={COLORS.text.secondary} bg={COLORS.divider} /> : null}
+          </Row>
+        </Card>
+        {d.bio ? (
+          <Card style={{ marginBottom: SPACING.md }}>
+            <Text style={TYPOGRAPHY.bodyBold}>About</Text>
+            <Text style={[TYPOGRAPHY.body, { color: COLORS.text.secondary, marginTop: 4 }]}>{d.bio}</Text>
+          </Card>
+        ) : null}
+        <Card style={{ marginBottom: SPACING.md }}>
+          <KV label="Can drive" value={d.vehicleTypes.map(titleCase).join(', ')} />
+          <KV label="Licence" value={[d.licenseTypes.join(', '), d.licenseValid === false ? 'expired' : d.licenseValid ? 'valid' : null].filter(Boolean).join(' · ')} />
+          <KV label="Automatic cars" value={d.canDriveAutomatic ? 'Yes' : 'No'} />
+          <KV label="Work" value={d.workTypes.map(titleCase).join(', ') || '—'} />
+          <KV label="Availability" value={titleCase(d.availability)} />
+          {d.expectedPay && <KV label="Expected pay" value={`${rupees(d.expectedPay.min)}${d.expectedPay.max !== d.expectedPay.min ? `–${rupees(d.expectedPay.max)}` : ''} ${titleCase(d.expectedPay.unit)}`} />}
+          <KV label="Languages" value={d.languages.join(', ')} />
+          <KV label="Based in" value={[d.city, d.district].filter(Boolean).join(', ')} />
+          {d.serviceAreas?.length ? <KV label="Also works in" value={d.serviceAreas.join(', ')} /> : null}
+          {d.experienceDetails ? <KV label="Experience" value={d.experienceDetails} /> : null}
+          {d.education ? <KV label="Education" value={d.education} /> : null}
+          <KV label="Own vehicle" value={d.hasOwnVehicle ? 'Yes' : 'No'} />
+          <KV label="On GoTrip since" value={fullDate(d.memberSince)} />
+        </Card>
+        <Card>
+          <Text style={TYPOGRAPHY.bodyBold}>Verification</Text>
+          {d.verifiedDocuments.length ? (
+            d.verifiedDocuments.map((x) => (
+              <Row key={x} style={{ marginTop: 6 }}>
+                <MaterialIcons name="check-circle" size={18} color={COLORS.success} />
+                <Text style={TYPOGRAPHY.caption}>{DOC_LABEL[x] || titleCase(x)} verified by GoTrip</Text>
+              </Row>
             ))
-          )}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.h}>Reviews</Text>
-          {(driver.reviews || []).length === 0 ? (
-            <Text style={styles.sub}>No reviews yet.</Text>
           ) : (
-            driver.reviews.map((r, i) => (
-              <Text key={i} style={styles.review}>
-                ★ {r.rating} — {r.comment}
-              </Text>
-            ))
+            <Text style={[TYPOGRAPHY.caption, { color: COLORS.text.secondary, marginTop: 4 }]}>Documents are being verified.</Text>
           )}
-        </View>
-
-        {!unlocked ? (
-          <CustomButton
-            title="Unlock Contact (₹49)"
-            onPress={startUnlock}
-            loading={paying}
-          />
-        ) : (
-          <View style={styles.unlocked}>
-            <Text style={styles.phone}>{phone || '—'}</Text>
-            <View style={styles.actions}>
-              <TouchableOpacity style={styles.call} onPress={() => Linking.openURL(`tel:${phone}`)}>
-                <MaterialIcons name="call" color={COLORS.text.white} size={22} />
-                <Text style={styles.callTxt}>Call</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.sms} onPress={() => Linking.openURL(`sms:${phone}`)}>
-                <MaterialIcons name="sms" color={COLORS.primary} size={22} />
-                <Text style={styles.smsTxt}>SMS</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+        </Card>
       </ScrollView>
-
-      <Modal visible={payOpen} transparent animationType="slide">
-        <View style={styles.modalBg}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Complete payment</Text>
-            <Text style={styles.modalSub}>
-              Razorpay checkout would open here. For development, confirm to simulate a successful payment.
-            </Text>
-            <CustomButton title="Simulate Razorpay success" loading={paying} onPress={confirmSimulatedRazorpay} />
-            <TouchableOpacity onPress={() => setPayOpen(false)} style={styles.cancel}>
-              <Text style={styles.cancelTxt}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </>
+      <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: SPACING.md, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: COLORS.border, flexDirection: 'row', gap: 10 }}>
+        <Button style={{ flex: 1 }} icon="call" title="Call driver" onPress={() => requireLogin(() => contactPartner('driver_profile', d.id), 'to call the driver')} />
+        <Button style={{ flex: 1 }} variant="outline" icon="chat" title="WhatsApp" onPress={() => requireLogin(() => contactPartner('driver_profile', d.id, 'whatsapp'), 'to message the driver')} />
+      </View>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: { padding: SPACING.lg, paddingBottom: SPACING.xxl },
-  avatarWrap: { alignItems: 'center', marginBottom: SPACING.md },
-  avatar: { width: 120, height: 120, borderRadius: 60, backgroundColor: COLORS.surface },
-  avatarPh: { alignItems: 'center', justifyContent: 'center' },
-  name: { ...TYPOGRAPHY.h2, color: COLORS.text.primary, textAlign: 'center' },
-  rRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: SPACING.sm },
-  rating: { ...TYPOGRAPHY.bodyBold, color: COLORS.text.primary },
-  exp: { ...TYPOGRAPHY.caption, color: COLORS.text.secondary, marginLeft: SPACING.sm },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  h: { ...TYPOGRAPHY.bodyBold, color: COLORS.text.primary, marginBottom: SPACING.sm },
-  bio: { ...TYPOGRAPHY.body, color: COLORS.text.secondary },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  chip: {
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 6,
-    borderRadius: BORDER_RADIUS.round,
-  },
-  chipTxt: { ...TYPOGRAPHY.small, color: COLORS.primary, fontWeight: '600' },
-  body: { ...TYPOGRAPHY.body, color: COLORS.text.primary },
-  sub: { ...TYPOGRAPHY.caption, color: COLORS.text.secondary },
-  review: { ...TYPOGRAPHY.caption, color: COLORS.text.primary, marginBottom: SPACING.xs },
-  unlocked: { marginTop: SPACING.md },
-  phone: { ...TYPOGRAPHY.h4, color: COLORS.text.primary, textAlign: 'center', marginBottom: SPACING.md },
-  actions: { flexDirection: 'row', gap: SPACING.md },
-  call: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.primary,
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  callTxt: { ...TYPOGRAPHY.bodyBold, color: COLORS.text.white },
-  sms: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  smsTxt: { ...TYPOGRAPHY.bodyBold, color: COLORS.primary },
-  modalBg: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalCard: {
-    backgroundColor: COLORS.background,
-    borderTopLeftRadius: BORDER_RADIUS.xl,
-    borderTopRightRadius: BORDER_RADIUS.xl,
-    padding: SPACING.lg,
-  },
-  modalTitle: { ...TYPOGRAPHY.h3, color: COLORS.text.primary },
-  modalSub: { ...TYPOGRAPHY.caption, color: COLORS.text.secondary, marginVertical: SPACING.md },
-  cancel: { alignItems: 'center', padding: SPACING.md },
-  cancelTxt: { ...TYPOGRAPHY.bodyBold, color: COLORS.text.secondary },
-});
