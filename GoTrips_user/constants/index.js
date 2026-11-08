@@ -1,7 +1,10 @@
 // App Constants and Configuration
 
-export const API_BASE_URL = 'https://api.rideflow.com'; // Change to your API URL
-// For local development: 'http://192.168.1.100:3000'
+import Constants from 'expo-constants';
+import { t } from '../i18n';
+
+// EXPO_PUBLIC_API_URL (.env) → app.json extra.apiUrl → Android emulator default
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.apiUrl || 'http://10.0.2.2:3000/api/v1';
 
 export const COLORS = {
   primary: '#EF4444',
@@ -73,107 +76,26 @@ export const BORDER_RADIUS = {
   round: 999,
 };
 
-export const VEHICLE_TYPES = [
-  { 
-    id: 'taxi', 
-    label: 'Taxi', 
-    icon: 'car',
-    description: 'Book a taxi ride'
-  },
-  { 
-    id: 'bike', 
-    label: 'Bike', 
-    icon: 'motorcycle',
-    description: 'Quick bike rides'
-  },
-  { 
-    id: 'rental', 
-    label: 'Rental', 
-    icon: 'car-key',
-    description: 'Rent vehicles'
-  },
-  { 
-    id: 'commercial', 
-    label: 'Trucks', 
-    icon: 'truck',
-    description: 'Commercial transport'
-  },
+export const SERVICES = [
+  { id: 'trips', label: 'Trips', icon: 'car', route: '/' },
+  { id: 'rental', label: 'Rentals', icon: 'car-key', route: '/(tabs)/rental' },
+  { id: 'drivers', label: 'Drivers', icon: 'card-account-details', route: '/(tabs)/marketplace' },
+  { id: 'goods', label: 'Goods', icon: 'truck', route: '/goods', feature: 'goodsOrders' },
 ];
 
-export const RIDE_STATUSES = {
-  pending: { label: 'Pending', color: COLORS.status.pending },
-  scheduled: { label: 'Scheduled', color: COLORS.info },
-  confirmed: { label: 'Confirmed', color: COLORS.status.confirmed },
-  started: { label: 'Started', color: COLORS.info },
-  completed: { label: 'Completed', color: COLORS.status.completed },
-  cancelled: { label: 'Cancelled', color: COLORS.status.cancelled },
+const VEHICLE_RAW = {
+  hatchback: 'Hatchback', sedan: 'Sedan', suv: 'SUV', muv: 'MUV', van: 'Van', mini_bus: 'Mini bus', bus: 'Bus', auto: 'Auto', bike: 'Bike',
+  pickup: 'Pickup', tempo: 'Tempo', mini_truck: 'Mini truck', truck: 'Truck', trailer: 'Trailer', other: 'Other',
 };
 
-export const PAYMENT_METHODS = [
-  { id: 'cash', label: 'Cash', icon: 'cash' },
-  { id: 'upi', label: 'UPI', icon: 'cellphone' },
-  { id: 'card', label: 'Card', icon: 'credit-card' },
-  { id: 'wallet', label: 'Wallet', icon: 'wallet' },
-];
-
-export const DOCUMENT_TYPES = [
-  { id: 'aadhar', label: 'Aadhar Card', requiresBack: true },
-  { id: 'pan', label: 'PAN Card', requiresBack: false },
-  { id: 'license', label: 'Driving License', requiresBack: true },
-  { id: 'passport', label: 'Passport', requiresBack: false },
-];
-
-export const LANGUAGES = [
-  { id: 'en', label: 'English', nativeLabel: 'English' },
-  { id: 'hi', label: 'Hindi', nativeLabel: 'हिन्दी' },
-  { id: 'as', label: 'Assamese', nativeLabel: 'অসমীয়া' },
-  { id: 'bn', label: 'Bengali', nativeLabel: 'বাংলা' },
-];
-
-export const VALIDATION_RULES = {
-  phone: {
-    pattern: /^[6-9]\d{9}$/,
-    message: 'Phone number must be 10 digits starting with 6-9',
-  },
-  otp: {
-    pattern: /^\d{6}$/,
-    message: 'OTP must be 6 digits',
-  },
-  name: {
-    minLength: 2,
-    maxLength: 100,
-    pattern: /^[a-zA-Z\s]+$/,
-    message: 'Name should contain only letters',
-  },
-  email: {
-    pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-    message: 'Invalid email format',
-  },
+export const BOOKING_STATUS = {
+  pending: { label: 'Waiting for driver', color: '#B45309', bg: '#FFFBEB' },
+  accepted: { label: 'Confirmed', color: '#059669', bg: '#ECFDF5' },
+  rejected: { label: 'Declined', color: '#DC2626', bg: '#FEF2F2' },
+  cancelled: { label: 'Cancelled', color: '#DC2626', bg: '#FEF2F2' },
+  completed: { label: 'Completed', color: '#2563EB', bg: '#EFF6FF' },
+  expired: { label: 'Expired', color: '#6B7280', bg: '#F3F4F6' },
 };
 
-export const ERROR_MESSAGES = {
-  NETWORK_ERROR: 'Network error. Please check your internet connection.',
-  UNAUTHORIZED: 'Session expired. Please login again.',
-  NOT_FOUND: 'Resource not found.',
-  SERVER_ERROR: 'Server error. Please try again later.',
-  VALIDATION_ERROR: 'Please check your input and try again.',
-  UNKNOWN_ERROR: 'Something went wrong. Please try again.',
-};
-
-export const RAZORPAY_KEY = 'rzp_test_your_key'; // Replace with your key
-
-export default {
-  API_BASE_URL,
-  COLORS,
-  TYPOGRAPHY,
-  SPACING,
-  BORDER_RADIUS,
-  VEHICLE_TYPES,
-  RIDE_STATUSES,
-  PAYMENT_METHODS,
-  DOCUMENT_TYPES,
-  LANGUAGES,
-  VALIDATION_RULES,
-  ERROR_MESSAGES,
-  RAZORPAY_KEY,
-};
+// Vehicle names follow the current language.
+export const VEHICLE_LABELS = new Proxy(VEHICLE_RAW, { get: (o, k) => (typeof o[k] === 'string' ? t(o[k]) : o[k]) });

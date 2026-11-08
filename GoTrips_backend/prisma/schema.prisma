@@ -1,11 +1,14 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// GoTrip database schema (PostgreSQL)
+//
+// Conventions
+//  - Models/fields are camelCase in code, snake_case in the database (@map / @@map).
+//  - Prices are whole rupees (Int). Payment amounts are paise (Int), as Razorpay expects.
+//  - Uploaded files are stored as storage *keys* (S3 or local disk), never as public URLs,
+//    so private documents can only be read through short-lived signed URLs.
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = []
 }
 
 datasource db {
@@ -14,936 +17,708 @@ datasource db {
 }
 
 // =====================================================
-// USERS & AUTHENTICATION
+// USERS, AUTH, DEVICES
 // =====================================================
 
 model User {
-  user_id           BigInt    @id @default(autoincrement())
-  phone_number      String    @unique @db.VarChar(20)
-  country_code      String    @default("+91") @db.VarChar(5)
-  full_name         String?   @db.VarChar(100)
-  email             String?   @unique @db.VarChar(100)
-  profile_photo_url String?   @db.VarChar(255)
-  date_of_birth     DateTime? @db.Date
-  gender            Gender?
-  user_type         UserType  @default(passenger)
-  is_verified       Boolean   @default(false)
-  is_active         Boolean   @default(true)
-  terms_accepted    Boolean   @default(false)
-  privacy_accepted  Boolean   @default(false)
-  profile_filled    Boolean   @default(false)
-  created_at        DateTime  @default(now()) @db.Timestamp(0)
-  updated_at        DateTime  @default(now()) @updatedAt @db.Timestamp(0)
-  last_login        DateTime? @db.Timestamp(0)
+  id          Int        @id @default(autoincrement())
+  phone       String     @unique @db.VarChar(15) // E.164, e.g. +919876543210
+  fullName    String?    @map("full_name") @db.VarChar(100)
+  email       String?    @db.VarChar(150)
+  photoKey    String?    @map("photo_key") @db.VarChar(255)
+  gender      Gender?
+  dateOfBirth DateTime?  @map("date_of_birth") @db.Date
+  city        String?    @db.VarChar(80)
+  /// UI / notification language: "en" | "as"
+  language    String     @default("en") @db.VarChar(5)
+  status      UserStatus @default(active)
+  blockReason String?    @map("block_reason") @db.VarChar(255)
+  lastLoginAt DateTime?  @map("last_login_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
 
-  // Relations
-  otp_verifications  OtpVerification[]
-  saved_locations    UserSavedLocation[]
-  partner            Partner?
-  created_rides      Ride[]              @relation("RideCreator") // Changed from "created_rides"
-  passenger_rides    Ride[]              @relation("RidePassenger")
-  payer_payments     Payment[]           @relation("payer_payments")
-  payee_payments     Payment[]           @relation("payee_payments")
-  rental_bookings    RentalBooking[]
-  reviews_given      RatingsReview[]     @relation("reviewer")
-  reviews_received   RatingsReview[]     @relation("reviewee")
-  notifications      Notification[]
-  push_tokens        PushToken[]
-  support_tickets    SupportTicket[]
-  promo_usage        PromoUsage[]
-  emergency_contacts EmergencyContact[]
-  sos_alerts         SosAlert[]
-  app_sessions       AppSession[]
-  search_logs        SearchLog[]
-  driverLeadUnlocks  DriverLeadUnlock[]
-  rides              Ride[]
-  rideBookings       RideBooking[]
+  partner       Partner?
+  sessions      Session[]
+  pushTokens    PushToken[]
+  bookings      Booking[]
+  notifications Notification[]
+  payments      Payment[]
+  savedPlaces   SavedPlace[]
+  tickets       SupportTicket[]
+  goodsOrders   GoodsOrder[]
+  contactEvents ContactEvent[]
 
-  @@index([phone_number])
-  @@index([email])
+  @@index([createdAt])
+  @@index([status])
   @@map("users")
 }
 
-model OtpVerification {
-  otp_id       BigInt   @id @default(autoincrement())
-  user_id      BigInt?
-  phone_number String   @db.VarChar(20)
-  otp_code     String   @db.VarChar(6)
-  otp_type     OtpType  @default(login)
-  is_verified  Boolean  @default(false)
-  expires_at   DateTime @db.Timestamp(0)
-  created_at   DateTime @default(now()) @db.Timestamp(0)
+model OtpCode {
+  id         Int        @id @default(autoincrement())
+  phone      String     @db.VarChar(15)
+  codeHash   String     @map("code_hash") @db.VarChar(64)
+  purpose    OtpPurpose @default(login)
+  attempts   Int        @default(0)
+  expiresAt  DateTime   @map("expires_at")
+  consumedAt DateTime?  @map("consumed_at")
+  createdAt  DateTime   @default(now()) @map("created_at")
 
-  // Relations
-  user User? @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-
-  @@index([phone_number, otp_code])
-  @@map("otp_verification")
+  @@index([phone, createdAt])
+  @@index([expiresAt])
+  @@map("otp_codes")
 }
 
-model UserSavedLocation {
-  location_id   BigInt       @id @default(autoincrement())
-  user_id       BigInt
-  location_type LocationType
-  location_name String?      @db.VarChar(100)
-  address       String       @db.Text
-  latitude      Decimal?     @db.Decimal(10, 8)
-  longitude     Decimal?     @db.Decimal(11, 8)
-  landmark      String?      @db.VarChar(255)
-  created_at    DateTime     @default(now()) @db.Timestamp(0)
+/// Refresh-token sessions. Only a SHA-256 hash of the token is stored.
+model Session {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     Int       @map("user_id")
+  app        AppKind
+  tokenHash  String    @unique @map("token_hash") @db.VarChar(64)
+  deviceInfo String?   @map("device_info") @db.VarChar(255)
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  lastUsedAt DateTime  @default(now()) @map("last_used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
 
-  // Relations
-  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
-  @@map("user_saved_locations")
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model PushToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  token     String   @unique @db.VarChar(255)
+  app       AppKind
+  platform  Platform
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, app, isActive])
+  @@map("push_tokens")
+}
+
+model SavedPlace {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  label     String   @db.VarChar(50)
+  address   String   @db.VarChar(255)
+  lat       Float?
+  lng       Float?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("saved_places")
 }
 
 // =====================================================
-// PARTNER/DRIVER MANAGEMENT
+// PARTNER CATEGORIES & DOCUMENT REQUIREMENTS (configurable)
+// =====================================================
+
+model PartnerCategory {
+  id                 Int      @id @default(autoincrement())
+  code               String   @unique @db.VarChar(40) // driver | rental | commercial | ...
+  name               String   @db.VarChar(80)
+  description        String?  @db.VarChar(255)
+  icon               String?  @db.VarChar(50)
+  /// Registration / listing fee in paise. 0 = free.
+  registrationFee    Int      @default(0) @map("registration_fee")
+  /// How long a paid listing stays active. null = lifetime.
+  feeValidityDays    Int?     @map("fee_validity_days")
+  hasDriverProfile   Boolean  @default(false) @map("has_driver_profile")
+  canListVehicles    Boolean  @default(false) @map("can_list_vehicles")
+  canCreateTrips     Boolean  @default(false) @map("can_create_trips")
+  canListRentals     Boolean  @default(false) @map("can_list_rentals")
+  canViewGoodsOrders Boolean  @default(false) @map("can_view_goods_orders")
+  isActive           Boolean  @default(true) @map("is_active")
+  sortOrder          Int      @default(0) @map("sort_order")
+  /// Other languages, e.g. { "as": { "name": "...", "description": "..." } }
+  translations       Json?
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  requirements DocumentRequirement[]
+  partners     Partner[]
+
+  @@map("partner_categories")
+}
+
+model DocumentRequirement {
+  id             Int           @id @default(autoincrement())
+  categoryId     Int           @map("category_id")
+  scope          DocumentScope @default(partner)
+  docType        String        @map("doc_type") @db.VarChar(40)
+  label          String        @db.VarChar(80)
+  hint           String?       @db.VarChar(255)
+  isRequired     Boolean       @default(true) @map("is_required")
+  requiresNumber Boolean       @default(false) @map("requires_number")
+  requiresExpiry Boolean       @default(false) @map("requires_expiry")
+  requiresBack   Boolean       @default(false) @map("requires_back")
+  sortOrder      Int           @default(0) @map("sort_order")
+  /// e.g. { "as": { "label": "...", "hint": "..." } }
+  translations   Json?
+
+  category PartnerCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, scope, docType])
+  @@map("document_requirements")
+}
+
+// =====================================================
+// PARTNERS
 // =====================================================
 
 model Partner {
-  partner_id            BigInt             @id @default(autoincrement())
-  user_id               BigInt             @unique
-  partner_type          PartnerType
-  business_name         String?            @db.VarChar(100)
-  verification_status   VerificationStatus @default(pending)
-  verification_date     DateTime?          @db.Timestamp(0)
-  rejection_reason      String?            @db.Text
-  is_online             Boolean            @default(false)
-  bank_account_number   String?            @db.VarChar(50)
-  bank_ifsc_code        String?            @db.VarChar(20)
-  bank_account_holder   String?            @db.VarChar(100)
-  upi_id                String?            @db.VarChar(100)
-  rating_average        Decimal            @default(0.00) @db.Decimal(3, 2)
-  total_rides_completed Int                @default(0)
-  total_earnings        Decimal            @default(0.00) @db.Decimal(10, 2)
-  pending_payout        Decimal            @default(0.00) @db.Decimal(10, 2)
-  language_preference   String             @default("en") @db.VarChar(10)
-  created_at            DateTime           @default(now()) @db.Timestamp(0)
-  updated_at            DateTime           @default(now()) @updatedAt @db.Timestamp(0)
+  id                 Int                @id @default(autoincrement())
+  userId             Int                @unique @map("user_id")
+  categoryId         Int                @map("category_id")
+  businessName       String?            @map("business_name") @db.VarChar(120)
+  alternatePhone     String?            @map("alternate_phone") @db.VarChar(15)
+  whatsappPhone      String?            @map("whatsapp_phone") @db.VarChar(15)
+  address            String?            @db.VarChar(255)
+  district           String?            @db.VarChar(80)
+  city               String?            @db.VarChar(80)
+  pincode            String?            @db.VarChar(10)
+  accountStatus      PartnerAccount     @default(onboarding) @map("account_status")
+  verificationStatus VerificationStatus @default(unverified) @map("verification_status")
+  rejectionReason    String?            @map("rejection_reason") @db.VarChar(500)
+  suspendedReason    String?            @map("suspended_reason") @db.VarChar(500)
+  submittedAt        DateTime?          @map("submitted_at")
+  verifiedAt         DateTime?          @map("verified_at")
+  activatedAt        DateTime?          @map("activated_at")
+  feePaidAt          DateTime?          @map("fee_paid_at")
+  /// End of the paid listing period (null = no expiry / not applicable).
+  listingExpiresAt   DateTime?          @map("listing_expires_at")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
 
-  // Relations
-  user                     User                      @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  documents                PartnerDocument[]
-  vehicles                 Vehicle[]
-  driver_rides             Ride[]                    @relation("RideDriver")
-  owner_rentals            RentalBooking[]           @relation("owner_rentals")
-  earnings                 PartnerEarning[]
-  subscriptions            PartnerSubscription[]
-  driverMarketplaceProfile DriverMarketplaceProfile?
-  driverLeadUnlocks        DriverLeadUnlock[]
-  rides                    Ride[]
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category      PartnerCategory   @relation(fields: [categoryId], references: [id])
+  documents     PartnerDocument[]
+  driverProfile DriverProfile?
+  vehicles      Vehicle[]
+  trips         Trip[]
+  bookings      Booking[]
+  payments      Payment[]
+  locationShare LocationShare?
+  contactEvents ContactEvent[]
 
-  @@index([partner_type])
-  @@index([verification_status])
+  @@index([categoryId, accountStatus])
+  @@index([verificationStatus])
+  @@index([createdAt])
   @@map("partners")
 }
 
 model PartnerDocument {
-  document_id         BigInt                @id @default(autoincrement())
-  partner_id          BigInt
-  document_type       DocumentType
-  document_number     String?               @db.VarChar(100)
-  document_url        String                @db.VarChar(255)
-  verification_status DocVerificationStatus @default(pending)
-  expiry_date         DateTime?             @db.Date
-  uploaded_at         DateTime              @default(now()) @db.Timestamp(0)
-  verified_at         DateTime?             @db.Timestamp(0)
+  id              Int            @id @default(autoincrement())
+  partnerId       Int            @map("partner_id")
+  docType         String         @map("doc_type") @db.VarChar(40)
+  docNumber       String?        @map("doc_number") @db.VarChar(60)
+  expiryDate      DateTime?      @map("expiry_date") @db.Date
+  frontKey        String         @map("front_key") @db.VarChar(255)
+  backKey         String?        @map("back_key") @db.VarChar(255)
+  status          DocumentStatus @default(pending)
+  rejectionReason String?        @map("rejection_reason") @db.VarChar(255)
+  reviewedAt      DateTime?      @map("reviewed_at")
+  reviewedBy      Int?           @map("reviewed_by")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
 
-  // Relations
-  partner Partner @relation(fields: [partner_id], references: [partner_id], onDelete: Cascade)
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
 
-  @@index([partner_id])
+  @@unique([partnerId, docType])
+  @@index([status])
   @@map("partner_documents")
 }
 
+/// Marketplace profile for partners in a category with hasDriverProfile = true.
+model DriverProfile {
+  id                 Int       @id @default(autoincrement())
+  partnerId          Int       @unique @map("partner_id")
+  headline           String?   @db.VarChar(120)
+  bio                String?   @db.VarChar(1000)
+  hasPriorExperience Boolean   @default(false) @map("has_prior_experience")
+  experienceYears    Int       @default(0) @map("experience_years")
+  experienceDetails  String?   @map("experience_details") @db.VarChar(1000)
+  licenseNumber      String?   @map("license_number") @db.VarChar(40)
+  licenseTypes       String[]  @default([]) @map("license_types") // LMV, HMV, MCWG, TRANS
+  licenseExpiry      DateTime? @map("license_expiry") @db.Date
+  vehicleTypes       String[]  @default([]) @map("vehicle_types") // car, suv, truck, bus...
+  canDriveAutomatic  Boolean   @default(false) @map("can_drive_automatic")
+  languages          String[]  @default([])
+  serviceAreas       String[]  @default([]) @map("service_areas")
+  workTypes          String[]  @default([]) @map("work_types") // personal, outstation, commercial, daily
+  availability       String?   @db.VarChar(30) // full_time | part_time | on_call
+  expectedPayMin     Int?      @map("expected_pay_min")
+  expectedPayMax     Int?      @map("expected_pay_max")
+  payUnit            String?   @map("pay_unit") @db.VarChar(20) // per_day | per_month | per_trip
+  education          String?   @db.VarChar(80)
+  hasOwnVehicle      Boolean   @default(false) @map("has_own_vehicle")
+  district           String?   @db.VarChar(80)
+  city               String?   @db.VarChar(80)
+  lat                Float?
+  lng                Float?
+  isAvailable        Boolean   @default(true) @map("is_available")
+  /// Denormalised visibility flag kept in sync by the service layer (fast marketplace queries).
+  isListed           Boolean   @default(false) @map("is_listed")
+  listedAt           DateTime? @map("listed_at")
+  completeness       Int       @default(0)
+  viewCount          Int       @default(0) @map("view_count")
+  callCount          Int       @default(0) @map("call_count")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([isListed, district])
+  @@index([isListed, experienceYears])
+  @@index([isListed, listedAt])
+  @@map("driver_profiles")
+}
+
 // =====================================================
-// VEHICLE MANAGEMENT
+// VEHICLES
 // =====================================================
 
 model Vehicle {
-  vehicle_id            BigInt          @id @default(autoincrement())
-  partner_id            BigInt
-  vehicle_type          VehicleType
-  vehicle_category      VehicleCategory
-  manufacturer          String?         @db.VarChar(50)
-  model                 String?         @db.VarChar(50)
-  year                  Int?
-  color                 String?         @db.VarChar(30)
-  number_plate          String          @unique @db.VarChar(20)
-  seating_capacity      Int?
-  fuel_type             FuelType?
-  ac_available          Boolean         @default(false)
-  is_available          Boolean         @default(true)
-  is_verified           Boolean         @default(false)
-  rental_price_per_hour Decimal?        @db.Decimal(10, 2)
-  rental_price_per_day  Decimal?        @db.Decimal(10, 2)
-  ride_price_per_km     Decimal?        @db.Decimal(10, 2)
-  base_fare             Decimal?        @db.Decimal(10, 2)
-  vehicle_photos        Json? // Array of photo URLs
-  features              Json? // Array of features
-  rating_average        Decimal         @default(0.00) @db.Decimal(3, 2)
-  total_trips           Int             @default(0)
-  created_at            DateTime        @default(now()) @db.Timestamp(0)
-  updated_at            DateTime        @default(now()) @updatedAt @db.Timestamp(0)
+  id                 Int          @id @default(autoincrement())
+  partnerId          Int          @map("partner_id")
+  vehicleClass       VehicleClass @map("vehicle_class")
+  make               String       @db.VarChar(50)
+  model              String       @db.VarChar(50)
+  year               Int?
+  color              String?      @db.VarChar(30)
+  registrationNumber String       @unique @map("registration_number") @db.VarChar(20)
+  seats              Int?
+  loadCapacityKg     Int?         @map("load_capacity_kg")
+  fuelType           FuelType?    @map("fuel_type")
+  hasAc              Boolean      @default(false) @map("has_ac")
+  features           String[]     @default([])
+  description        String?      @db.VarChar(1000)
+  photoKeys          String[]     @default([]) @map("photo_keys")
 
-  // Relations
-  partner         Partner         @relation(fields: [partner_id], references: [partner_id], onDelete: Cascade)
-  rides           Ride[]
-  rental_bookings RentalBooking[]
-  reviews         RatingsReview[]
+  // How the vehicle is used
+  forTrips  Boolean @default(false) @map("for_trips")
+  forRental Boolean @default(false) @map("for_rental")
+  forGoods  Boolean @default(false) @map("for_goods")
 
-  @@index([vehicle_type])
-  @@index([is_available])
-  @@index([number_plate])
+  // Status
+  isAvailable        Boolean            @default(true) @map("is_available")
+  verificationStatus VerificationStatus @default(pending) @map("verification_status")
+  rejectionReason    String?            @map("rejection_reason") @db.VarChar(500)
+  submittedAt        DateTime           @default(now()) @map("submitted_at")
+  verifiedAt         DateTime?          @map("verified_at")
+  verifiedBy         Int?               @map("verified_by")
+
+  // Rental listing
+  rentalAvailable    Boolean             @default(false) @map("rental_available")
+  rentalPricePerDay  Int?                @map("rental_price_per_day")
+  rentalPricePerHour Int?                @map("rental_price_per_hour")
+  rentalDriverOption RentalDriverOption? @map("rental_driver_option")
+  securityDeposit    Int?                @map("security_deposit")
+  rentalMinHours     Int?                @map("rental_min_hours")
+  rentalDistrict     String?             @map("rental_district") @db.VarChar(80)
+  rentalCity         String?             @map("rental_city") @db.VarChar(80)
+  rentalAddress      String?             @map("rental_address") @db.VarChar(255)
+  rentalLat          Float?              @map("rental_lat")
+  rentalLng          Float?              @map("rental_lng")
+  rentalTerms        String?             @map("rental_terms") @db.VarChar(1000)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  partner   Partner           @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  documents VehicleDocument[]
+  trips     Trip[]
+
+  @@index([partnerId])
+  @@index([verificationStatus, submittedAt])
+  @@index([forRental, verificationStatus, rentalDistrict])
+  @@index([rentalLat, rentalLng])
   @@map("vehicles")
 }
 
-// =====================================================
-// RIDE MANAGEMENT
-// =====================================================
+model VehicleDocument {
+  id              Int            @id @default(autoincrement())
+  vehicleId       Int            @map("vehicle_id")
+  docType         String         @map("doc_type") @db.VarChar(40)
+  docNumber       String?        @map("doc_number") @db.VarChar(60)
+  expiryDate      DateTime?      @map("expiry_date") @db.Date
+  frontKey        String         @map("front_key") @db.VarChar(255)
+  backKey         String?        @map("back_key") @db.VarChar(255)
+  status          DocumentStatus @default(pending)
+  rejectionReason String?        @map("rejection_reason") @db.VarChar(255)
+  reviewedAt      DateTime?      @map("reviewed_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
 
-model Ride {
-  ride_id BigInt @id @default(autoincrement())
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
-  // RIDE CREATION
-  created_by   BigInt // Partner who created the ride
-  ride_type    RideType @default(fixed_route)
-  is_published Boolean  @default(true)
-
-  // VEHICLE & DRIVER
-  vehicle_id BigInt
-  driver_id  BigInt? // Partner who will drive
-
-  // ROUTE
-  pickup_location_lat Decimal? @db.Decimal(10, 8)
-  pickup_location_lng Decimal? @db.Decimal(11, 8)
-  pickup_address      String?  @db.VarChar(255)
-
-  drop_location_lat Decimal? @db.Decimal(10, 8)
-  drop_location_lng Decimal? @db.Decimal(11, 8)
-  drop_address      String?  @db.VarChar(255)
-
-  // CAPACITY MANAGEMENT
-  total_seats           Int?
-  total_capacity_kg     Decimal? @db.Decimal(10, 2)
-  available_seats       Int?
-  available_capacity_kg Decimal? @db.Decimal(10, 2)
-
-  // PRICING
-  fare_amount    Decimal? @db.Decimal(10, 2)
-  price_per_seat Decimal? @db.Decimal(10, 2)
-  price_per_km   Decimal? @db.Decimal(10, 2)
-  base_fare      Decimal? @db.Decimal(10, 2)
-
-  // SCHEDULE
-  scheduled_departure_time DateTime?
-  estimated_arrival_time   DateTime?
-
-  // RIDE DETAILS
-  distance_km      Decimal? @db.Decimal(10, 2)
-  duration_minutes Int?
-  ride_category    String?  @db.VarChar(50)
-
-  // RIDE EXECUTION
-  passenger_id       BigInt? // User who booked
-  booked_seats       Int?
-  booked_capacity_kg Decimal? @db.Decimal(10, 2)
-
-  actual_pickup_time DateTime?
-  actual_drop_time   DateTime?
-
-  ride_status         RideStatus @default(pending)
-  cancellation_reason String?    @db.Text
-
-  // PAYMENT
-  total_fare          Decimal?      @db.Decimal(10, 2)
-  platform_commission Decimal?      @db.Decimal(10, 2)
-  driver_earnings     Decimal?      @db.Decimal(10, 2)
-  payment_status      PaymentStatus @default(pending)
-
-  // OTP VERIFICATION
-  ride_otp String? @db.VarChar(6)
-
-  // RIDE PREFERENCES
-  allow_pets     Boolean  @default(false)
-  allow_smoking  Boolean  @default(false)
-  allow_luggage  Boolean  @default(true)
-  max_luggage_kg Decimal? @db.Decimal(5, 2)
-
-  // NOTES
-  ride_notes           String? @db.Text
-  special_instructions String? @db.Text
-
-  created_at DateTime @default(now()) @db.Timestamp(0)
-  updated_at DateTime @default(now()) @updatedAt @db.Timestamp(0)
-
-  // RELATIONS
-  creator   User     @relation("RideCreator", fields: [created_by], references: [user_id])
-  passenger User?    @relation("RidePassenger", fields: [passenger_id], references: [user_id])
-  vehicle   Vehicle  @relation(fields: [vehicle_id], references: [vehicle_id])
-  driver    Partner? @relation("RideDriver", fields: [driver_id], references: [partner_id])
-
-  // payments          Payment[]
-  // partnerEarnings   PartnerEarning[]
-  ratingsReviews    RatingsReview[]
-  rideBookings      RideBooking[] // NEW: Multiple users can book seats
-  user              User?            @relation(fields: [userUser_id], references: [user_id])
-  userUser_id       BigInt?
-  partner           Partner?         @relation(fields: [partnerPartner_id], references: [partner_id])
-  partnerPartner_id BigInt?
-  rideTrackings     RideTracking[]
-  // supportTickets    SupportTicket[]
-  // promoUsages       PromoUsage[]
-  sosAlerts         SosAlert[]
-  payments          Payment[]
-  partnerEarnings   PartnerEarning[]
-  supportTickets    SupportTicket[]
-  promoUsages       PromoUsage[]
-
-  @@index([created_by])
-  @@index([passenger_id])
-  @@index([driver_id])
-  @@index([ride_status])
-  @@index([ride_type])
-  @@index([scheduled_departure_time])
-  @@map("rides")
-}
-
-model RideBooking {
-  booking_id BigInt @id @default(autoincrement())
-  ride_id    BigInt
-  user_id    BigInt
-
-  seats_booked       Int?
-  capacity_booked_kg Decimal? @db.Decimal(10, 2)
-
-  fare_amount    Decimal?      @db.Decimal(10, 2)
-  booking_status BookingStatus @default(pending)
-
-  pickup_location_lat Decimal? @db.Decimal(10, 8)
-  pickup_location_lng Decimal? @db.Decimal(11, 8)
-  pickup_address      String?  @db.VarChar(255)
-
-  drop_location_lat Decimal? @db.Decimal(10, 8)
-  drop_location_lng Decimal? @db.Decimal(11, 8)
-  drop_address      String?  @db.VarChar(255)
-
-  special_requests    String? @db.Text
-  cancellation_reason String? @db.Text
-
-  payment_id BigInt?
-
-  created_at DateTime @default(now()) @db.Timestamp(0)
-  updated_at DateTime @default(now()) @updatedAt @db.Timestamp(0)
-
-  // RELATIONS
-  // Note: Ensure the references: [ride_id] matches the name in your updated Ride model
-  ride    Ride     @relation(fields: [ride_id], references: [ride_id])
-  user    User     @relation(fields: [user_id], references: [user_id])
-  payment Payment? @relation(fields: [payment_id], references: [payment_id])
-
-  @@index([ride_id])
-  @@index([user_id])
-  @@index([booking_status])
-  @@map("ride_bookings")
-}
-
-model RentalBooking {
-  booking_id   BigInt @id @default(autoincrement())
-  passenger_id BigInt
-  vehicle_id   BigInt
-  owner_id     BigInt
-
-  // Rental Period
-  start_date            DateTime @db.Date
-  start_time            DateTime @db.Time(0)
-  end_date              DateTime @db.Date
-  end_time              DateTime @db.Time(0)
-  rental_duration_hours Int?
-  rental_duration_days  Int?
-
-  // Pricing
-  price_per_hour      Decimal? @db.Decimal(10, 2)
-  price_per_day       Decimal? @db.Decimal(10, 2)
-  total_rental_amount Decimal? @db.Decimal(10, 2)
-  security_deposit    Decimal? @db.Decimal(10, 2)
-  tax_amount          Decimal? @db.Decimal(10, 2)
-  total_amount        Decimal? @db.Decimal(10, 2)
-
-  // Pickup/Return Location
-  pickup_location String? @db.Text
-  return_location String? @db.Text
-
-  // Status
-  booking_status      BookingStatus @default(pending)
-  cancellation_reason String?       @db.Text
-
-  // Documents
-  rental_agreement_url String? @db.VarChar(255)
-
-  created_at DateTime @default(now()) @db.Timestamp(0)
-  updated_at DateTime @default(now()) @updatedAt @db.Timestamp(0)
-
-  // Relations
-  passenger       User             @relation(fields: [passenger_id], references: [user_id], onDelete: Cascade)
-  vehicle         Vehicle          @relation(fields: [vehicle_id], references: [vehicle_id], onDelete: Cascade)
-  owner           Partner          @relation("owner_rentals", fields: [owner_id], references: [partner_id], onDelete: Cascade)
-  payments        Payment[]
-  earnings        PartnerEarning[]
-  reviews         RatingsReview[]
-  support_tickets SupportTicket[]
-  promo_usage     PromoUsage[]
-
-  @@index([passenger_id])
-  @@index([vehicle_id])
-  @@index([booking_status])
-  @@map("rental_bookings")
+  @@unique([vehicleId, docType])
+  @@map("vehicle_documents")
 }
 
 // =====================================================
-// RIDE TRACKING & LOCATION
+// TRIPS (Start trips and Return trips) & BOOKING REQUESTS
 // =====================================================
 
-model RideTracking {
-  tracking_id           BigInt   @id @default(autoincrement())
-  ride_id               BigInt
-  driver_latitude       Decimal? @db.Decimal(10, 8)
-  driver_longitude      Decimal? @db.Decimal(11, 8)
-  speed_kmph            Decimal? @db.Decimal(5, 2)
-  heading               Decimal? @db.Decimal(5, 2)
-  eta_minutes           Int?
-  distance_to_pickup_km Decimal? @db.Decimal(10, 2)
-  recorded_at           DateTime @default(now()) @db.Timestamp(0)
+model Trip {
+  id              Int        @id @default(autoincrement())
+  partnerId       Int        @map("partner_id")
+  vehicleId       Int        @map("vehicle_id")
+  tripType        TripType   @map("trip_type")
+  /// For a return trip: the outbound trip it returns from (optional).
+  parentTripId    Int?       @map("parent_trip_id")
+  originName      String     @map("origin_name") @db.VarChar(120)
+  destinationName String     @map("destination_name") @db.VarChar(120)
+  departureAt     DateTime   @map("departure_at")
+  arrivalAt       DateTime?  @map("arrival_at")
+  totalSeats      Int        @map("total_seats")
+  availableSeats  Int        @map("available_seats")
+  pricePerSeat    Int        @map("price_per_seat")
+  acceptsParcels  Boolean    @default(false) @map("accepts_parcels")
+  /// Partner can pause new booking requests without cancelling the trip.
+  bookingOpen     Boolean    @default(true) @map("booking_open")
+  notes           String?    @db.VarChar(500)
+  status          TripStatus @default(scheduled)
+  cancelReason    String?    @map("cancel_reason") @db.VarChar(255)
+  startedAt       DateTime?  @map("started_at")
+  completedAt     DateTime?  @map("completed_at")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
 
-  // Relations
-  ride Ride @relation(fields: [ride_id], references: [ride_id], onDelete: Cascade)
+  partner     Partner    @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle    @relation(fields: [vehicleId], references: [id])
+  parentTrip  Trip?      @relation("ReturnTrip", fields: [parentTripId], references: [id], onDelete: SetNull)
+  returnTrips Trip[]     @relation("ReturnTrip")
+  stops       TripStop[]
+  bookings    Booking[]
 
-  @@index([ride_id, recorded_at])
-  @@map("ride_tracking")
+  @@index([status, departureAt])
+  @@index([partnerId, departureAt])
+  @@index([vehicleId, departureAt])
+  @@map("trips")
+}
+
+/// Ordered stops of a trip: seq 0 = origin, last = destination, everything between is a pickup/drop point.
+model TripStop {
+  id            Int     @id @default(autoincrement())
+  tripId        Int     @map("trip_id")
+  seq           Int
+  placeName     String  @map("place_name") @db.VarChar(120)
+  /// Lower-cased, trimmed name used for searching.
+  placeKey      String  @map("place_key") @db.VarChar(120)
+  district      String? @db.VarChar(80)
+  lat           Float?
+  lng           Float?
+  /// Optional fare from the origin to this stop (rupees). Used to estimate partial-route fares.
+  fareFromStart Int?    @map("fare_from_start")
+  /// Minutes after departure the vehicle is expected here.
+  etaMinutes    Int?    @map("eta_minutes")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, seq])
+  @@index([placeKey])
+  @@index([district])
+  @@map("trip_stops")
+}
+
+model Booking {
+  id             Int           @id @default(autoincrement())
+  code           String        @unique @db.VarChar(12)
+  tripId         Int           @map("trip_id")
+  userId         Int           @map("user_id")
+  partnerId      Int           @map("partner_id")
+  seats          Int
+  pickupSeq      Int           @map("pickup_seq")
+  dropSeq        Int           @map("drop_seq")
+  pickupName     String        @map("pickup_name") @db.VarChar(120)
+  dropName       String        @map("drop_name") @db.VarChar(120)
+  fareEstimate   Int           @map("fare_estimate")
+  passengerName  String?       @map("passenger_name") @db.VarChar(100)
+  passengerPhone String        @map("passenger_phone") @db.VarChar(15)
+  note           String?       @db.VarChar(300)
+  status         BookingStatus @default(pending)
+  statusReason   String?       @map("status_reason") @db.VarChar(255)
+  cancelledBy    Actor?        @map("cancelled_by")
+  respondedAt    DateTime?     @map("responded_at")
+  completedAt    DateTime?     @map("completed_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  trip    Trip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId, status, createdAt])
+  @@index([userId, createdAt])
+  @@index([tripId, status])
+  @@map("bookings")
 }
 
 // =====================================================
-// PAYMENTS
+// GOODS TRANSPORT ORDERS (feature flagged - disabled by default)
+// =====================================================
+
+model GoodsOrder {
+  id             Int              @id @default(autoincrement())
+  userId         Int              @map("user_id")
+  pickupName     String           @map("pickup_name") @db.VarChar(160)
+  pickupDistrict String?          @map("pickup_district") @db.VarChar(80)
+  pickupLat      Float?           @map("pickup_lat")
+  pickupLng      Float?           @map("pickup_lng")
+  dropName       String           @map("drop_name") @db.VarChar(160)
+  dropDistrict   String?          @map("drop_district") @db.VarChar(80)
+  dropLat        Float?           @map("drop_lat")
+  dropLng        Float?           @map("drop_lng")
+  goodsType      String           @map("goods_type") @db.VarChar(80)
+  weightKg       Int?             @map("weight_kg")
+  vehicleClass   VehicleClass?    @map("vehicle_class")
+  pickupDate     DateTime         @map("pickup_date")
+  description    String?          @db.VarChar(1000)
+  contactPhone   String           @map("contact_phone") @db.VarChar(15)
+  budget         Int?
+  status         GoodsOrderStatus @default(open)
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, pickupDate])
+  @@index([pickupDistrict, status])
+  @@map("goods_orders")
+}
+
+// =====================================================
+// PAYMENTS (registration / listing fee only)
 // =====================================================
 
 model Payment {
-  payment_id        BigInt          @id @default(autoincrement())
-  transaction_type  TransactionType
-  ride_id           BigInt?
-  rental_booking_id BigInt?
-  payer_id          BigInt
-  payee_id          BigInt?
+  id                Int            @id @default(autoincrement())
+  userId            Int            @map("user_id")
+  partnerId         Int            @map("partner_id")
+  purpose           PaymentPurpose @default(registration_fee)
+  amount            Int // paise
+  currency          String         @default("INR") @db.VarChar(3)
+  status            PaymentStatus  @default(created)
+  razorpayOrderId   String         @unique @map("razorpay_order_id") @db.VarChar(64)
+  razorpayPaymentId String?        @unique @map("razorpay_payment_id") @db.VarChar(64)
+  razorpaySignature String?        @map("razorpay_signature") @db.VarChar(128)
+  method            String?        @db.VarChar(30)
+  failureReason     String?        @map("failure_reason") @db.VarChar(255)
+  receipt           String         @unique @db.VarChar(40)
+  paidAt            DateTime?      @map("paid_at")
+  /// Listing period covered by this payment.
+  validUntil        DateTime?      @map("valid_until")
+  categoryCode      String         @map("category_code") @db.VarChar(40)
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
 
-  amount         Decimal       @db.Decimal(10, 2)
-  payment_method PaymentMethod
-  payment_status PaymentStatus @default(pending)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
 
-  // Payment Gateway Details
-  transaction_id   String? @unique @db.VarChar(100)
-  gateway_name     String? @db.VarChar(50)
-  gateway_response Json?
-
-  payment_date DateTime @default(now()) @db.Timestamp(0)
-
-  // Relations
-  ride                     Ride?                      @relation(fields: [ride_id], references: [ride_id], onDelete: SetNull)
-  rental_booking           RentalBooking?             @relation(fields: [rental_booking_id], references: [booking_id], onDelete: SetNull)
-  payer                    User                       @relation("payer_payments", fields: [payer_id], references: [user_id], onDelete: Cascade)
-  payee                    User?                      @relation("payee_payments", fields: [payee_id], references: [user_id], onDelete: SetNull)
-  subscriptions            PartnerSubscription[]
-  driverLeadUnlocks        DriverLeadUnlock[]
-  marketplaceRegistrations DriverMarketplaceProfile[] @relation("marketplace_registration")
-  rideBookings             RideBooking[]
-
-  @@index([payer_id])
-  @@index([transaction_id])
-  @@index([payment_status])
-  @@index([payment_date])
+  @@index([partnerId, createdAt])
+  @@index([status, createdAt])
   @@map("payments")
 }
 
-model PartnerEarning {
-  earning_id        BigInt  @id @default(autoincrement())
-  partner_id        BigInt
-  ride_id           BigInt?
-  rental_booking_id BigInt?
+/// Razorpay webhook log (idempotency + audit).
+model PaymentWebhookEvent {
+  id          Int      @id @default(autoincrement())
+  eventId     String   @unique @map("event_id") @db.VarChar(64)
+  event       String   @db.VarChar(60)
+  payload     Json
+  processedAt DateTime @default(now()) @map("processed_at")
 
-  gross_amount          Decimal  @db.Decimal(10, 2)
-  commission_percentage Decimal  @default(15.00) @db.Decimal(5, 2)
-  commission_amount     Decimal  @default(0.00) @db.Decimal(10, 2)
-  final_payout_amount   Decimal  @default(0.00) @db.Decimal(10, 2)
-  net_earnings          Decimal? @db.Decimal(10, 2)
-
-  payout_status         PayoutStatus @default(pending)
-  payout_date           DateTime?    @db.Timestamp(0)
-  payout_transaction_id String?      @db.VarChar(100)
-
-  earned_at DateTime @default(now()) @db.Timestamp(0)
-
-  // Relations
-  partner        Partner        @relation(fields: [partner_id], references: [partner_id], onDelete: Cascade)
-  ride           Ride?          @relation(fields: [ride_id], references: [ride_id], onDelete: SetNull)
-  rental_booking RentalBooking? @relation(fields: [rental_booking_id], references: [booking_id], onDelete: SetNull)
-
-  @@index([partner_id])
-  @@index([payout_status])
-  @@index([partner_id, earned_at])
-  @@map("partner_earnings")
-}
-
-model PartnerSubscriptionPlan {
-  plan_id               BigInt      @id @default(autoincrement())
-  plan_name             String      @db.VarChar(100)
-  billing_type          BillingType
-  plan_price            Decimal     @db.Decimal(10, 2)
-  lead_unlock_price     Decimal     @default(49.00) @db.Decimal(10, 2)
-  commission_percentage Decimal     @default(0.00) @db.Decimal(5, 2)
-  is_active             Boolean     @default(true)
-  created_at            DateTime    @default(now()) @db.Timestamp(0)
-
-  // Relations
-  subscriptions PartnerSubscription[]
-
-  @@map("partner_subscription_plans")
-}
-
-model PartnerSubscription {
-  subscription_id     BigInt             @id @default(autoincrement())
-  partner_id          BigInt
-  plan_id             BigInt
-  subscription_status SubscriptionStatus @default(pending)
-  start_date          DateTime?          @db.Timestamp(0)
-  end_date            DateTime?          @db.Timestamp(0)
-  payment_id          BigInt?
-  created_at          DateTime           @default(now()) @db.Timestamp(0)
-
-  // Relations
-  partner Partner                 @relation(fields: [partner_id], references: [partner_id])
-  plan    PartnerSubscriptionPlan @relation(fields: [plan_id], references: [plan_id])
-  payment Payment?                @relation(fields: [payment_id], references: [payment_id])
-
-  @@index([partner_id])
-  @@map("partner_subscriptions")
+  @@map("payment_webhook_events")
 }
 
 // =====================================================
-// DRIVER MARKETPLACE - SEPARATE PROFILE TABLE
+// LIVE LOCATION SHARING (low-cost: latest point only)
 // =====================================================
 
-// New separate table for marketplace profiles
-model DriverMarketplaceProfile {
-  profile_id BigInt @id @default(autoincrement())
-  partner_id BigInt @unique
+model LocationShare {
+  partnerId Int       @id @map("partner_id")
+  isSharing Boolean   @default(false) @map("is_sharing")
+  lat       Float?
+  lng       Float?
+  accuracyM Float?    @map("accuracy_m")
+  tripId    Int?      @map("trip_id")
+  startedAt DateTime? @map("started_at")
+  expiresAt DateTime? @map("expires_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
-  // Location & Service Area
-  home_location_lat Decimal? @db.Decimal(10, 8)
-  home_location_lng Decimal? @db.Decimal(11, 8)
-  service_city      String?  @db.VarChar(100)
-  service_radius_km Int      @default(50)
-  service_areas     Json? // ["Guwahati", "Jorhat", "Dibrugarh"]
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
 
-  // Profile Information
-  marketplace_bio     String? @db.Text
-  specializations     Json? // ["Airport Transfer", "Outstation", "Corporate"]
-  languages_spoken    Json? // ["English", "Hindi", "Assamese"]
-  available_hours     Json? // {"monday": "9am-9pm", "tuesday": "all day"}
-  years_of_experience Int?
-
-  // Vehicle Details (from partner's vehicles)
-  primary_vehicle_type String? @db.VarChar(50)
-  own_vehicle          Boolean @default(false)
-  willing_to_relocate  Boolean @default(false)
-
-  // Documents & Verification
-  has_valid_license    Boolean @default(false)
-  has_police_clearance Boolean @default(false)
-  verification_badge   String? @db.VarChar(50) // "verified", "premium"
-
-  // Marketplace Status
-  marketplace_status  MarketplaceStatus @default(inactive)
-  show_in_marketplace Boolean           @default(false)
-
-  // Registration & Expiry
-  registration_payment_id   BigInt?
-  marketplace_registered_at DateTime? @db.Timestamp(0)
-  marketplace_expires_at    DateTime? @db.Timestamp(0)
-
-  // Analytics
-  profile_view_count   Int       @default(0)
-  total_leads_received Int       @default(0)
-  last_viewed_at       DateTime? @db.Timestamp(0)
-
-  // Preferences
-  preferred_job_type  Json?    @map("preferred_job_type") // ["full_time", "part_time", "contract"]
-  expected_salary_min Decimal? @db.Decimal(10, 2)
-  expected_salary_max Decimal? @db.Decimal(10, 2)
-
-  // SEO & Search
-  search_keywords      String? @db.VarChar(500)
-  profile_completeness Int     @default(0) // 0-100%
-
-  created_at DateTime @default(now()) @db.Timestamp(0)
-  updated_at DateTime @default(now()) @updatedAt @db.Timestamp(0)
-
-  // Relations
-  partner             Partner            @relation(fields: [partner_id], references: [partner_id], onDelete: Cascade)
-  registrationPayment Payment?           @relation("marketplace_registration", fields: [registration_payment_id], references: [payment_id])
-  leadUnlocks         DriverLeadUnlock[]
-
-  @@index([service_city])
-  @@index([marketplace_status])
-  @@index([show_in_marketplace])
-  @@index([home_location_lat, home_location_lng])
-  @@map("driver_marketplace_profiles")
-}
-
-// Driver Lead Unlocks (User pays to see driver details)
-model DriverLeadUnlock {
-  unlock_id  BigInt @id @default(autoincrement())
-  user_id    BigInt
-  partner_id BigInt
-  profile_id BigInt
-  payment_id BigInt
-
-  // Payment (₹49 - 100% to platform)
-  amount_paid    Decimal       @default(49.00) @db.Decimal(10, 2)
-  payment_status PaymentStatus @default(pending)
-
-  // Access Control
-  contact_revealed Boolean   @default(false)
-  revealed_at      DateTime? @db.Timestamp(0)
-  valid_until      DateTime? @db.Timestamp(0) // 30 days access
-  is_expired       Boolean   @default(false)
-
-  // Lead Tracking (User's perspective)
-  lead_status          LeadStatus    @default(new)
-  lead_notes           String?       @db.Text
-  contact_viewed_count Int           @default(0)
-  last_viewed_at       DateTime?     @db.Timestamp(0)
-  user_feedback        String?       @db.Text
-  hiring_status        HiringStatus?
-
-  created_at DateTime @default(now()) @db.Timestamp(0)
-  updated_at DateTime @default(now()) @updatedAt @db.Timestamp(0)
-
-  // Relations
-  user    User                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  partner Partner                  @relation(fields: [partner_id], references: [partner_id], onDelete: Cascade)
-  profile DriverMarketplaceProfile @relation(fields: [profile_id], references: [profile_id], onDelete: Cascade)
-  payment Payment                  @relation(fields: [payment_id], references: [payment_id], onDelete: Restrict)
-
-  @@unique([user_id, partner_id], name: "uq_user_partner_unlock")
-  @@index([user_id, created_at])
-  @@index([partner_id, lead_status])
-  @@index([profile_id])
-  @@index([payment_status])
+  @@map("location_shares")
 }
 
 // =====================================================
-// RATINGS & REVIEWS
-// =====================================================
-
-model RatingsReview {
-  review_id         BigInt     @id @default(autoincrement())
-  review_type       ReviewType
-  ride_id           BigInt?
-  rental_booking_id BigInt?
-  reviewer_id       BigInt
-  reviewee_id       BigInt?
-  vehicle_id        BigInt?
-
-  rating      Int
-  review_text String? @db.Text
-  review_tags Json? // ["Clean", "Polite", "On Time"]
-
-  is_visible    Boolean   @default(true)
-  response_text String?   @db.Text
-  responded_at  DateTime? @db.Timestamp(0)
-
-  created_at DateTime @default(now()) @db.Timestamp(0)
-
-  // Relations
-  ride           Ride?          @relation(fields: [ride_id], references: [ride_id], onDelete: Cascade)
-  rental_booking RentalBooking? @relation(fields: [rental_booking_id], references: [booking_id], onDelete: Cascade)
-  reviewer       User           @relation("reviewer", fields: [reviewer_id], references: [user_id], onDelete: Cascade)
-  reviewee       User?          @relation("reviewee", fields: [reviewee_id], references: [user_id], onDelete: SetNull)
-  vehicle        Vehicle?       @relation(fields: [vehicle_id], references: [vehicle_id], onDelete: SetNull)
-
-  @@index([reviewer_id])
-  @@index([reviewee_id])
-  @@index([vehicle_id])
-  @@map("ratings_reviews")
-}
-
-// =====================================================
-// NOTIFICATIONS
+// NOTIFICATIONS, CONTACT ANALYTICS
 // =====================================================
 
 model Notification {
-  notification_id   BigInt           @id @default(autoincrement())
-  user_id           BigInt
-  notification_type NotificationType
-  title             String           @db.VarChar(255)
-  message           String           @db.Text
-  data              Json? // Additional data for deep linking
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  app       AppKind
+  type      String    @db.VarChar(40)
+  title     String    @db.VarChar(150)
+  body      String    @db.VarChar(500)
+  data      Json?
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
 
-  is_read Boolean   @default(false)
-  read_at DateTime? @db.Timestamp(0)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  sent_at DateTime @default(now()) @db.Timestamp(0)
-
-  // Relations
-  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-
-  @@index([user_id, is_read])
+  @@index([userId, app, createdAt])
+  @@index([createdAt])
   @@map("notifications")
 }
 
-model PushToken {
-  token_id     BigInt     @id @default(autoincrement())
-  user_id      BigInt
-  device_token String     @db.VarChar(255)
-  device_type  DeviceType
-  is_active    Boolean    @default(true)
-  created_at   DateTime   @default(now()) @db.Timestamp(0)
-  updated_at   DateTime   @default(now()) @updatedAt @db.Timestamp(0)
+/// Every "Call" / "WhatsApp" tap on a listing. Powers partner insights.
+model ContactEvent {
+  id         Int           @id @default(autoincrement())
+  partnerId  Int           @map("partner_id")
+  userId     Int?          @map("user_id")
+  targetType ContactTarget @map("target_type")
+  targetId   Int           @map("target_id")
+  channel    String        @default("call") @db.VarChar(15)
+  createdAt  DateTime      @default(now()) @map("created_at")
 
-  // Relations
-  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@unique([user_id, device_token])
-  @@index([is_active])
-  @@map("push_tokens")
+  @@index([partnerId, createdAt])
+  @@map("contact_events")
 }
 
 // =====================================================
-// Location  & service
+// LOCATIONS (districts & major points)
 // =====================================================
 
 model District {
-  id           Int          @id @default(autoincrement())
-  name         String       @unique
-  major_points MajorPoint[]
-  created_at   DateTime     @default(now()) @db.Timestamp(0)
-  updated_at   DateTime     @default(now()) @updatedAt @db.Timestamp(0)
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(80)
+  state     String   @default("Assam") @db.VarChar(60)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  places Place[]
 
   @@map("districts")
 }
 
-model MajorPoint {
-  id          Int      @id @default(autoincrement())
-  name        String
-  district_id Int
-  district    District @relation(fields: [district_id], references: [id], onDelete: Cascade)
-  created_at  DateTime @default(now()) @db.Timestamp(0)
-  updated_at  DateTime @default(now()) @updatedAt @db.Timestamp(0)
+model Place {
+  id         Int      @id @default(autoincrement())
+  districtId Int      @map("district_id")
+  name       String   @db.VarChar(120)
+  nameKey    String   @map("name_key") @db.VarChar(120)
+  lat        Float?
+  lng        Float?
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  @@unique([name, district_id])
-  @@map("major_points")
+  district District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+
+  @@unique([districtId, nameKey])
+  @@index([nameKey])
+  @@map("places")
 }
 
 // =====================================================
-// SUPPORT & HELP
+// SUPPORT
 // =====================================================
 
 model SupportTicket {
-  ticket_id         BigInt  @id @default(autoincrement())
-  user_id           BigInt
-  ride_id           BigInt?
-  rental_booking_id BigInt?
+  id         Int          @id @default(autoincrement())
+  userId     Int          @map("user_id")
+  app        AppKind
+  category   String       @db.VarChar(40)
+  subject    String       @db.VarChar(150)
+  message    String       @db.VarChar(2000)
+  status     TicketStatus @default(open)
+  adminReply String?      @map("admin_reply") @db.VarChar(2000)
+  repliedAt  DateTime?    @map("replied_at")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
 
-  ticket_type TicketType
-  priority    Priority   @default(medium)
-  subject     String     @db.VarChar(255)
-  description String     @db.Text
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  status           TicketStatus @default(open)
-  assigned_to      BigInt? // Admin user ID
-  resolution_notes String?      @db.Text
-
-  created_at  DateTime  @default(now()) @db.Timestamp(0)
-  updated_at  DateTime  @default(now()) @updatedAt @db.Timestamp(0)
-  resolved_at DateTime? @db.Timestamp(0)
-
-  // Relations
-  user           User           @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  ride           Ride?          @relation(fields: [ride_id], references: [ride_id], onDelete: SetNull)
-  rental_booking RentalBooking? @relation(fields: [rental_booking_id], references: [booking_id], onDelete: SetNull)
-
-  @@index([user_id])
-  @@index([status])
+  @@index([status, createdAt])
+  @@index([userId])
   @@map("support_tickets")
 }
 
 model Faq {
-  faq_id        BigInt      @id @default(autoincrement())
-  category      FaqCategory
-  question      String      @db.Text
-  answer        String      @db.Text
-  display_order Int         @default(0)
-  is_active     Boolean     @default(true)
-  created_at    DateTime    @default(now()) @db.Timestamp(0)
-  updated_at    DateTime    @default(now()) @updatedAt @db.Timestamp(0)
+  id           Int         @id @default(autoincrement())
+  audience     FaqAudience @default(all)
+  question     String      @db.VarChar(300)
+  answer       String      @db.VarChar(2000)
+  /// e.g. { "as": { "question": "...", "answer": "..." } }
+  translations Json?
+  sortOrder    Int         @default(0) @map("sort_order")
+  isActive     Boolean     @default(true) @map("is_active")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
 
-  @@index([category, is_active])
+  @@index([audience, isActive])
   @@map("faqs")
 }
 
 // =====================================================
-// PROMO CODES & OFFERS
+// ADMIN
 // =====================================================
 
-model PromoCode {
-  promo_id            BigInt       @id @default(autoincrement())
-  promo_code          String       @unique @db.VarChar(50)
-  description         String?      @db.VarChar(255)
-  discount_type       DiscountType
-  discount_value      Decimal      @db.Decimal(10, 2)
-  max_discount_amount Decimal?     @db.Decimal(10, 2)
-  min_order_amount    Decimal?     @db.Decimal(10, 2)
+model AdminUser {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique @db.VarChar(150)
+  name         String    @db.VarChar(100)
+  passwordHash String    @map("password_hash") @db.VarChar(100)
+  role         AdminRole @default(admin)
+  isActive     Boolean   @default(true) @map("is_active")
+  /// Bumped on password change / forced logout to invalidate issued tokens.
+  tokenVersion Int       @default(0) @map("token_version")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  usage_limit_per_user Int  @default(1)
-  total_usage_limit    Int?
-  times_used           Int  @default(0)
+  auditLogs AuditLog[]
 
-  valid_from  DateTime @db.Timestamp(0)
-  valid_until DateTime @db.Timestamp(0)
-  is_active   Boolean  @default(true)
-
-  applicable_to ApplicableTo  @default(all)
-  user_type     PromoUserType @default(all)
-
-  created_at DateTime @default(now()) @db.Timestamp(0)
-
-  // Relations
-  usage PromoUsage[]
-
-  @@index([promo_code])
-  @@index([is_active, valid_from, valid_until])
-  @@map("promo_codes")
+  @@map("admin_users")
 }
 
-model PromoUsage {
-  usage_id          BigInt   @id @default(autoincrement())
-  promo_id          BigInt
-  user_id           BigInt
-  ride_id           BigInt?
-  rental_booking_id BigInt?
-  discount_applied  Decimal? @db.Decimal(10, 2)
-  used_at           DateTime @default(now()) @db.Timestamp(0)
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  adminId    Int?     @map("admin_id")
+  action     String   @db.VarChar(60)
+  entityType String   @map("entity_type") @db.VarChar(40)
+  entityId   String?  @map("entity_id") @db.VarChar(40)
+  details    Json?
+  ip         String?  @db.VarChar(64)
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  // Relations
-  promo          PromoCode      @relation(fields: [promo_id], references: [promo_id], onDelete: Cascade)
-  user           User           @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  ride           Ride?          @relation(fields: [ride_id], references: [ride_id], onDelete: SetNull)
-  rental_booking RentalBooking? @relation(fields: [rental_booking_id], references: [booking_id], onDelete: SetNull)
+  admin AdminUser? @relation(fields: [adminId], references: [id], onDelete: SetNull)
 
-  @@index([user_id, promo_id])
-  @@map("promo_usage")
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 
-// =====================================================
-// EMERGENCY SOS
-// =====================================================
+/// Key/value runtime settings & feature flags (cached in memory).
+model AppSetting {
+  key       String   @id @db.VarChar(60)
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-model EmergencyContact {
-  contact_id    BigInt   @id @default(autoincrement())
-  user_id       BigInt
-  contact_name  String   @db.VarChar(100)
-  contact_phone String   @db.VarChar(20)
-  relationship  String?  @db.VarChar(50)
-  is_primary    Boolean  @default(false)
-  created_at    DateTime @default(now()) @db.Timestamp(0)
-
-  // Relations
-  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-
-  @@index([user_id])
-  @@map("emergency_contacts")
-}
-
-model SosAlert {
-  sos_id  BigInt  @id @default(autoincrement())
-  user_id BigInt
-  ride_id BigInt?
-
-  alert_type       AlertType
-  latitude         Decimal?  @db.Decimal(10, 8)
-  longitude        Decimal?  @db.Decimal(11, 8)
-  location_address String?   @db.Text
-
-  alert_status   AlertStatus @default(active)
-  response_notes String?     @db.Text
-
-  triggered_at DateTime  @default(now()) @db.Timestamp(0)
-  resolved_at  DateTime? @db.Timestamp(0)
-
-  // Relations
-  user User  @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  ride Ride? @relation(fields: [ride_id], references: [ride_id], onDelete: SetNull)
-
-  @@index([alert_status, triggered_at])
-  @@map("sos_alerts")
-}
-
-// =====================================================
-// ANALYTICS & LOGS
-// =====================================================
-
-model AppSession {
-  session_id  BigInt      @id @default(autoincrement())
-  user_id     BigInt
-  device_id   String?     @db.VarChar(255)
-  device_type DeviceType?
-  app_version String?     @db.VarChar(20)
-  os_version  String?     @db.VarChar(20)
-
-  session_start    DateTime  @default(now()) @db.Timestamp(0)
-  session_end      DateTime? @db.Timestamp(0)
-  duration_seconds Int?
-
-  // Relations
-  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-
-  @@index([user_id, session_start])
-  @@map("app_sessions")
-}
-
-model SearchLog {
-  search_id       BigInt      @id @default(autoincrement())
-  user_id         BigInt?
-  search_type     SearchType?
-  pickup_location String?     @db.Text
-  drop_location   String?     @db.Text
-  vehicle_type    String?     @db.VarChar(50)
-  search_date     DateTime?   @db.Date
-  search_time     DateTime?   @db.Time(0)
-  results_count   Int?
-  booking_made    Boolean     @default(false)
-  searched_at     DateTime    @default(now()) @db.Timestamp(0)
-
-  // Relations
-  user User? @relation(fields: [user_id], references: [user_id], onDelete: SetNull)
-
-  @@index([user_id, searched_at])
-  @@map("search_logs")
-}
-
-// =====================================================
-// ADMIN CONFIGURATIONS
-// =====================================================
-
-model AppConfiguration {
-  config_id    BigInt   @id @default(autoincrement())
-  config_key   String   @unique @db.VarChar(100)
-  config_value String   @db.Text
-  description  String?  @db.Text
-  updated_at   DateTime @default(now()) @updatedAt @db.Timestamp(0)
-
-  @@map("app_configurations")
+  @@map("app_settings")
 }
 
 // =====================================================
@@ -956,73 +731,67 @@ enum Gender {
   other
 }
 
-enum UserType {
-  passenger
-  driver
-  both
+enum UserStatus {
+  active
+  blocked
+}
+
+enum OtpPurpose {
+  login
+}
+
+enum AppKind {
+  user
   partner
 }
 
-enum OtpType {
-  login
-  signup
-  verification
+enum Platform {
+  android
+  ios
+  web
 }
 
-enum LocationType {
-  home
-  work
-  other
+enum DocumentScope {
+  partner
+  vehicle
 }
 
-enum PartnerType {
-  taxi_driver
-  bike_rider
-  vehicle_service
-  vehicle_driver
-  vehicle_rental
+enum PartnerAccount {
+  onboarding // registration not finished (profile / documents / fee)
+  active // registration complete
+  suspended // blocked by admin
 }
 
 enum VerificationStatus {
+  unverified
   pending
   approved
   rejected
   suspended
 }
 
-enum DocumentType {
-  driving_license
-  vehicle_rc
-  insurance
-  aadhar
-  pan
-  other
-}
-
-enum DocVerificationStatus {
+enum DocumentStatus {
   pending
   approved
   rejected
 }
 
-enum VehicleType {
-  taxi
-  bike
-  rental
-  commercial_truck
-  commercial_car
-  rental_car
-  commercial_vehicle
-}
-
-enum VehicleCategory {
+enum VehicleClass {
+  hatchback
   sedan
   suv
-  hatchback
-  motorcycle
-  auto
-  mini_truck
+  muv
   van
+  mini_bus
+  bus
+  auto
+  bike
+  pickup
+  tempo
+  mini_truck
+  truck
+  trailer
+  other
 }
 
 enum FuelType {
@@ -1033,116 +802,63 @@ enum FuelType {
   hybrid
 }
 
-// NEW ENUMS
-enum RideType {
-  fixed_route // Point A to Point B, fixed fare
-  open_ride // Point A to anywhere, negotiate fare
+enum RentalDriverOption {
+  self_drive
+  with_driver
+  both
+}
+
+enum TripType {
+  start
+  return
+}
+
+enum TripStatus {
+  scheduled
+  ongoing
+  completed
+  cancelled
 }
 
 enum BookingStatus {
   pending
-  confirmed
+  accepted
+  rejected
   cancelled
   completed
-  no_show
-  active
+  expired
 }
 
-enum RideStatus {
-  pending // Ride created, waiting for bookings
-  scheduled // Ride scheduled with bookings
-  accepted // Driver confirmed
-  started // Ride in progress
-  completed // Ride finished
-  cancelled // Ride cancelled
-  expired // Scheduled time passed without bookings
-}
-
-enum CancelledBy {
-  passenger
-  driver
+enum Actor {
+  user
+  partner
+  admin
   system
 }
 
-enum TransactionType {
-  ride
-  rental
-  payout
-  refund
-  driver_unlock
-  driver_subscription
+enum GoodsOrderStatus {
+  open
+  assigned
+  closed
+  cancelled
 }
 
-enum PaymentMethod {
-  cash
-  upi
-  wallet
-  card
-  netbanking
+enum PaymentPurpose {
+  registration_fee
 }
 
 enum PaymentStatus {
-  pending
-  completed
+  created
+  paid
   failed
   refunded
 }
 
-enum PayoutStatus {
-  pending
-  processing
-  completed
-  failed
-}
-
-enum BillingType {
-  one_time
-  monthly
-}
-
-enum SubscriptionStatus {
-  active
-  expired
-  cancelled
-  pending
-}
-
-enum ReviewType {
-  ride
-  rental
-  driver
+enum ContactTarget {
+  driver_profile
   vehicle
-}
-
-enum NotificationType {
-  ride_request
-  ride_accepted
-  ride_started
-  ride_completed
-  payment
-  promotion
-  system
-}
-
-enum DeviceType {
-  android
-  ios
-}
-
-enum TicketType {
-  ride_issue
-  payment_issue
-  driver_complaint
-  vehicle_issue
-  account
-  other
-}
-
-enum Priority {
-  low
-  medium
-  high
-  urgent
+  trip
+  goods_order
 }
 
 enum TicketStatus {
@@ -1152,73 +868,14 @@ enum TicketStatus {
   closed
 }
 
-enum FaqCategory {
-  passenger
+enum FaqAudience {
+  all
+  user
   partner
-  general
-  payment
-  rental
 }
 
-enum DiscountType {
-  percentage
-  fixed
-}
-
-enum ApplicableTo {
-  all
-  ride
-  rental
-}
-
-enum PromoUserType {
-  all
-  new
-  existing
-}
-
-enum AlertType {
-  emergency
-  safety_concern
-  accident
-}
-
-enum AlertStatus {
-  active
-  acknowledged
-  resolved
-}
-
-enum SearchType {
-  ride
-  rental
-  location
-}
-
-// Add new enums
-enum MarketplaceStatus {
-  inactive // Not registered in marketplace
-  active // Paid and listed
-  expired // Registration expired (if time-based)
-  suspended // Removed by admin
-  pending // Payment pending
-}
-
-enum LeadStatus {
-  new // User just unlocked
-  contacted // User called/messaged driver
-  hired // User hired this driver
-  not_interested // User not interested
-  expired // 30 days access expired
-  rejected // Driver rejected by user
-}
-
-enum HiringStatus {
-  interview_scheduled
-  hired_full_time
-  hired_part_time
-  hired_contract
-  rejected_by_user
-  rejected_by_driver
-  negotiating
+enum AdminRole {
+  super_admin
+  admin
+  support
 }

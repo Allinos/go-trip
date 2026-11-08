@@ -1,98 +1,128 @@
-import React, { createContext, useState, useContext } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { Alert, Platform } from 'react-native';
+import * as Device from 'expo-device';
+import { authApi, catalogApi } from '../api';
+import { clearTokens, getRefreshToken, loadTokens, saveTokens, setSessionExpiredHandler } from '../api/client';
+import { clearCache, readCache, setCacheScope, writeCache } from '../api/cache';
+import { onLangChange } from '../i18n';
+import { t } from '../i18n';
 
-const AuthContext = createContext();
+/**
+ * Session state machine:
+ *   loading → loggedOut → (OTP) → onboarding (nextStep from API) → ready
+ * Onboarding progress always comes from the server, so a partner who closes the app midway
+ * resumes at the right step after logging in again (even on another phone).
+ */
+const AuthContext = createContext(null);
+const CatalogContext = createContext({});
 
-export const AuthProvider = ({ children }) => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+export function AuthProvider({ children }) {
+  const [status, setStatus] = useState('loading');
   const [user, setUser] = useState(null);
-  const [partner, setPartner] = useState(null);
-  const [isProfileCompleted, setIsProfileCompleted] = useState(false);
+  const [onboarding, setOnboarding] = useState(null);
+  const [catalog, setCatalog] = useState({ config: null, districts: [] });
 
-  const login = async (userData) => {
-    console.log('AuthContext Login:', userData);
+  const applyMe = useCallback((data) => {
+    setCacheScope(data.user?.id);
+    setUser(data.user);
+    setOnboarding(data.onboarding);
+    setStatus(data.onboarding?.completed ? 'ready' : 'onboarding');
+  }, []);
+
+  const loadCatalog = useCallback(async () => {
+    // Show the saved copy immediately (fast start, works offline), then refresh.
+    const cached = await readCache('catalog');
+    if (cached) setCatalog(cached.data);
     try {
-      await AsyncStorage.setItem("accessToken", userData.data.accessToken);
-      await AsyncStorage.setItem("user", JSON.stringify(userData.data.user));
-      setUser(userData.data.user);
-      setIsLoggedIn(true);
-      
-      if(userData.data.partner) {
-        await AsyncStorage.setItem("partner", JSON.stringify(userData.data.partner));
-        setPartner(userData.data.partner);
-      }
-
-      const hasCompletedProfile = userData.data.user?.profileFilled || false;
-      setIsProfileCompleted(hasCompletedProfile);
-      await AsyncStorage.setItem("isProfileCompleted", JSON.stringify(hasCompletedProfile));
-
-    } catch (error) {
-      console.log('Failed to save auth data: ' + error);
+      const [config, districts] = await Promise.all([catalogApi.config(), catalogApi.districts()]);
+      const fresh = { config: config.data, districts: districts.data };
+      setCatalog(fresh);
+      writeCache('catalog', fresh);
+    } catch {
+      /* keep cached copy; retried on next refresh */
     }
-  };
+  }, []);
 
-  const completeProfile = async (updatedUser) => {
+  const refresh = useCallback(async () => {
+    const r = await authApi.me();
+    applyMe(r.data);
+    return r.data;
+  }, [applyMe]);
+
+  const logout = useCallback(async (message) => {
     try {
-      setIsProfileCompleted(true);
-      await AsyncStorage.setItem("isProfileCompleted", "true");
-      
-      if (updatedUser) {
-        setUser(updatedUser);
-        await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
-      }
-    } catch (error) {
-      console.log('Failed to update profile completion status: ' + error);
+      const rt = await getRefreshToken();
+      if (rt) await authApi.logout(rt, globalThis.__gtPushToken);
+    } catch {
+      /* ignore */
     }
-  };
-
-  // NEW METHOD: Call this right after a successful partner registration API call
-  const updatePartnerData = async (partnerData) => {
-    try {
-      if (partnerData) {
-        setPartner(partnerData);
-        await AsyncStorage.setItem("partner", JSON.stringify(partnerData));
-        console.log("Global partner state synchronized successfully.");
-      }
-    } catch (error) {
-      console.log('Failed to update partner data globally: ' + error);
-    }
-  };
-
-  const logout = async () => {
-    await AsyncStorage.removeItem("accessToken");
-    await AsyncStorage.removeItem("user");
-    await AsyncStorage.removeItem("isProfileCompleted"); 
-    setIsLoggedIn(false);
+    await clearTokens();
+    await clearCache();
+    setCacheScope(null);
     setUser(null);
-    setIsProfileCompleted(false);
-    
-    await AsyncStorage.removeItem("partner");
-    setPartner(null);
-  };
+    setOnboarding(null);
+    setStatus('loggedOut');
+    if (typeof message === 'string') Alert.alert(t("Signed out"), message);
+  }, []);
 
+  // Server-provided text (partner types, step labels) is localised: reload it when the language changes.
+  useEffect(
+    () =>
+      onLangChange(() => {
+        loadCatalog();
+        refresh().catch(() => {});
+      }),
+    [loadCatalog, refresh]
+  );
+
+  useEffect(() => {
+    setSessionExpiredHandler((msg) => logout(msg));
+    (async () => {
+      loadCatalog();
+      if (!(await loadTokens())) return setStatus('loggedOut');
+      try {
+        await refresh();
+      } catch (e) {
+        if (e?.response?.status === 401 || e?.response?.status === 403) await clearTokens();
+        setStatus(e?.response ? 'loggedOut' : 'offline');
+      }
+    })();
+  }, [loadCatalog, logout, refresh]);
+
+  const login = useCallback(
+    async (phone, otp) => {
+      const r = await authApi.verifyOtp(phone, otp, `${Device.manufacturer || ''} ${Device.modelName || Platform.OS}`.trim());
+      await saveTokens(r.data);
+      applyMe(r.data);
+      if (!catalog.config) loadCatalog();
+      return r.data;
+    },
+    [applyMe, catalog.config, loadCatalog]
+  );
+
+  /** Update onboarding from any API response that includes it. */
+  const setOnboardingState = useCallback((state) => {
+    if (!state) return;
+    setOnboarding(state);
+    setStatus(state.completed ? 'ready' : 'onboarding');
+  }, []);
+
+  const value = useMemo(
+    () => ({ status, user, setUser, onboarding, setOnboardingState, refresh, login, logout, retry: () => (setStatus('loading'), refresh().catch(() => setStatus('offline'))) }),
+    [status, user, onboarding, setOnboardingState, refresh, login, logout]
+  );
   return (
-    // Expose updatePartnerData to your context consumers
-    <AuthContext.Provider value={{ 
-      isLoggedIn, 
-      setIsLoggedIn, 
-      user, 
-      partner,
-      isProfileCompleted, 
-      setIsProfileCompleted, 
-      login, 
-      completeProfile, 
-      updatePartnerData, // Added here
-      logout 
-    }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      <CatalogContext.Provider value={{ ...catalog, reloadCatalog: loadCatalog }}>{children}</CatalogContext.Provider>
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+export const useAuth = () => useContext(AuthContext);
+export const useCatalog = () => useContext(CatalogContext);
+/** Capabilities of the partner's category (what tabs/features to show). */
+export const useCaps = () => {
+  const { onboarding } = useAuth();
+  const c = onboarding?.category || {};
+  return { driver: !!c.hasDriverProfile, vehicles: !!c.canListVehicles, trips: !!c.canCreateTrips, rentals: !!c.canListRentals, goods: !!c.canViewGoodsOrders, name: c.name, code: c.code };
 };

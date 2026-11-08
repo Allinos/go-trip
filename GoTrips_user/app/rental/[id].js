@@ -1,225 +1,89 @@
-import { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Dimensions,
-  Image,
-  Alert,
-  TouchableOpacity,
-} from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { Image, Linking, ScrollView, Text, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { format, addDays } from 'date-fns';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants';
+import { Button, Card, ErrorView, Header, KV, Loading, Notice, Pill, Row } from '../../components/ui';
+import useFetch from '../../hooks/useFetch';
+import useRequireLogin from '../../hooks/useRequireLogin';
 import { rentalAPI } from '../../services/api';
-import LoadingSpinner from '../../components/LoadingSpinner';
-import CustomButton from '../../components/CustomButton';
+import { contactPartner } from '../../utils/contact';
+import { COLORS, SPACING, TYPOGRAPHY, VEHICLE_LABELS } from '../../constants';
+import { rupees, titleCase } from '../../utils/format';
+import { t } from '../../i18n';
+import CachedImage from '../../components/CachedImage';
 
-const { width } = Dimensions.get('window');
-
-export default function RentalDetailScreen() {
+export default function RentalDetail() {
   const { id } = useLocalSearchParams();
-  const vehicleId = Array.isArray(id) ? id[0] : id;
-  const router = useRouter();
-
-  const [vehicle, setVehicle] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [start, setStart] = useState(new Date());
-  const [end, setEnd] = useState(addDays(new Date(), 3));
-  const [booking, setBooking] = useState(false);
-  const [imgIdx, setImgIdx] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await rentalAPI.getVehicle(vehicleId);
-        const data = res?.data ?? res;
-        if (!cancelled) setVehicle(data?.vehicle ?? data);
-      } catch (e) {
-        Alert.alert('Error', e.response?.data?.error || 'Something went wrong');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [vehicleId]);
-
-  const images =
-    vehicle?.images ||
-    (vehicle?.image ? [vehicle.image] : []).filter(Boolean) ||
-    [];
-
-  const rate = vehicle?.pricePerDay ?? vehicle?.dailyRate ?? vehicle?.price ?? 0;
-  const days = Math.max(1, Math.ceil((end - start) / 86400000));
-  const deposit = vehicle?.deposit ?? 2000;
-  const total = days * Number(rate) + Number(deposit);
-
-  const book = async () => {
-    try {
-      setBooking(true);
-      await rentalAPI.book(vehicleId, {
-        startDate: start.toISOString(),
-        endDate: end.toISOString(),
-      });
-      Alert.alert('Success', 'Rental booked', [{ text: 'OK', onPress: () => router.back() }]);
-    } catch (e) {
-      Alert.alert('Error', e.response?.data?.error || 'Something went wrong');
-    } finally {
-      setBooking(false);
-    }
-  };
-
-  if (loading || !vehicle) {
-    return (
-      <>
-        <Stack.Screen options={{ title: 'Vehicle' }} />
-        <LoadingSpinner />
-      </>
-    );
-  }
-
-  const reviews = vehicle.reviews || [];
-
+  const requireLogin = useRequireLogin();
+  const { data: v, error, loading, reload } = useFetch(() => rentalAPI.get(id), [id], { cacheKey: `rental:${id}` });
+  if (loading) return (<><Header title={t("Vehicle")} /><Loading /></>);
+  if (error) return (<><Header title={t("Vehicle")} /><ErrorView message={error} onRetry={reload} /></>);
+  const r = v.rental;
   return (
-    <>
-      <Stack.Screen options={{ title: vehicle.name || 'Vehicle' }} />
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <ScrollView
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={(e) => {
-            const idx = Math.round(e.nativeEvent.contentOffset.x / width);
-            setImgIdx(idx);
-          }}
-        >
-          {(images.length ? images : [null]).map((item, i) => (
-            <View key={i}>
-              {item ? (
-                <Image source={{ uri: item }} style={styles.hero} />
-              ) : (
-                <View style={[styles.hero, styles.heroPh]}>
-                  <MaterialIcons name="directions-car" size={64} color={COLORS.text.tertiary} />
-                </View>
-              )}
-            </View>
-          ))}
-        </ScrollView>
-        <Text style={styles.dots}>
-          {images.length ? `${imgIdx + 1} / ${images.length}` : ''}
-        </Text>
-
-        <Text style={styles.title}>{vehicle.name || vehicle.model}</Text>
-        <View style={styles.rateRow}>
-          <MaterialIcons name="star" size={18} color={COLORS.warning} />
-          <Text style={styles.rating}>{Number(vehicle.rating || 4.5).toFixed(1)}</Text>
-          <Text style={styles.reviews}>({vehicle.reviewCount ?? reviews.length} reviews)</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.h}>Specifications</Text>
-          <Spec label="Type" value={vehicle.type || 'Sedan'} />
-          <Spec label="Seats" value={String(vehicle.seats ?? 4)} />
-          <Spec label="Fuel" value={vehicle.fuel || 'Petrol'} />
-          <Text style={styles.tags}>
-            {(vehicle.features || ['AC', 'GPS']).join(' · ')}
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.h}>Owner</Text>
-          <Text style={styles.body}>{vehicle.ownerName || vehicle.owner?.name || 'Owner'}</Text>
-          <Text style={styles.sub}>{vehicle.ownerPhone || ''}</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.h}>Reviews</Text>
-          {reviews.length === 0 ? (
-            <Text style={styles.sub}>No reviews yet.</Text>
-          ) : (
-            reviews.slice(0, 5).map((r, i) => (
-              <Text key={i} style={styles.review}>
-                ★ {r.rating} — {r.comment || r.text}
-              </Text>
-            ))
+    <View style={{ flex: 1, backgroundColor: COLORS.surface }}>
+      <Header title={`${v.make} ${v.model}`} />
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
+          {(v.photos.length ? v.photos : [null]).map((p, i) =>
+            p ? <CachedImage key={p} uri={p} style={{ width: 400, height: 230 }} /> : <View key={i} style={{ width: 400, height: 160, backgroundColor: COLORS.divider, alignItems: 'center', justifyContent: 'center' }}><MaterialIcons name="directions-car" size={60} color={COLORS.text.tertiary} /></View>
           )}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.h}>Dates</Text>
-          <View style={styles.dateRow}>
-            <TouchableOpacity
-              style={styles.dateBtn}
-              onPress={() => setStart((d) => addDays(d, 1))}
-            >
-              <Text style={styles.dateLbl}>Start</Text>
-              <Text style={styles.dateVal}>{format(start, 'dd MMM yyyy')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.dateBtn} onPress={() => setEnd((d) => addDays(d, 1))}>
-              <Text style={styles.dateLbl}>End</Text>
-              <Text style={styles.dateVal}>{format(end, 'dd MMM yyyy')}</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.calc}>
-            {days} day(s) × ₹{Number(rate).toFixed(0)} + deposit ₹{Number(deposit).toFixed(0)} = ₹
-            {total.toFixed(0)}
+        </ScrollView>
+        <View style={{ padding: SPACING.md }}>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <Text style={TYPOGRAPHY.h3}>
+              {v.make} {v.model}
+            </Text>
+            <Pill text={r.available ? t("Available") : t("Not available now")} color={r.available ? COLORS.success : COLORS.text.secondary} bg={r.available ? '#ECFDF5' : COLORS.divider} />
+          </Row>
+          <Text style={[TYPOGRAPHY.caption, { color: COLORS.text.secondary }]}>
+            {VEHICLE_LABELS[v.vehicleClass]} {v.year ? `· ${v.year}` : ''} {v.color ? `· ${v.color}` : ''}
           </Text>
+          <Row style={{ marginTop: 12, gap: 16 }}>
+            {r.pricePerDay ? (
+              <View>
+                <Text style={[TYPOGRAPHY.h3, { color: COLORS.primary }]}>{rupees(r.pricePerDay)}</Text>
+                <Text style={TYPOGRAPHY.small}>{t("per day")}</Text>
+              </View>
+            ) : null}
+            {r.pricePerHour ? (
+              <View>
+                <Text style={[TYPOGRAPHY.h3, { color: COLORS.primary }]}>{rupees(r.pricePerHour)}</Text>
+                <Text style={TYPOGRAPHY.small}>{t("per hour")}</Text>
+              </View>
+            ) : null}
+          </Row>
+          {!r.available && <Notice title={t("Currently not available")} text={t("You can still call the owner to ask when it will be free.")} color={COLORS.warning} bg="#FFFBEB" icon="schedule" />}
+          <Card style={{ marginTop: SPACING.md }}>
+            <KV label={t("Driver")} value={titleCase(r.driverOption)} />
+            {v.seats ? <KV label={t("Seats")} value={v.seats} /> : null}
+            <KV label={t("Fuel")} value={titleCase(v.fuelType)} />
+            <KV label={t("AC")} value={v.hasAc ? 'Yes' : 'No'} />
+            {r.securityDeposit ? <KV label={t("Security deposit")} value={rupees(r.securityDeposit)} /> : null}
+            {r.minHours ? <KV label={t("Minimum rental")} value={`${r.minHours} hours`} /> : null}
+            <KV label={t("Pickup area")} value={[r.address, r.city, r.district].filter(Boolean).join(', ')} />
+            {v.features?.length ? <KV label={t("Extras")} value={v.features.join(', ')} /> : null}
+          </Card>
+          {v.description ? <Text style={[TYPOGRAPHY.body, { marginTop: SPACING.md }]}>{v.description}</Text> : null}
+          {r.terms ? (
+            <Card style={{ marginTop: SPACING.md }}>
+              <Text style={TYPOGRAPHY.captionBold}>{t("Rental terms")}</Text>
+              <Text style={[TYPOGRAPHY.caption, { color: COLORS.text.secondary, marginTop: 4 }]}>{r.terms}</Text>
+            </Card>
+          ) : null}
+          {r.mapsUrl && <Button variant="ghost" icon="map" title={t("See pickup location on Google Maps")} onPress={() => Linking.openURL(r.mapsUrl)} style={{ alignSelf: 'flex-start', paddingHorizontal: 0 }} />}
+          <Card style={{ marginTop: SPACING.md }}>
+            <Text style={[TYPOGRAPHY.small, { color: COLORS.text.secondary }]}>{t("OWNER")}</Text>
+            <Row gap={6}>
+              <Text style={TYPOGRAPHY.bodyBold}>{v.owner.name}</Text>
+              {v.owner.isVerified && <MaterialIcons name="verified" size={18} color={COLORS.success} />}
+            </Row>
+            <Text style={[TYPOGRAPHY.small, { color: COLORS.text.secondary }]}>{[v.owner.city, v.owner.district].filter(Boolean).join(', ')}</Text>
+          </Card>
         </View>
-
-        <CustomButton title="Book Now" loading={booking} disabled={booking} onPress={book} />
       </ScrollView>
-    </>
-  );
-}
-
-function Spec({ label, value }) {
-  return (
-    <View style={styles.specRow}>
-      <Text style={styles.specLabel}>{label}</Text>
-      <Text style={styles.specVal}>{value}</Text>
+      <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: SPACING.md, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: COLORS.border, flexDirection: 'row', gap: 10 }}>
+        <Button style={{ flex: 1 }} icon="call" title={t("Call owner")} onPress={() => requireLogin(() => contactPartner('vehicle', v.id), 'to call the owner')} />
+        <Button style={{ flex: 1 }} variant="outline" icon="chat" title={t("WhatsApp")} onPress={() => requireLogin(() => contactPartner('vehicle', v.id, 'whatsapp'), 'to message the owner')} />
+      </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: { paddingBottom: SPACING.xxl },
-  hero: { width, height: 220, backgroundColor: COLORS.surface },
-  heroPh: { alignItems: 'center', justifyContent: 'center' },
-  dots: { ...TYPOGRAPHY.caption, color: COLORS.text.tertiary, textAlign: 'center', marginVertical: SPACING.xs },
-  title: { ...TYPOGRAPHY.h2, color: COLORS.text.primary, paddingHorizontal: SPACING.md, marginTop: SPACING.sm },
-  rateRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: SPACING.md, marginTop: SPACING.xs },
-  rating: { ...TYPOGRAPHY.bodyBold, color: COLORS.text.primary },
-  reviews: { ...TYPOGRAPHY.caption, color: COLORS.text.secondary },
-  card: {
-    marginHorizontal: SPACING.md,
-    marginTop: SPACING.md,
-    padding: SPACING.md,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
-  },
-  h: { ...TYPOGRAPHY.bodyBold, color: COLORS.text.primary, marginBottom: SPACING.sm },
-  body: { ...TYPOGRAPHY.body, color: COLORS.text.primary },
-  sub: { ...TYPOGRAPHY.caption, color: COLORS.text.secondary, marginTop: 4 },
-  tags: { ...TYPOGRAPHY.caption, color: COLORS.text.secondary, marginTop: SPACING.sm },
-  specRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.xs },
-  specLabel: { ...TYPOGRAPHY.caption, color: COLORS.text.secondary },
-  specVal: { ...TYPOGRAPHY.captionBold, color: COLORS.text.primary },
-  review: { ...TYPOGRAPHY.caption, color: COLORS.text.primary, marginBottom: SPACING.xs },
-  dateRow: { flexDirection: 'row', gap: SPACING.md },
-  dateBtn: {
-    flex: 1,
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.background,
-  },
-  dateLbl: { ...TYPOGRAPHY.small, color: COLORS.text.tertiary },
-  dateVal: { ...TYPOGRAPHY.bodyBold, color: COLORS.text.primary, marginTop: 4 },
-  calc: { ...TYPOGRAPHY.caption, color: COLORS.text.secondary, marginTop: SPACING.md },
-});

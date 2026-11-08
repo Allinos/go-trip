@@ -1,230 +1,152 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import { TextInput, Button, Checkbox } from 'react-native-paper';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Button, Input, Notice } from '../../components/ui';
+import LanguageSwitch from '../../components/LanguageSwitch';
 import useAuthStore from '../../store/authStore';
-import { COLORS, SPACING, TYPOGRAPHY, VALIDATION_RULES } from '../../constants';
+import { errorMessage, userAPI } from '../../services/api';
+import { COLORS, SPACING, TYPOGRAPHY } from '../../constants';
+import { t } from '../../i18n';
 
-function paramStr(v) {
-  if (Array.isArray(v)) return v[0] || '';
-  return v || '';
-}
-
+/**
+ * One modal for the whole login: phone → OTP → (first time) name.
+ * Closing it returns the user to exactly where they were (e.g. the trip they wanted to book).
+ */
 export default function LoginScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
-  const isRegisterFlow = paramStr(params.flow) === 'register';
-  const { sendOTP, error, clearError } = useAuthStore();
-  
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { sendOtp, verifyOtp, setUser } = useAuthStore();
+  const [step, setStep] = useState('phone');
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [devOtp, setDevOtp] = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [wait, setWait] = useState(0);
+  const otpInput = useRef();
 
-  const validatePhone = () => {
-    if (!phoneNumber) {
-      Alert.alert('Error', 'Please enter your phone number');
-      return false;
-    }
-    if (!VALIDATION_RULES.phone.pattern.test(phoneNumber)) {
-      Alert.alert('Error', VALIDATION_RULES.phone.message);
-      return false;
-    }
-    if (!agreedToTerms) {
-      Alert.alert('Error', 'Please accept the Terms & Conditions');
-      return false;
-    }
-    return true;
-  };
+  useEffect(() => {
+    if (wait <= 0) return undefined;
+    const timer = setTimeout(() => setWait(wait - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [wait]);
 
-  const handleSendOTP = async () => {
-    if (!validatePhone()) return;
-
+  const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
+  const run = async (fn) => {
+    setBusy(true);
+    setError('');
     try {
-      setLoading(true);
-      clearError();
-      
-      const formattedPhone = `+91${phoneNumber}`;
-      await sendOTP(formattedPhone);
-      
-      router.push({
-        pathname: '/(auth)/verify-otp',
-        params: { phoneNumber: formattedPhone }
-      });
-    } catch (err) {
-      Alert.alert('Error', error || 'Failed to send OTP. Please try again.');
+      await fn();
+    } catch (e) {
+      setError(errorMessage(e));
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   };
+
+  const requestOtp = () =>
+    run(async () => {
+      const r = await sendOtp(phone);
+      setDevOtp(r.data.devOtp || '');
+      setWait(r.data.resendAfter || 30);
+      setOtp('');
+      setStep('otp');
+    });
+
+  const checkOtp = (code = otp) =>
+    code.length === 6 &&
+    run(async () => {
+      try {
+        const r = await verifyOtp(phone, code);
+        if (r.profileComplete) close();
+        else setStep('name');
+      } catch (e) {
+        setOtp('');
+        throw e;
+      }
+    });
+
+  const saveName = () =>
+    run(async () => {
+      const r = await userAPI.update({ fullName: name.trim(), ...(email.trim() ? { email: email.trim() } : {}) });
+      setUser(r.data);
+      close();
+    });
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <View style={styles.content}>
-          {/* Logo */}
-          <View style={styles.logoContainer}>
-            <MaterialIcons name="directions-car" size={80} color={COLORS.primary} />
-            <Text style={styles.title}>{isRegisterFlow ? 'Create account' : 'RideFlow'}</Text>
-            <Text style={styles.subtitle}>
-              {isRegisterFlow
-                ? 'Enter your mobile number to sign up'
-                : 'Your journey begins here'}
-            </Text>
-          </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={{ padding: SPACING.lg }} keyboardShouldPersistTaps="handled">
+          <Pressable onPress={step === 'otp' ? () => setStep('phone') : close} hitSlop={12} accessibilityLabel={step === 'otp' ? t("Back") : t("Close")}>
+            <MaterialIcons name={step === 'otp' ? 'arrow-back' : 'close'} size={26} color={COLORS.text.primary} />
+          </Pressable>
 
-          {/* Phone Input */}
-          <View style={styles.form}>
-            <Text style={styles.label}>
-              {isRegisterFlow ? 'Mobile number' : 'Enter your mobile number'}
-            </Text>
-            
-            <View style={styles.phoneContainer}>
-              <View style={styles.countryCode}>
-                <Text style={styles.countryCodeText}>+91</Text>
+          {step === 'phone' && (
+            <>
+              <LanguageSwitch syncServer={false} style={{ alignSelf: 'flex-end', marginTop: -26 }} />
+              <View style={{ alignItems: 'center', marginVertical: 28 }}>
+                <View style={{ backgroundColor: COLORS.primary, borderRadius: 20, padding: 14 }}>
+                  <MaterialCommunityIcons name="car" size={40} color="#fff" />
+                </View>
+                <Text style={[TYPOGRAPHY.h2, { marginTop: 12 }]}>{t("Welcome to GoTrip")}</Text>
+                <Text style={[TYPOGRAPHY.caption, { color: COLORS.text.secondary, textAlign: 'center', marginTop: 4 }]}>{t("Book seats, rent vehicles and hire drivers across Assam")}</Text>
               </View>
+              <Input label={t("Mobile number")} prefix="+91" value={phone} onChangeText={(v) => setPhone(v.replace(/\D/g, '').slice(-10))} keyboardType="phone-pad" maxLength={10} placeholder="98765 43210" autoFocus onSubmitEditing={() => /^[6-9]\d{9}$/.test(phone) && requestOtp()} />
+              {error ? <Text style={{ color: COLORS.error, marginBottom: 12 }}>{error}</Text> : null}
+              <Button title={t("Get OTP")} onPress={requestOtp} loading={busy} disabled={!/^[6-9]\d{9}$/.test(phone)} />
+              <Text style={[TYPOGRAPHY.small, { color: COLORS.text.tertiary, textAlign: 'center', marginTop: 16 }]}>{t("By continuing you agree to GoTrip's terms and privacy policy.")}</Text>
+            </>
+          )}
+
+          {step === 'otp' && (
+            <>
+              <Text style={[TYPOGRAPHY.h2, { marginTop: 20 }]}>{t("Enter OTP")}</Text>
+              <Text style={[TYPOGRAPHY.caption, { color: COLORS.text.secondary, marginTop: 4, marginBottom: 24 }]}>{t("Sent to +91")}{" "}{phone}</Text>
+              {devOtp ? <Notice title={t("Test mode")} text={t("Your code is {0}", [devOtp])} /> : null}
+              <Pressable onPress={() => otpInput.current?.focus()} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <View key={i} style={{ width: 48, height: 56, borderRadius: 12, borderWidth: 1.5, borderColor: otp.length === i ? COLORS.primary : COLORS.border, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 24, fontWeight: '700' }}>{otp[i] || ''}</Text>
+                  </View>
+                ))}
+              </Pressable>
               <TextInput
-                mode="outlined"
-                placeholder="9876543210"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                keyboardType="phone-pad"
-                maxLength={10}
-                style={styles.phoneInput}
-                outlineColor={COLORS.border}
-                activeOutlineColor={COLORS.primary}
+                ref={otpInput}
+                value={otp}
+                onChangeText={(txt) => {
+                  const v = txt.replace(/\D/g, '').slice(0, 6);
+                  setOtp(v);
+                  if (v.length === 6) checkOtp(v);
+                }}
+                autoFocus
+                keyboardType="number-pad"
+                textContentType="oneTimeCode"
+                autoComplete="sms-otp"
+                maxLength={6}
+                style={{ position: 'absolute', opacity: 0, height: 1, width: 1 }}
+                accessibilityLabel={t("OTP code")}
               />
-            </View>
+              {error ? <Text style={{ color: COLORS.error, marginBottom: 12 }}>{error}</Text> : null}
+              <Button title={t("Verify")} onPress={() => checkOtp()} loading={busy} disabled={otp.length !== 6} />
+              <View style={{ alignItems: 'center', marginTop: 16 }}>{wait > 0 ? <Text style={{ color: COLORS.text.secondary }}>{t("Resend in")}{" "}{wait}s</Text> : <Button small variant="ghost" title={t("Resend OTP")} onPress={requestOtp} />}</View>
+            </>
+          )}
 
-            {/* Terms Checkbox */}
-            <View style={styles.checkboxContainer}>
-              <Checkbox
-                status={agreedToTerms ? 'checked' : 'unchecked'}
-                onPress={() => setAgreedToTerms(!agreedToTerms)}
-                color={COLORS.primary}
-              />
-              <Text style={styles.checkboxText}>
-                I agree to the{' '}
-                <Text style={styles.link}>Terms & Conditions</Text>
-                {' '}and{' '}
-                <Text style={styles.link}>Privacy Policy</Text>
-              </Text>
-            </View>
-
-            {/* Send OTP Button */}
-            <Button
-              mode="contained"
-              onPress={handleSendOTP}
-              loading={loading}
-              disabled={loading}
-              style={styles.button}
-              buttonColor={COLORS.primary}
-              labelStyle={styles.buttonLabel}
-            >
-              {isRegisterFlow ? 'Continue' : 'Send OTP'}
-            </Button>
-
-            {/* Help Text */}
-            <Text style={styles.helpText}>
-              We'll send you a 6-digit OTP to verify your number
-            </Text>
-          </View>
-        </View>
+          {step === 'name' && (
+            <>
+              <Text style={[TYPOGRAPHY.h2, { marginTop: 20 }]}>{t("What's your name?")}</Text>
+              <Text style={[TYPOGRAPHY.caption, { color: COLORS.text.secondary, marginTop: 4, marginBottom: 24 }]}>{t("Drivers see your name when you request a seat.")}</Text>
+              <Input label={t("Full name")} value={name} onChangeText={setName} placeholder={t("e.g. Ananya Bora")} autoCapitalize="words" autoFocus />
+              <Input label={t("Email (optional)")} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+              {error ? <Text style={{ color: COLORS.error, marginBottom: 12 }}>{error}</Text> : null}
+              <Button title={t("Continue")} onPress={saveName} loading={busy} disabled={name.trim().length < 2} />
+            </>
+          )}
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: SPACING.lg,
-    justifyContent: 'center',
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: SPACING.xxl,
-  },
-  title: {
-    ...TYPOGRAPHY.h1,
-    color: COLORS.text.primary,
-    marginTop: SPACING.md,
-  },
-  subtitle: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.text.secondary,
-    marginTop: SPACING.xs,
-  },
-  form: {
-    width: '100%',
-  },
-  label: {
-    ...TYPOGRAPHY.bodyBold,
-    color: COLORS.text.primary,
-    marginBottom: SPACING.sm,
-  },
-  phoneContainer: {
-    flexDirection: 'row',
-    marginBottom: SPACING.md,
-  },
-  countryCode: {
-    width: 60,
-    height: 56,
-    backgroundColor: COLORS.surface,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  countryCodeText: {
-    ...TYPOGRAPHY.bodyBold,
-    color: COLORS.text.primary,
-  },
-  phoneInput: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
-  },
-  checkboxText: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.text.secondary,
-    flex: 1,
-    marginLeft: SPACING.xs,
-  },
-  link: {
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  button: {
-    height: 56,
-    justifyContent: 'center',
-    borderRadius: 12,
-  },
-  buttonLabel: {
-    ...TYPOGRAPHY.bodyBold,
-    color: COLORS.text.white,
-  },
-  helpText: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.text.tertiary,
-    textAlign: 'center',
-    marginTop: SPACING.md,
-  },
-});

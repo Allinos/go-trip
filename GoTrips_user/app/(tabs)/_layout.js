@@ -1,59 +1,17 @@
 import { Tabs } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '../../constants';
+import { t } from '../../i18n';
 
 export default function TabsLayout() {
+  const icon = (name) => ({ color, size }) => <MaterialIcons name={name} size={size} color={color} />;
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.tabs.inactive,
-        tabBarStyle: {
-          borderTopColor: COLORS.border,
-          backgroundColor: COLORS.background,
-          height: 60,
-          paddingBottom: 10,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => <MaterialIcons name="home" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="bookings"
-        options={{
-          title: 'Bookings',
-          tabBarIcon: ({ color, size }) => <MaterialIcons name="event-note" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="rental"
-        options={{
-          title: 'Rental',
-          tabBarIcon: ({ color, size }) => <MaterialIcons name="directions-car" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="marketplace"
-        options={{
-          title: 'Marketplace',
-          tabBarIcon: ({ color, size }) => <MaterialIcons name="storefront" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, size }) => <MaterialIcons name="settings" size={size} color={color} />,
-        }}
-      />
+    <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: COLORS.primary, tabBarInactiveTintColor: COLORS.tabs.inactive, tabBarLabelStyle: { fontWeight: '600', fontSize: 12 }, tabBarStyle: { height: 62, paddingTop: 6, borderTopColor: COLORS.border } }}>
+      <Tabs.Screen name="index" options={{ title: t('Home'), tabBarIcon: icon('home') }} />
+      <Tabs.Screen name="bookings" options={{ title: t('Bookings'), tabBarIcon: icon('event-note') }} />
+      <Tabs.Screen name="rental" options={{ title: t('Rentals'), tabBarIcon: icon('car-rental') }} />
+      <Tabs.Screen name="marketplace" options={{ title: t('Drivers'), tabBarIcon: icon('badge') }} />
+      <Tabs.Screen name="settings" options={{ title: t('Account'), tabBarIcon: icon('person') }} />
     </Tabs>
   );
 }
