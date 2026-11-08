@@ -105,7 +105,7 @@ const tripInclude = { stops: true, vehicle: true };
 const partnerRouter = express.Router();
 partnerRouter.use(authenticate, requireActivePartner, requireCapability('canCreateTrips'));
 partnerRouter.use((req, res, next) => {
-  if (req.method !== 'GET') res.on('finish', () => res.statusCode < 400 && clearSearchCache());
+  if (req.method !== 'GET') res.on('finish', () => res.statusCode < 400 && (clearSearchCache(), cache.invalidateDashboard(req.partner?.id)));
   next();
 });
 
@@ -406,10 +406,15 @@ publicRouter.get(
 );
 
 publicRouter.get('/:id', optionalAuth, validate({ params: idParam }), async (req, res) => {
-  const t = await prisma.trip.findFirst({ where: { id: req.params.id, partner: { accountStatus: 'active' } }, include: { ...tripInclude, partner: { select: contactSelect } } });
-  if (!t) throw notFound('Trip');
-  const myBooking = req.user ? await prisma.booking.findFirst({ where: { tripId: t.id, userId: req.user.id }, orderBy: { createdAt: 'desc' }, select: { id: true, code: true, status: true, seats: true } }) : null;
-  res.json({ success: true, data: { ...(await serializeTrip(t, { loggedIn: !!req.user })), myBooking } });
+  const loggedIn = !!req.user;
+  // Shares the "trips:search:" prefix so every trip/seat change also clears it.
+  const trip = await cache.wrap(`trips:search:detail:${req.params.id}:${loggedIn ? 1 : 0}`, 15, async () => {
+    const t = await prisma.trip.findFirst({ where: { id: req.params.id, partner: { accountStatus: 'active' } }, include: { ...tripInclude, partner: { select: contactSelect } } });
+    return t ? serializeTrip(t, { loggedIn }) : null;
+  });
+  if (!trip) throw notFound('Trip');
+  const myBooking = req.user ? await prisma.booking.findFirst({ where: { tripId: trip.id, userId: req.user.id }, orderBy: { createdAt: 'desc' }, select: { id: true, code: true, status: true, seats: true } }) : null;
+  res.json({ success: true, data: { ...trip, myBooking } });
 });
 
 module.exports = { partnerRouter, publicRouter, serializeTrip, estimateFare, tripInclude, clearSearchCache };

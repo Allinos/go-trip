@@ -29,6 +29,8 @@ model User {
   gender      Gender?
   dateOfBirth DateTime?  @map("date_of_birth") @db.Date
   city        String?    @db.VarChar(80)
+  /// UI / notification language: "en" | "as"
+  language    String     @default("en") @db.VarChar(5)
   status      UserStatus @default(active)
   blockReason String?    @map("block_reason") @db.VarChar(255)
   lastLoginAt DateTime?  @map("last_login_at")
@@ -137,6 +139,8 @@ model PartnerCategory {
   canViewGoodsOrders Boolean  @default(false) @map("can_view_goods_orders")
   isActive           Boolean  @default(true) @map("is_active")
   sortOrder          Int      @default(0) @map("sort_order")
+  /// Other languages, e.g. { "as": { "name": "...", "description": "..." } }
+  translations       Json?
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -158,6 +162,8 @@ model DocumentRequirement {
   requiresExpiry Boolean       @default(false) @map("requires_expiry")
   requiresBack   Boolean       @default(false) @map("requires_back")
   sortOrder      Int           @default(0) @map("sort_order")
+  /// e.g. { "as": { "label": "...", "hint": "..." } }
+  translations   Json?
 
   category PartnerCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
@@ -652,14 +658,16 @@ model SupportTicket {
 }
 
 model Faq {
-  id        Int         @id @default(autoincrement())
-  audience  FaqAudience @default(all)
-  question  String      @db.VarChar(300)
-  answer    String      @db.VarChar(2000)
-  sortOrder Int         @default(0) @map("sort_order")
-  isActive  Boolean     @default(true) @map("is_active")
-  createdAt DateTime    @default(now()) @map("created_at")
-  updatedAt DateTime    @updatedAt @map("updated_at")
+  id           Int         @id @default(autoincrement())
+  audience     FaqAudience @default(all)
+  question     String      @db.VarChar(300)
+  answer       String      @db.VarChar(2000)
+  /// e.g. { "as": { "question": "...", "answer": "..." } }
+  translations Json?
+  sortOrder    Int         @default(0) @map("sort_order")
+  isActive     Boolean     @default(true) @map("is_active")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
 
   @@index([audience, isActive])
   @@map("faqs")

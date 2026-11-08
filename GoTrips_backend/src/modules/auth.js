@@ -9,6 +9,7 @@ const { validate, z } = require('../lib/validate');
 const { sha256, hmac, randomToken, normalizePhone, safeEqual } = require('../lib/util');
 const { badRequest, unauthorized, forbidden, tooMany } = require('../lib/errors');
 const { otpSendLimiter, otpVerifyLimiter } = require('../middleware/rateLimit');
+const { langOf } = require('../lib/i18n');
 const { authenticate, invalidateAuthCache } = require('../middleware/auth');
 const { serializeUser } = require('./users');
 const partnerService = require('./partners/service');
@@ -16,7 +17,7 @@ const partnerService = require('./partners/service');
 const router = express.Router();
 
 const otpHash = (phone, code) => hmac(env.OTP_SECRET, `${phone}:${code}`);
-const phoneField = z.string().trim().min(10).max(16).transform((v, ctx) => {
+const phoneField = z.string().trim().max(16).transform((v, ctx) => {
   try {
     return normalizePhone(v);
   } catch (e) {
@@ -25,6 +26,7 @@ const phoneField = z.string().trim().min(10).max(16).transform((v, ctx) => {
   }
 });
 const appField = z.enum(['user', 'partner']).default('user');
+const langField = z.enum(['en', 'as']).optional();
 
 async function issueSession(user, app, deviceInfo) {
   const refreshToken = randomToken(48);
@@ -41,8 +43,9 @@ async function authPayload(user, app) {
 }
 
 // POST /auth/otp/send
-router.post('/otp/send', otpSendLimiter, validate({ body: z.object({ phone: phoneField, app: appField }) }), async (req, res) => {
+router.post('/otp/send', otpSendLimiter, validate({ body: z.object({ phone: phoneField, app: appField, language: langField }) }), async (req, res) => {
   const { phone } = req.body;
+  const lang = req.body.language || langOf(req);
   const last = await prisma.otpCode.findFirst({ where: { phone }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } });
   if (last && Date.now() - last.createdAt.getTime() < 30_000) throw tooMany('Please wait 30 seconds before requesting another code');
   const today = await prisma.otpCode.count({ where: { phone, createdAt: { gte: new Date(Date.now() - 86400_000) } } });
@@ -58,7 +61,7 @@ router.post('/otp/send', otpSendLimiter, validate({ body: z.object({ phone: phon
   await prisma.otpCode.create({ data: { phone, codeHash: otpHash(phone, code), expiresAt: new Date(Date.now() + env.OTP_TTL_SECONDS * 1000) } });
   if (!testCode) {
     try {
-      await sms.sendOtp(phone, code);
+      await sms.sendOtp(phone, code, lang);
     } catch {
       throw badRequest('Could not send the SMS right now. Please try again.', undefined, 'SMS_FAILED');
     }
@@ -70,9 +73,9 @@ router.post('/otp/send', otpSendLimiter, validate({ body: z.object({ phone: phon
 router.post(
   '/otp/verify',
   otpVerifyLimiter,
-  validate({ body: z.object({ phone: phoneField, otp: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code'), app: appField, deviceInfo: z.string().max(255).optional() }) }),
+  validate({ body: z.object({ phone: phoneField, otp: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code'), app: appField, deviceInfo: z.string().max(255).optional(), language: langField }) }),
   async (req, res) => {
-    const { phone, otp, app, deviceInfo } = req.body;
+    const { phone, otp, app, deviceInfo, language } = req.body;
     const rec = await prisma.otpCode.findFirst({ where: { phone, consumedAt: null }, orderBy: { createdAt: 'desc' } });
     if (!rec || rec.expiresAt < new Date()) throw badRequest('The code has expired. Please request a new one.', undefined, 'OTP_EXPIRED');
     if (rec.attempts >= env.OTP_MAX_ATTEMPTS) throw tooMany('Too many wrong attempts. Please request a new code.');
@@ -88,9 +91,9 @@ router.post(
 
     let user = await prisma.user.findUnique({ where: { phone } });
     const isNewUser = !user;
-    if (!user) user = await prisma.user.create({ data: { phone } });
+    if (!user) user = await prisma.user.create({ data: { phone, language: language || langOf(req) } });
     if (user.status === 'blocked') throw forbidden('This account is blocked. Please contact support.', 'ACCOUNT_BLOCKED');
-    user = await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+    user = await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date(), ...(language ? { language } : {}) } });
 
     const tokens = await issueSession(user, app, deviceInfo || req.get('user-agent'));
     res.json({ success: true, data: { ...tokens, isNewUser, ...(await authPayload(user, app)) } });

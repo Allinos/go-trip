@@ -50,6 +50,7 @@ async function send(phone, message, { otp, critical = false } = {}) {
   }
 }
 
-const sendOtp = (phone, otp) => send(phone, `${otp} is your GoTrip verification code. It is valid for ${Math.round(env.OTP_TTL_SECONDS / 60)} minutes. Do not share it with anyone.`, { otp, critical: true });
+const { OTP_SMS } = require('./messages');
+const sendOtp = (phone, otp, lang = 'en') => send(phone, (OTP_SMS[lang] || OTP_SMS.en)(otp, Math.round(env.OTP_TTL_SECONDS / 60)), { otp, critical: true });
 
 module.exports = { send, sendOtp };

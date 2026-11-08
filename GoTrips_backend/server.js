@@ -4,6 +4,7 @@ const logger = require('./src/lib/logger');
 const prisma = require('./src/lib/prisma');
 const app = require('./app');
 const jobs = require('./src/jobs/scheduler');
+const counters = require('./src/jobs/counters');
 
 const server = app.listen(env.PORT, () => logger.info(`GoTrip API listening on :${env.PORT} (${env.NODE_ENV})`));
 // Keep-alive slightly above typical load balancer idle timeout (60s) to avoid 502s.
@@ -11,6 +12,7 @@ server.keepAliveTimeout = 65_000;
 server.headersTimeout = 66_000;
 
 // With PM2 cluster mode, only instance 0 schedules jobs (advisory locks protect multi-server setups too).
+counters.start();
 if (env.JOBS_ENABLED && (process.env.NODE_APP_INSTANCE === undefined || process.env.NODE_APP_INSTANCE === '0')) jobs.start();
 
 let shuttingDown = false;
@@ -19,6 +21,7 @@ async function shutdown(signal) {
   shuttingDown = true;
   logger.info(`${signal} received, shutting down`);
   jobs.stop();
+  await counters.stop();
   server.close(async () => {
     await prisma.$disconnect();
     process.exit(0);

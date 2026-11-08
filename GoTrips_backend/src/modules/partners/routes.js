@@ -10,9 +10,26 @@ const { documentUpload } = require('../../middleware/upload');
 const { writeLimiter } = require('../../middleware/rateLimit');
 const { badRequest, notFound, conflict } = require('../../lib/errors');
 const { normalizePhone, paginate, pageMeta, startOfDay } = require('../../lib/util');
+const { langOf, tr } = require('../../lib/i18n');
+
+const cache = require('../../lib/cache');
 
 const router = express.Router();
 router.use(authenticate);
+const { dashKey } = cache;
+// Profile/document changes refresh the partner's dashboard and the public marketplace pages.
+// Live-location pings (every ~30 s) are deliberately excluded so they never wipe caches.
+const PUBLIC_PROFILE_PATHS = ['/driver-profile', '/documents', '/me', '/register'];
+router.use((req, res, next) => {
+  if (req.method !== 'GET' && !req.path.startsWith('/location')) {
+    res.on('finish', () => {
+      if (res.statusCode >= 400 || !req.partner) return;
+      cache.invalidateDashboard(req.partner.id);
+      if (PUBLIC_PROFILE_PATHS.some((x) => req.path.startsWith(x))) cache.delPrefix('mkt:').catch(() => {});
+    });
+  }
+  next();
+});
 
 const optPhone = z
   .string()
@@ -40,11 +57,11 @@ const detailsSchema = z.object({
   pincode: z.string().trim().regex(/^\d{6}$/, 'Enter a 6-digit PIN code').optional().nullable(),
 });
 
-async function serializePartner(p) {
+async function serializePartner(p, lang = 'en') {
   const category = await service.categoryById(p.categoryId);
   return {
     id: p.id,
-    category: { code: category.code, name: category.name },
+    category: { code: category.code, name: tr(category, lang, 'name') },
     businessName: p.businessName,
     alternatePhone: p.alternatePhone,
     whatsappPhone: p.whatsappPhone,
@@ -97,13 +114,13 @@ router.post(
 
 router.get('/me', requirePartner, async (req, res) => {
   const p = await prisma.partner.findUnique({ where: { id: req.partner.id } });
-  res.json({ success: true, data: await serializePartner(p) });
+  res.json({ success: true, data: await serializePartner(p, langOf(req)) });
 });
 
 router.patch('/me', requirePartner, validate({ body: detailsSchema }), async (req, res) => {
   const p = await prisma.partner.update({ where: { id: req.partner.id }, data: req.body });
   await service.tryComplete(req.user.id);
-  res.json({ success: true, data: await serializePartner(p) });
+  res.json({ success: true, data: await serializePartner(p, langOf(req)) });
 });
 
 // ---------- Documents ----------
@@ -119,7 +136,7 @@ router.get('/documents', requirePartner, async (req, res) => {
   const items = await Promise.all(
     category.requirements
       .filter((r) => r.scope === 'partner')
-      .map(async (r) => ({ requirement: { docType: r.docType, label: r.label, hint: r.hint, isRequired: r.isRequired, requiresNumber: r.requiresNumber, requiresExpiry: r.requiresExpiry, requiresBack: r.requiresBack }, document: byType[r.docType] ? await serializeDoc(byType[r.docType]) : null }))
+      .map(async (r) => ({ requirement: { docType: r.docType, label: tr(r, langOf(req), 'label'), hint: tr(r, langOf(req), 'hint'), isRequired: r.isRequired, requiresNumber: r.requiresNumber, requiresExpiry: r.requiresExpiry, requiresBack: r.requiresBack }, document: byType[r.docType] ? await serializeDoc(byType[r.docType]) : null }))
   );
   res.json({ success: true, data: items });
 });
@@ -228,6 +245,8 @@ const countOf = (rows, status) => rows.find((r) => r.status === status)?._count.
 
 router.get('/dashboard', requireActivePartner, async (req, res) => {
   const pid = req.partner.id;
+  const cached = await cache.get(dashKey(pid));
+  if (cached) return res.json({ success: true, data: cached });
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const [vehicleGroups, vehicleActive, bookingGroups, monthGroups, upcomingTrips, ongoingTrips, completedTrips, rentalListed, calls30, profile, pendingRequests] = await Promise.all([
     prisma.vehicle.groupBy({ by: ['verificationStatus'], where: { partnerId: pid }, _count: { _all: true } }),
@@ -246,9 +265,7 @@ router.get('/dashboard', requireActivePartner, async (req, res) => {
   const vstat = (s) => vehicleGroups.find((g) => g.verificationStatus === s)?._count._all || 0;
   const onboarding = await service.onboardingState(req.user.id);
 
-  res.json({
-    success: true,
-    data: {
+  const data = {
       partner: { category: req.partner.category, verificationStatus: req.partner.verificationStatus, listingExpiresAt: req.partner.listingExpiresAt },
       pendingSteps: onboarding.steps.filter((s) => !s.done),
       vehicles: { total: totalVehicles, approved: vstat('approved'), pending: vstat('pending'), rejected: vstat('rejected'), active: vehicleActive, inactive: totalVehicles - vehicleActive, rentalListed },
@@ -270,8 +287,9 @@ router.get('/dashboard', requireActivePartner, async (req, res) => {
       contacts: { callsLast30Days: calls30 },
       driverProfile: profile,
       pendingRequests: pendingRequests.map((b) => ({ id: b.id, code: b.code, seats: b.seats, pickupName: b.pickupName, dropName: b.dropName, passengerName: b.passengerName, passengerPhone: b.passengerPhone, note: b.note, fareEstimate: b.fareEstimate, departureAt: b.trip.departureAt, createdAt: b.createdAt })),
-    },
-  });
+  };
+  await cache.set(dashKey(pid), data, 20);
+  res.json({ success: true, data });
 });
 
 // ---------- Earnings (estimated) ----------

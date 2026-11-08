@@ -12,6 +12,12 @@ const cache = require('../../lib/cache');
 const settings = require('../../services/settings');
 const notify = require('../../services/notify');
 const { invalidateAuthCache } = require('../../middleware/auth');
+const { tr } = require('../../lib/i18n');
+
+const STEP_LABELS = {
+  en: { profile: 'Your name', category: 'Partner type', driver: 'Driver details', business: 'Business details', documents: 'Documents', payment: 'Registration fee' },
+  as: { profile: 'আপোনাৰ নাম', category: 'পাৰ্টনাৰৰ প্ৰকাৰ', driver: 'চালকৰ বিৱৰণ', business: 'ব্যৱসায়ৰ বিৱৰণ', documents: 'নথিপত্ৰ', payment: 'পঞ্জীয়ন মাচুল' },
+};
 
 const CATEGORIES_KEY = 'catalog:categories';
 
@@ -74,31 +80,33 @@ async function loadFull(userId) {
 /** Compute onboarding progress for the partner app. */
 async function onboardingState(userId) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
+  const lang = user?.language === 'as' ? 'as' : 'en';
+  const L = STEP_LABELS[lang];
   const partner = await loadFull(userId);
   const steps = [];
-  steps.push({ key: 'profile', label: 'Your name', done: !!user?.fullName });
+  steps.push({ key: 'profile', label: L.profile, done: !!user?.fullName });
 
   if (!partner) {
-    steps.push({ key: 'category', label: 'Partner type', done: false });
+    steps.push({ key: 'category', label: L.category, done: false });
     return { started: false, steps, nextStep: steps.find((s) => !s.done).key, accountStatus: null };
   }
 
   const category = await categoryById(partner.categoryId);
-  steps.push({ key: 'category', label: 'Partner type', done: true });
+  steps.push({ key: 'category', label: L.category, done: true });
 
   const detailsDone = !!(partner.district && partner.city) && (!category.hasDriverProfile || driverDetailsComplete(partner.driverProfile));
-  steps.push({ key: 'details', label: category.hasDriverProfile ? 'Driver details' : 'Business details', done: detailsDone });
+  steps.push({ key: 'details', label: category.hasDriverProfile ? L.driver : L.business, done: detailsDone });
 
   const required = category.requirements.filter((r) => r.scope === 'partner' && r.isRequired);
   const byType = Object.fromEntries(partner.documents.map((d) => [d.docType, d]));
-  const missing = required.filter((r) => !byType[r.docType] || byType[r.docType].status === 'rejected').map((r) => ({ docType: r.docType, label: r.label, rejected: byType[r.docType]?.status === 'rejected', reason: byType[r.docType]?.rejectionReason || null }));
-  steps.push({ key: 'documents', label: 'Documents', done: missing.length === 0, missing });
+  const missing = required.filter((r) => !byType[r.docType] || byType[r.docType].status === 'rejected').map((r) => ({ docType: r.docType, label: tr(r, lang, 'label'), rejected: byType[r.docType]?.status === 'rejected', reason: byType[r.docType]?.rejectionReason || null }));
+  steps.push({ key: 'documents', label: L.documents, done: missing.length === 0, missing });
 
   if (category.registrationFee > 0) {
     const valid = feeIsValid(partner, category);
     steps.push({
       key: 'payment',
-      label: 'Registration fee',
+      label: L.payment,
       done: valid,
       amount: category.registrationFee,
       validityDays: category.feeValidityDays,
@@ -111,7 +119,7 @@ async function onboardingState(userId) {
   return {
     started: true,
     partnerId: partner.id,
-    category: { code: category.code, name: category.name, hasDriverProfile: category.hasDriverProfile, canListVehicles: category.canListVehicles, canCreateTrips: category.canCreateTrips, canListRentals: category.canListRentals, canViewGoodsOrders: category.canViewGoodsOrders, registrationFee: category.registrationFee },
+    category: { code: category.code, name: tr(category, lang, 'name'), hasDriverProfile: category.hasDriverProfile, canListVehicles: category.canListVehicles, canCreateTrips: category.canCreateTrips, canListRentals: category.canListRentals, canViewGoodsOrders: category.canViewGoodsOrders, registrationFee: category.registrationFee },
     steps,
     nextStep: pending ? pending.key : 'done',
     completed: partner.accountStatus !== 'onboarding',

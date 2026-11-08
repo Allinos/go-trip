@@ -10,6 +10,8 @@ const { imageUpload, documentUpload } = require('../middleware/upload');
 const { writeLimiter } = require('../middleware/rateLimit');
 const { badRequest, notFound, forbidden } = require('../lib/errors');
 const { paginate, pageMeta, haversineKm, mapsUrl, startOfDay } = require('../lib/util');
+const { langOf, tr } = require('../lib/i18n');
+const localReq = (r, lang) => ({ ...r, label: tr(r, lang, 'label'), hint: tr(r, lang, 'hint'), translations: undefined });
 
 const VEHICLE_CLASSES = ['hatchback', 'sedan', 'suv', 'muv', 'van', 'mini_bus', 'bus', 'auto', 'bike', 'pickup', 'tempo', 'mini_truck', 'truck', 'trailer', 'other'];
 const MAX_PHOTOS = 8;
@@ -119,6 +121,10 @@ const clearPublicCache = () => cache.delPrefix('rent:');
 // =============== Partner: /partner/vehicles ===============
 const partnerRouter = express.Router();
 partnerRouter.use(authenticate, requireActivePartner, requireCapability('canListVehicles'));
+partnerRouter.use((req, res, next) => {
+  if (req.method !== 'GET') res.on('finish', () => res.statusCode < 400 && cache.invalidateDashboard(req.partner?.id));
+  next();
+});
 
 const ownVehicle = async (req) => {
   const v = await prisma.vehicle.findFirst({ where: { id: req.params.id, partnerId: req.partner.id } });
@@ -134,7 +140,7 @@ partnerRouter.get('/', validate({ query: z.object({ status: z.enum(['pending', '
 
 partnerRouter.get('/requirements', async (req, res) => {
   const category = await partnerService.categoryById(req.partner.category.id);
-  res.json({ success: true, data: { vehicleClasses: VEHICLE_CLASSES, documents: category.requirements.filter((r) => r.scope === 'vehicle') } });
+  res.json({ success: true, data: { vehicleClasses: VEHICLE_CLASSES, documents: category.requirements.filter((r) => r.scope === 'vehicle').map((r) => localReq(r, langOf(req))) } });
 });
 
 partnerRouter.post('/', writeLimiter, validate({ body: createSchema }), async (req, res) => {
@@ -168,7 +174,7 @@ partnerRouter.get('/:id', validate({ params: idParam }), async (req, res) => {
       .filter((r) => r.scope === 'vehicle')
       .map(async (r) => {
         const d = byType[r.docType];
-        return { requirement: r, document: d ? { id: d.id, docNumber: d.docNumber, expiryDate: d.expiryDate, status: d.status, rejectionReason: d.rejectionReason, frontUrl: await storage.url(d.frontKey, 900), backUrl: await storage.url(d.backKey, 900) } : null };
+        return { requirement: localReq(r, langOf(req)), document: d ? { id: d.id, docNumber: d.docNumber, expiryDate: d.expiryDate, status: d.status, rejectionReason: d.rejectionReason, frontUrl: await storage.url(d.frontKey, 900), backUrl: await storage.url(d.backKey, 900) } : null };
       })
   );
   res.json({ success: true, data: { ...(await serialize(v, { owner: true })), documents, tripCount } });
@@ -368,9 +374,13 @@ publicRouter.get(
 );
 
 publicRouter.get('/:id', optionalAuth, validate({ params: idParam }), async (req, res) => {
-  const v = await prisma.vehicle.findFirst({ where: { id: req.params.id, ...publicWhere }, include: { partner: { select: contactSelect } } });
-  if (!v) throw notFound('Vehicle');
-  res.json({ success: true, data: { ...(await serialize(v)), owner: await partnerContact(v.partner, !!req.user) } });
+  const loggedIn = !!req.user;
+  const data = await cache.wrap(`rent:detail:${req.params.id}:${loggedIn ? 1 : 0}`, 30, async () => {
+    const v = await prisma.vehicle.findFirst({ where: { id: req.params.id, ...publicWhere }, include: { partner: { select: contactSelect } } });
+    return v ? { ...(await serialize(v)), owner: await partnerContact(v.partner, loggedIn) } : null;
+  });
+  if (!data) throw notFound('Vehicle');
+  res.json({ success: true, data });
 });
 
 module.exports = { partnerRouter, publicRouter, serialize, partnerContact, contactSelect, VEHICLE_CLASSES, clearPublicCache };

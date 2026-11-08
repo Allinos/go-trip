@@ -93,4 +93,26 @@ async function wrap(key, ttlSec, loader) {
   return val;
 }
 
-module.exports = { get, set, del, delPrefix, wrap, redis };
+/**
+ * Buffered counters: increments are kept in memory and flushed in batches (e.g. profile views),
+ * so a popular profile does not cause one database write per view.
+ */
+const counters = new Map();
+function bump(name, id, by = 1) {
+  const key = `${name}:${id}`;
+  counters.set(key, (counters.get(key) || 0) + by);
+}
+function drainCounters() {
+  const out = [...counters.entries()].map(([k, n]) => {
+    const i = k.lastIndexOf(':');
+    return { name: k.slice(0, i), id: Number(k.slice(i + 1)), n };
+  });
+  counters.clear();
+  return out;
+}
+
+/** Partner dashboard cache key + invalidation (bookings, trips, vehicles all change it). */
+const dashKey = (partnerId) => `dash:${partnerId}`;
+const invalidateDashboard = (partnerId) => (partnerId ? del(dashKey(partnerId)).catch(() => {}) : Promise.resolve());
+
+module.exports = { get, set, del, delPrefix, wrap, redis, bump, drainCounters, dashKey, invalidateDashboard };

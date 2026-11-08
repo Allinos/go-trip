@@ -3,6 +3,7 @@ const multer = require('multer');
 const { Prisma } = require('@prisma/client');
 const logger = require('../lib/logger');
 const env = require('../config/env');
+const { langOf, errorText } = require('../lib/i18n');
 
 function notFoundHandler(req, res) {
   res.status(404).json({ success: false, error: { code: 'ROUTE_NOT_FOUND', message: `Route ${req.method} ${req.path} not found` } });
@@ -42,7 +43,7 @@ function errorHandler(err, req, res, _next) {
 
   if (status >= 500) logger.error({ err, path: req.path, method: req.method, userId: req.user?.id }, 'unhandled error');
 
-  res.status(status).json({ success: false, error: { code, message, ...(details ? { details } : {}) } });
+  res.status(status).json({ success: false, error: { code, message: errorText(code, message, langOf(req)), ...(details ? { details } : {}) } });
 }
 
 module.exports = { notFoundHandler, errorHandler };

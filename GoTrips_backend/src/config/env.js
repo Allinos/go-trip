@@ -18,6 +18,8 @@ const schema = z.object({
 
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().optional(),
+  /** Scale every rate limit (e.g. 3 when many users share a mobile-carrier IP). */
+  RATE_LIMIT_MULTIPLIER: z.coerce.number().min(0.1).max(100).default(1),
 
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),

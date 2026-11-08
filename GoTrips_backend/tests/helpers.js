@@ -56,11 +56,13 @@ async function activePartner(categoryCode = 'taxi', extra = {}) {
   return s;
 }
 
+const uniqueReg = () => `AS${10 + Math.floor(Math.random() * 89)}${String.fromCharCode(65 + Math.floor(Math.random() * 26), 65 + Math.floor(Math.random() * 26))}${1000 + Math.floor(Math.random() * 9000)}`;
+
 async function approvedVehicle(partnerToken, admin, body = {}) {
   const v = await api()
     .post('/api/v1/partner/vehicles')
     .set(auth(partnerToken))
-    .send({ vehicleClass: 'suv', make: 'Toyota', model: 'Innova', registrationNumber: `AS02AB${String(1000 + phoneSeq++).slice(-4)}`, seats: 7, forTrips: true, ...body });
+    .send({ vehicleClass: 'suv', make: 'Toyota', model: 'Innova', registrationNumber: uniqueReg(), seats: 7, forTrips: true, ...body });
   if (v.status !== 201) throw new Error(JSON.stringify(v.body));
   const r = await api().post(`/api/v1/admin/vehicles/${v.body.data.id}/review`).set(auth(admin)).send({ decision: 'approve' });
   if (r.status !== 200) throw new Error(JSON.stringify(r.body));

@@ -1,8 +1,9 @@
 'use strict';
 /**
  * One place for every outbound notification.
- * Each call stores an in-app notification and sends FCM push. Some events also send SMS or email.
- * Delivery runs in the background (setImmediate), so API responses never wait on FCM, SMS or SMTP.
+ * Each event stores an in-app notification and sends FCM push, plus SMS or email where useful.
+ * Text is rendered in the recipient's saved language (English / Assamese).
+ * Delivery happens in the background, so API responses never wait for FCM, SMS or SMTP.
  */
 const prisma = require('../lib/prisma');
 const logger = require('../lib/logger');
@@ -10,146 +11,76 @@ const push = require('./push');
 const sms = require('./sms');
 const email = require('./email');
 const settings = require('./settings');
+const { render } = require('./messages');
 
-const rupees = (paise) => `₹${(paise / 100).toLocaleString('en-IN')}`;
-const when = (d) => new Date(d).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
-
-async function deliver({ userId, app, type, title, body, data = {}, smsText, emailTo, emailSubject, emailLines }) {
-  await prisma.notification.create({ data: { userId, app, type, title, body, data } });
-  const jobs = [push.sendToUser(userId, app, { title, body, data: { type, ...data } })];
-  if (smsText) {
-    const u = await prisma.user.findUnique({ where: { id: userId }, select: { phone: true } });
-    if (u) jobs.push(sms.send(u.phone, smsText));
-  }
-  if (emailTo) jobs.push(email.send(emailTo, emailSubject || title, title, emailLines || [body]));
+/**
+ * key: template key in messages.js; vars: template variables; type: stored notification type
+ * channels: { sms?: boolean, email?: boolean }
+ */
+async function deliver({ userId, app, key, type = key, vars, data = {}, channels = {} }) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { phone: true, email: true, fullName: true, language: true } });
+  if (!user) return;
+  const lang = user.language || 'en';
+  const msg = render(key, lang, { name: user.fullName, ...vars });
+  await prisma.notification.create({ data: { userId, app, type, title: msg.title, body: msg.body, data } });
+  const jobs = [push.sendToUser(userId, app, { title: msg.title, body: msg.body, data: { type, ...data } })];
+  if (channels.sms && msg.sms) jobs.push(sms.send(user.phone, msg.sms));
+  if (channels.email && msg.email && user.email) jobs.push(email.send(user.email, msg.email.subject, msg.title, msg.email.lines));
   const results = await Promise.allSettled(jobs);
   results.filter((r) => r.status === 'rejected').forEach((r) => logger.warn({ err: r.reason?.message, type }, 'notification channel failed'));
 }
 
 /** Queue a notification without blocking the request. */
 function queue(payload) {
-  setImmediate(() => deliver(payload).catch((e) => logger.error({ err: e.message, type: payload.type }, 'notification failed')));
+  setImmediate(() => deliver(payload).catch((e) => logger.error({ err: e.message, key: payload.key }, 'notification failed')));
 }
+
+const seg = (b) => ({ code: b.code, seats: b.seats, pickup: b.pickupName, drop: b.dropName });
 
 const N = {
   async bookingRequested(booking, trip, partnerUserId) {
     const smsOn = await settings.get('sms_booking_alerts');
-    queue({
-      userId: partnerUserId,
-      app: 'partner',
-      type: 'booking_request',
-      title: 'New booking request',
-      body: `${booking.passengerName || 'A passenger'} wants ${booking.seats} seat(s) ${booking.pickupName} → ${booking.dropName} on ${when(trip.departureAt)}.`,
-      data: { bookingId: booking.id, tripId: trip.id, screen: 'BookingDetail' },
-      smsText: smsOn ? `GoTrip: New booking request (${booking.code}) for ${booking.seats} seat(s) ${booking.pickupName} to ${booking.dropName}, ${when(trip.departureAt)}. Open the GoTrip Partner app to accept.` : undefined,
-    });
+    queue({ userId: partnerUserId, app: 'partner', key: 'booking_request', vars: { ...seg(booking), name: booking.passengerName, at: trip.departureAt }, data: { bookingId: booking.id, tripId: trip.id, screen: 'BookingDetail' }, channels: { sms: smsOn } });
   },
   bookingResponded(booking, trip, accepted) {
-    queue({
-      userId: booking.userId,
-      app: 'user',
-      type: accepted ? 'booking_accepted' : 'booking_rejected',
-      title: accepted ? 'Booking confirmed 🎉' : 'Booking request declined',
-      body: accepted
-        ? `Your ${booking.seats} seat(s) ${booking.pickupName} → ${booking.dropName} on ${when(trip.departureAt)} are confirmed. You can call the driver from the app.`
-        : `Your request ${booking.pickupName} → ${booking.dropName} was declined${booking.statusReason ? `: ${booking.statusReason}` : ''}. Try another trip.`,
-      data: { bookingId: booking.id, tripId: trip.id, screen: 'booking' },
-    });
+    queue({ userId: booking.userId, app: 'user', key: accepted ? 'booking_accepted' : 'booking_rejected', vars: { ...seg(booking), at: trip.departureAt, reason: booking.statusReason }, data: { bookingId: booking.id, tripId: trip.id, screen: 'booking' } });
   },
   bookingCancelledByUser(booking, partnerUserId) {
-    queue({
-      userId: partnerUserId,
-      app: 'partner',
-      type: 'booking_cancelled',
-      title: 'Booking cancelled',
-      body: `Booking ${booking.code} (${booking.seats} seat(s) ${booking.pickupName} → ${booking.dropName}) was cancelled by the passenger.`,
-      data: { bookingId: booking.id, tripId: booking.tripId, screen: 'BookingDetail' },
-    });
+    queue({ userId: partnerUserId, app: 'partner', key: 'booking_cancelled_by_user', type: 'booking_cancelled', vars: seg(booking), data: { bookingId: booking.id, tripId: booking.tripId, screen: 'BookingDetail' } });
   },
   bookingCancelledByPartner(booking, reason) {
-    queue({
-      userId: booking.userId,
-      app: 'user',
-      type: 'booking_cancelled',
-      title: 'Your booking was cancelled',
-      body: `Booking ${booking.code} ${booking.pickupName} → ${booking.dropName} was cancelled by the driver${reason ? `: ${reason}` : ''}.`,
-      data: { bookingId: booking.id, screen: 'booking' },
-    });
+    queue({ userId: booking.userId, app: 'user', key: 'booking_cancelled_by_partner', type: 'booking_cancelled', vars: { ...seg(booking), reason }, data: { bookingId: booking.id, screen: 'booking' } });
   },
   tripStarted(booking) {
-    queue({
-      userId: booking.userId,
-      app: 'user',
-      type: 'trip_started',
-      title: 'Your trip has started',
-      body: `The vehicle for ${booking.pickupName} → ${booking.dropName} is on its way. Open the booking to see the driver's shared location.`,
-      data: { bookingId: booking.id, screen: 'booking' },
-    });
+    queue({ userId: booking.userId, app: 'user', key: 'trip_started', vars: seg(booking), data: { bookingId: booking.id, screen: 'booking' } });
   },
   registrationComplete(partner, user, listed) {
-    queue({
-      userId: user.id,
-      app: 'partner',
-      type: 'registration_complete',
-      title: 'Registration complete',
-      body: listed ? 'Your profile is now live on the GoTrip marketplace.' : 'Your registration is complete. Our team will verify your documents shortly.',
-      data: { screen: 'Home' },
-      smsText: `GoTrip: Welcome aboard! Your partner registration is complete${listed ? ' and your profile is live on the marketplace' : ''}.`,
-      emailTo: user.email,
-      emailSubject: 'Welcome to GoTrip Partner',
-      emailLines: [`Hi ${user.fullName || 'Partner'},`, 'Your GoTrip partner registration is complete.', listed ? 'Your profile is now visible to customers on the marketplace.' : 'We will verify your documents and notify you.'],
-    });
+    queue({ userId: user.id, app: 'partner', key: 'registration_complete', vars: { listed }, data: { screen: 'Home' }, channels: { sms: true, email: true } });
   },
   paymentReceived(payment, user) {
-    queue({
-      userId: user.id,
-      app: 'partner',
-      type: 'payment_success',
-      title: 'Payment received',
-      body: `We received ${rupees(payment.amount)} for your registration fee. Receipt: ${payment.receipt}.`,
-      data: { paymentId: payment.id, screen: 'Payments' },
-      emailTo: user.email,
-      emailSubject: `Payment receipt ${payment.receipt}`,
-      emailLines: [
-        `Hi ${user.fullName || 'Partner'},`,
-        `Thank you. We received your payment of ${rupees(payment.amount)}.`,
-        `Receipt: ${payment.receipt}`,
-        `Razorpay payment ID: ${payment.razorpayPaymentId}`,
-        payment.validUntil ? `Your listing is valid until ${new Date(payment.validUntil).toDateString()}.` : 'Your listing does not expire.',
-      ],
-    });
+    queue({ userId: user.id, app: 'partner', key: 'payment_success', vars: { amount: payment.amount, receipt: payment.receipt, paymentId: payment.razorpayPaymentId, validUntil: payment.validUntil }, data: { paymentId: payment.id, screen: 'Payments' }, channels: { email: true } });
   },
   vehicleReviewed(vehicle, partnerUserId, approved, reason) {
-    const name = `${vehicle.make} ${vehicle.model} (${vehicle.registrationNumber})`;
     queue({
       userId: partnerUserId,
       app: 'partner',
-      type: approved ? 'vehicle_approved' : 'vehicle_rejected',
-      title: approved ? 'Vehicle approved ✅' : 'Vehicle needs changes',
-      body: approved ? `${name} is verified and now visible to customers.` : `${name} was not approved: ${reason}. Please update and resubmit.`,
-      data: { vehicleId: vehicle.id, screen: 'VehicleDetails' },
-      smsText: `GoTrip: Your vehicle ${vehicle.registrationNumber} was ${approved ? 'approved and is now live' : `not approved (${reason}). Please update it in the app`}.`,
+      key: approved ? 'vehicle_approved' : 'vehicle_rejected',
+      vars: { vehicle: `${vehicle.make} ${vehicle.model} (${vehicle.registrationNumber})`, reg: vehicle.registrationNumber, reason },
+      data: { vehicleId: vehicle.id, screen: 'VehicleDetail' },
+      channels: { sms: true },
     });
   },
   partnerReviewed(partnerUserId, approved, reason) {
-    queue({
-      userId: partnerUserId,
-      app: 'partner',
-      type: approved ? 'documents_approved' : 'documents_rejected',
-      title: approved ? 'Profile verified ✅' : 'Documents need attention',
-      body: approved ? 'Your documents are verified. You now have the Verified badge.' : `Some documents were rejected: ${reason}. Please re-upload them.`,
-      data: { screen: approved ? 'Home' : 'Documents' },
-      smsText: `GoTrip: ${approved ? 'Your partner profile is verified.' : `Your documents need attention (${reason}). Please re-upload in the app.`}`,
-    });
+    queue({ userId: partnerUserId, app: 'partner', key: approved ? 'documents_approved' : 'documents_rejected', vars: { reason }, data: { screen: approved ? 'Home' : 'Documents' }, channels: { sms: true } });
   },
   partnerSuspended(partnerUserId, reason) {
-    queue({ userId: partnerUserId, app: 'partner', type: 'account_suspended', title: 'Account suspended', body: `Your partner account was suspended: ${reason}. Contact support for help.`, smsText: `GoTrip: Your partner account was suspended (${reason}). Contact support.` });
+    queue({ userId: partnerUserId, app: 'partner', key: 'account_suspended', vars: { reason }, channels: { sms: true } });
   },
   listingExpiring(partnerUserId, expiresAt) {
-    queue({ userId: partnerUserId, app: 'partner', type: 'listing_expiring', title: 'Listing expiring soon', body: `Your marketplace listing expires on ${new Date(expiresAt).toDateString()}. Renew to stay visible.`, data: { screen: 'Payments' } });
+    queue({ userId: partnerUserId, app: 'partner', key: 'listing_expiring', vars: { at: expiresAt }, data: { screen: 'Payments' } });
   },
   ticketReplied(ticket) {
-    queue({ userId: ticket.userId, app: ticket.app, type: 'support_reply', title: 'Support replied', body: `We replied to your ticket "${ticket.subject}".`, data: { ticketId: ticket.id, screen: 'Support' } });
+    queue({ userId: ticket.userId, app: ticket.app, key: 'support_reply', vars: { subject: ticket.subject }, data: { ticketId: ticket.id, screen: 'Support' } });
   },
 };
 

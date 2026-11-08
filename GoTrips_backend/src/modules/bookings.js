@@ -2,6 +2,7 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
 const notify = require('../services/notify');
+const cache = require('../lib/cache');
 const { validate, z, idParam, trimmed, optText, pageQuery } = require('../lib/validate');
 const { authenticate, requireActivePartner } = require('../middleware/auth');
 const { writeLimiter } = require('../middleware/rateLimit');
@@ -48,7 +49,12 @@ async function sharedLocation(partnerId, tripId) {
 
 /** Seat counts change on accept/cancel: drop cached search pages once the change is committed. */
 const clearAfterWrite = (req, res, next) => {
-  if (req.method !== 'GET') res.on('finish', () => res.statusCode < 400 && clearSearchCache());
+  if (req.method !== 'GET')
+    res.on('finish', () => {
+      if (res.statusCode >= 400) return;
+      clearSearchCache();
+      cache.invalidateDashboard(req.partner?.id || res.locals.partnerId);
+    });
   next();
 };
 
@@ -89,6 +95,7 @@ userRouter.post(
           note: b.note,
         },
       });
+      res.locals.partnerId = trip.partnerId;
       notify.bookingRequested(booking, trip, trip.partner.userId);
       res.status(201).json({ success: true, data: serializeBooking(booking) });
     } catch (e) {
@@ -139,6 +146,7 @@ userRouter.post('/:id/cancel', validate({ params: idParam, body: z.object({ reas
     if (b.status === 'accepted') await releaseSeats(tx, b.tripId, b.seats);
     return tx.booking.findUnique({ where: { id: b.id } });
   });
+  res.locals.partnerId = b.partnerId;
   notify.bookingCancelledByUser(updated, b.partner.userId);
   res.json({ success: true, data: serializeBooking(updated) });
 });

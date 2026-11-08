@@ -18,7 +18,7 @@ async function invalidateAuthCache(userId) {
 }
 
 async function loadUser(id) {
-  return cache.wrap(userCacheKey(id), 60, () => prisma.user.findUnique({ where: { id }, select: { id: true, phone: true, fullName: true, email: true, status: true } }));
+  return cache.wrap(userCacheKey(id), 60, () => prisma.user.findUnique({ where: { id }, select: { id: true, phone: true, fullName: true, email: true, status: true, language: true } }));
 }
 
 function decode(token) {

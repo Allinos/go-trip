@@ -19,6 +19,7 @@ async function serializeUser(u) {
     gender: u.gender,
     dateOfBirth: u.dateOfBirth,
     city: u.city,
+    language: u.language,
     photoUrl: await storage.url(u.photoKey),
     status: u.status,
     createdAt: u.createdAt,
@@ -43,6 +44,7 @@ router.patch(
       gender: z.enum(['male', 'female', 'other']).optional().nullable(),
       dateOfBirth: z.coerce.date().max(new Date(), 'Date of birth cannot be in the future').optional().nullable(),
       city: optText(80),
+      language: z.enum(['en', 'as']).optional(),
     }),
   }),
   async (req, res) => {

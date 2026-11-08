@@ -132,10 +132,14 @@ router.get(
 );
 
 router.get('/drivers/:id', optionalAuth, validate({ params: idParam }), async (req, res) => {
-  const d = await prisma.driverProfile.findFirst({ where: { id: req.params.id, isListed: true }, select: driverSelect });
-  if (!d) throw notFound('Driver');
-  prisma.driverProfile.update({ where: { id: d.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
-  res.json({ success: true, data: await serializeDriver(d, { loggedIn: !!req.user, full: true }) });
+  const loggedIn = !!req.user;
+  const data = await cache.wrap(`mkt:detail:${req.params.id}:${loggedIn ? 1 : 0}`, 30, async () => {
+    const d = await prisma.driverProfile.findFirst({ where: { id: req.params.id, isListed: true }, select: driverSelect });
+    return d ? serializeDriver(d, { loggedIn, full: true }) : null;
+  });
+  if (!data) throw notFound('Driver');
+  cache.bump('driverViews', data.id); // flushed to the DB in batches by the scheduler
+  res.json({ success: true, data });
 });
 
 /**
@@ -152,7 +156,7 @@ router.post(
     if (targetType === 'driver_profile') {
       const d = await prisma.driverProfile.findFirst({ where: { id: targetId, isListed: true }, select: { partner: { select: { id: true, whatsappPhone: true, user: { select: { phone: true } } } } } });
       partner = d?.partner;
-      if (partner) await prisma.driverProfile.update({ where: { id: targetId }, data: { callCount: { increment: 1 } } });
+      if (partner) cache.bump('driverCalls', targetId);
     } else if (targetType === 'vehicle') {
       const v = await prisma.vehicle.findFirst({ where: { id: targetId, verificationStatus: 'approved' }, select: { partner: { select: { id: true, whatsappPhone: true, user: { select: { phone: true } } } } } });
       partner = v?.partner;

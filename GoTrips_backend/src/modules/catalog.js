@@ -7,6 +7,7 @@ const settings = require('../services/settings');
 const partnerService = require('./partners/service');
 const { validate, z } = require('../lib/validate');
 const { placeKey } = require('../lib/util');
+const { langOf, tr } = require('../lib/i18n');
 const { VEHICLE_CLASSES } = require('./vehicles');
 
 const router = express.Router();
@@ -15,24 +16,28 @@ const publicCache = (sec) => (_req, res, next) => {
   next();
 };
 
-const serializeCategory = (c) => ({
+const serializeCategory = (c, lang = 'en') => ({
   code: c.code,
-  name: c.name,
-  description: c.description,
+  name: tr(c, lang, 'name'),
+  description: tr(c, lang, 'description'),
   icon: c.icon,
   registrationFee: c.registrationFee,
   feeValidityDays: c.feeValidityDays,
   capabilities: { driverProfile: c.hasDriverProfile, vehicles: c.canListVehicles, trips: c.canCreateTrips, rentals: c.canListRentals, goodsOrders: c.canViewGoodsOrders },
-  documents: c.requirements.map((r) => ({ scope: r.scope, docType: r.docType, label: r.label, hint: r.hint, isRequired: r.isRequired, requiresNumber: r.requiresNumber, requiresExpiry: r.requiresExpiry, requiresBack: r.requiresBack })),
+  documents: c.requirements.map((r) => ({ scope: r.scope, docType: r.docType, label: tr(r, lang, 'label'), hint: tr(r, lang, 'hint'), isRequired: r.isRequired, requiresNumber: r.requiresNumber, requiresExpiry: r.requiresExpiry, requiresBack: r.requiresBack })),
 });
 
-router.get('/config', publicCache(60), async (_req, res) => {
+const vary = (_req, res, next) => (res.setHeader('Vary', 'Accept-Language'), next());
+
+router.get('/config', vary, publicCache(60), async (req, res) => {
+  const lang = langOf(req);
   const [s, cats] = await Promise.all([settings.publicSettings(), partnerService.categories()]);
-  res.json({ success: true, data: { ...s, vehicleClasses: VEHICLE_CLASSES, categories: cats.map(serializeCategory) } });
+  res.json({ success: true, data: { ...s, languages: ['en', 'as'], vehicleClasses: VEHICLE_CLASSES, categories: cats.map((c) => serializeCategory(c, lang)) } });
 });
 
-router.get('/categories', publicCache(300), async (_req, res) => {
-  res.json({ success: true, data: (await partnerService.categories()).map(serializeCategory) });
+router.get('/categories', vary, publicCache(300), async (req, res) => {
+  const lang = langOf(req);
+  res.json({ success: true, data: (await partnerService.categories()).map((c) => serializeCategory(c, lang)) });
 });
 
 router.get('/locations/districts', publicCache(3600), async (_req, res) => {
@@ -54,11 +59,14 @@ router.get('/locations/search', publicCache(300), validate({ query: z.object({ q
   res.json({ success: true, data });
 });
 
-router.get('/faqs', publicCache(600), validate({ query: z.object({ audience: z.enum(['user', 'partner']).default('user') }) }), async (req, res) => {
-  const data = await cache.wrap(`catalog:faqs:${req.query.audience}`, 600, () =>
-    prisma.faq.findMany({ where: { isActive: true, audience: { in: ['all', req.query.audience] } }, orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }], select: { id: true, question: true, answer: true } })
-  );
+router.get('/faqs', vary, publicCache(600), validate({ query: z.object({ audience: z.enum(['user', 'partner']).default('user'), lang: z.enum(['en', 'as']).optional() }) }), async (req, res) => {
+  const lang = langOf(req);
+  const data = await cache.wrap(`catalog:faqs:${req.query.audience}:${lang}`, 600, async () => {
+    const rows = await prisma.faq.findMany({ where: { isActive: true, audience: { in: ['all', req.query.audience] } }, orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }], select: { id: true, question: true, answer: true, translations: true } });
+    return rows.map((f) => ({ id: f.id, question: tr(f, lang, 'question'), answer: tr(f, lang, 'answer') }));
+  });
   res.json({ success: true, data });
 });
 
 module.exports = router;
+module.exports.serializeCategory = serializeCategory;
