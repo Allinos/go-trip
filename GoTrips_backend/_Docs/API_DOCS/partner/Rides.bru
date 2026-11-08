@@ -1,0 +1,40 @@
+meta {
+  name: Rides
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{URL}}/vehicles
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIyIiwicGhvbmVOdW1iZXIiOiIrOTE5NDAxMDY5MzM3IiwidXNlclR5cGUiOiJwYXNzZW5nZXIiLCJpYXQiOjE3NzMxNTQ5MDYsImV4cCI6MTc3NDQ1MDkwNn0.nBEhF3wnyltuFlbJyPyXXn7mVLx1C6XwbsbvwGKUbe4
+}
+
+body:json {
+  {
+    "vehicleType": "rental_car",
+    "vehicleCategory": "suv",
+    "manufacturer": "Toyota",
+    "model": "Highlander",
+    "year": 2024,
+    "color": "Midnight Blue",
+    "numberPlate": "ABC-1234-XYZ",
+    "seatingCapacity": 7,
+    "fuelType": "hybrid",
+    "acAvailable": true,
+    "rentalPricePerHour": 15.50,
+    "rentalPricePerDay": 120.00,
+    "ridePricePerKm": 2.25,
+    "baseFare": 10.00,
+    "features": [
+      "Leather Seats",
+      "Panoramic Sunroof",
+      "Backup Camera",
+      "Bluetooth Audio"
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+meta {
+  name: users
+}
+
+auth {
+  mode: oauth2
+}
+
+auth:oauth2 {
+  grant_type: authorization_code
+  callback_url: 
+  authorization_url: 
+  access_token_url: 
+  refresh_token_url: 
+  client_id: 
+  client_secret: 
+  scope: 
+  state: 
+  pkce: false
+  credentials_placement: body
+  credentials_id: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxIiwicGhvbmVOdW1iZXIiOiIrOTE5ODc2NTQzMjEwIiwidXNlclR5cGUiOiJwYXNzZW5nZXIiLCJpYXQiOjE3NzI3MTk0NjIsImV4cCI6MTc3MjgwNTg2Mn0.f6chZDgWi65QsfbBWZdBrvx_mUJbSA04k0dOaifJANE
+  token_placement: header
+  token_header_prefix: Bearer
+  auto_fetch_token: true
+  auto_refresh_token: false
+}
+
+vars:pre-request {
+  auth: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxIiwicGhvbmVOdW1iZXIiOiIrOTE5ODc2NTQzMjEwIiwidXNlclR5cGUiOiJwYXNzZW5nZXIiLCJpYXQiOjE3NzI3MTk0NjIsImV4cCI6MTc3MjgwNTg2Mn0.f6chZDgWi65QsfbBWZdBrvx_mUJbSA04k0dOaifJANE
+}

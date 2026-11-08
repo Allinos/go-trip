@@ -1,0 +1,22 @@
+meta {
+  name: send-otp-login
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{URL}}/auth/send-otp
+  body: json
+  auth: inherit
+}
+
+body:json {
+  // {
+  //   "phoneNumber": "9876543210",
+  //   "otpType":"login"
+  // }
+  {
+    "phoneNumber": "9401069337",
+    "otpType":"login"
+  }
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Upload Vehicle Photos
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{URL}}/vehicles/:id/photos
+  body: multipartForm
+  auth: bearer
+}
+
+params:path {
+  id: 2
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIyIiwicGhvbmVOdW1iZXIiOiIrOTE5NDAxMDY5MzM3IiwidXNlclR5cGUiOiJwYXNzZW5nZXIiLCJpYXQiOjE3NzMxNTQ5MDYsImV4cCI6MTc3NDQ1MDkwNn0.nBEhF3wnyltuFlbJyPyXXn7mVLx1C6XwbsbvwGKUbe4
+}
+
+body:multipart-form {
+  vehiclePhotos: @file(C:\Users\BS\Pictures\52327250_346921022575070_941985573428428151_n.jpg)
+}

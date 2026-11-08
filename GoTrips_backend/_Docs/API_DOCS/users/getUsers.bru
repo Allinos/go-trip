@@ -1,0 +1,19 @@
+meta {
+  name: getUsers
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{URL}}/users/:id
+  body: none
+  auth: bearer
+}
+
+params:path {
+  id: 1
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxIiwicGhvbmVOdW1iZXIiOiIrOTE5ODc2NTQzMjEwIiwidXNlclR5cGUiOiJwYXNzZW5nZXIiLCJpYXQiOjE3NzI3MTk0NjIsImV4cCI6MTc3MjgwNTg2Mn0.f6chZDgWi65QsfbBWZdBrvx_mUJbSA04k0dOaifJANE
+}

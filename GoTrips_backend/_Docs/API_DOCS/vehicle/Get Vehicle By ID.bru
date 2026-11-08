@@ -1,0 +1,19 @@
+meta {
+  name: Get Vehicle By ID
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{URL}}/vehicles/:id
+  body: none
+  auth: bearer
+}
+
+params:path {
+  id: 1
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIyIiwicGhvbmVOdW1iZXIiOiIrOTE5NDAxMDY5MzM3IiwidXNlclR5cGUiOiJwYXNzZW5nZXIiLCJpYXQiOjE3NzMxNTQ5MDYsImV4cCI6MTc3NDQ1MDkwNn0.nBEhF3wnyltuFlbJyPyXXn7mVLx1C6XwbsbvwGKUbe4
+}

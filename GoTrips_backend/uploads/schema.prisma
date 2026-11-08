@@ -1,0 +1,965 @@
+// =====================================================
+// RIDEFLOW DATABASE SCHEMA
+// Taxi & Vehicle Rental Platform
+// User App + Partner App
+// =====================================================
+
+generator client {
+  provider = "prisma-client-js"
+   engineType = "binary"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =====================================================
+// USERS & AUTHENTICATION
+// =====================================================
+
+model User {
+  user_id               BigInt                @id @default(autoincrement())
+  phone_number          String                 @unique @db.VarChar(20)
+  country_code          String                 @default("+91") @db.VarChar(5)
+  full_name             String?                @db.VarChar(100)
+  email                 String?                @unique @db.VarChar(100)
+  profile_photo_url     String?                @db.VarChar(255)
+  date_of_birth         DateTime?              @db.Date
+  gender                Gender?
+  user_type             UserType               @default(passenger)
+  is_verified           Boolean                @default(false)
+  is_active             Boolean                @default(true)
+  terms_accepted        Boolean                @default(false)
+  privacy_accepted      Boolean                @default(false)
+  created_at            DateTime               @default(now()) @db.Timestamp(0)
+  updated_at            DateTime               @default(now()) @updatedAt @db.Timestamp(0)
+  last_login            DateTime?              @db.Timestamp(0)
+
+  // Relations
+  otp_verifications     OtpVerification[]
+  saved_locations       UserSavedLocation[]
+  partner               Partner?
+  passenger_rides       Ride[]                 @relation("passenger_rides")
+  payer_payments        Payment[]              @relation("payer_payments")
+  payee_payments        Payment[]              @relation("payee_payments")
+  rental_bookings       RentalBooking[]
+  reviews_given         RatingsReview[]        @relation("reviewer")
+  reviews_received      RatingsReview[]        @relation("reviewee")
+  notifications         Notification[]
+  push_tokens           PushToken[]
+  support_tickets       SupportTicket[]
+  promo_usage           PromoUsage[]
+  emergency_contacts    EmergencyContact[]
+  sos_alerts            SosAlert[]
+  app_sessions          AppSession[]
+  search_logs           SearchLog[]
+
+  @@index([phone_number])
+  @@index([email])
+  @@map("users")
+}
+
+model OtpVerification {
+  otp_id                BigInt                 @id @default(autoincrement())
+  user_id               BigInt?
+  phone_number          String                 @db.VarChar(20)
+  otp_code              String                 @db.VarChar(6)
+  otp_type              OtpType                @default(login)
+  is_verified           Boolean                @default(false)
+  expires_at            DateTime               @db.Timestamp(0)
+  created_at            DateTime               @default(now()) @db.Timestamp(0)
+
+  // Relations
+  user                  User?                  @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@index([phone_number, otp_code])
+  @@map("otp_verification")
+}
+
+model UserSavedLocation {
+  location_id           BigInt                 @id @default(autoincrement())
+  user_id               BigInt
+  location_type         LocationType
+  location_name         String?                @db.VarChar(100)
+  address               String                 @db.Text
+  latitude              Decimal?               @db.Decimal(10, 8)
+  longitude             Decimal?               @db.Decimal(11, 8)
+  landmark              String?                @db.VarChar(255)
+  created_at            DateTime               @default(now()) @db.Timestamp(0)
+
+  // Relations
+  user                  User                   @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("user_saved_locations")
+}
+
+// =====================================================
+// PARTNER/DRIVER MANAGEMENT
+// =====================================================
+
+model Partner {
+  partner_id            BigInt                 @id @default(autoincrement())
+  user_id               BigInt                 @unique
+  partner_type          PartnerType
+  business_name         String?                @db.VarChar(100)
+  verification_status   VerificationStatus     @default(pending)
+  verification_date     DateTime?              @db.Timestamp(0)
+  rejection_reason      String?                @db.Text
+  is_online             Boolean                @default(false)
+  bank_account_number   String?                @db.VarChar(50)
+  bank_ifsc_code        String?                @db.VarChar(20)
+  bank_account_holder   String?                @db.VarChar(100)
+  upi_id                String?                @db.VarChar(100)
+  rating_average        Decimal                @default(0.00) @db.Decimal(3, 2)
+  total_rides_completed Int                    @default(0)
+  total_earnings        Decimal                @default(0.00) @db.Decimal(10, 2)
+  pending_payout        Decimal                @default(0.00) @db.Decimal(10, 2)
+  language_preference   String                 @default("en") @db.VarChar(10)
+  created_at            DateTime               @default(now()) @db.Timestamp(0)
+  updated_at            DateTime               @default(now()) @updatedAt @db.Timestamp(0)
+
+  // Relations
+  user                  User                   @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  documents             PartnerDocument[]
+  vehicles              Vehicle[]
+  driver_rides          Ride[]                  @relation("driver_rides")
+  owner_rentals         RentalBooking[]         @relation("owner_rentals")
+  earnings              PartnerEarning[]
+  subscriptions         PartnerSubscription[]
+
+  @@index([partner_type])
+  @@index([verification_status])
+  @@map("partners")
+}
+
+model PartnerDocument {
+  document_id           BigInt                 @id @default(autoincrement())
+  partner_id            BigInt
+  document_type         DocumentType
+  document_number       String?                @db.VarChar(100)
+  document_url          String                 @db.VarChar(255)
+  verification_status   DocVerificationStatus  @default(pending)
+  expiry_date           DateTime?              @db.Date
+  uploaded_at           DateTime               @default(now()) @db.Timestamp(0)
+  verified_at           DateTime?              @db.Timestamp(0)
+
+  // Relations
+  partner               Partner                @relation(fields: [partner_id], references: [partner_id], onDelete: Cascade)
+
+  @@index([partner_id])
+  @@map("partner_documents")
+}
+
+// =====================================================
+// VEHICLE MANAGEMENT
+// =====================================================
+
+model Vehicle {
+  vehicle_id            BigInt                 @id @default(autoincrement())
+  partner_id            BigInt
+  vehicle_type          VehicleType
+  vehicle_category      VehicleCategory
+  manufacturer          String?                @db.VarChar(50)
+  model                 String?                @db.VarChar(50)
+  year                  Int?
+  color                 String?                @db.VarChar(30)
+  number_plate          String                 @unique @db.VarChar(20)
+  seating_capacity      Int?
+  fuel_type             FuelType?
+  ac_available          Boolean                @default(false)
+  is_available          Boolean                @default(true)
+  is_verified           Boolean                @default(false)
+  rental_price_per_hour Decimal?               @db.Decimal(10, 2)
+  rental_price_per_day  Decimal?               @db.Decimal(10, 2)
+  ride_price_per_km     Decimal?               @db.Decimal(10, 2)
+  base_fare             Decimal?               @db.Decimal(10, 2)
+  vehicle_photos        Json?                  // Array of photo URLs
+  features              Json?                  // Array of features
+  rating_average        Decimal                @default(0.00) @db.Decimal(3, 2)
+  total_trips           Int                    @default(0)
+  created_at            DateTime               @default(now()) @db.Timestamp(0)
+  updated_at            DateTime               @default(now()) @updatedAt @db.Timestamp(0)
+
+  // Relations
+  partner               Partner                @relation(fields: [partner_id], references: [partner_id], onDelete: Cascade)
+  rides                 Ride[]
+  rental_bookings       RentalBooking[]
+  reviews               RatingsReview[]
+
+  @@index([vehicle_type])
+  @@index([is_available])
+  @@index([number_plate])
+  @@map("vehicles")
+}
+
+// =====================================================
+// RIDE MANAGEMENT
+// =====================================================
+
+model Ride {
+  ride_id               BigInt                 @id @default(autoincrement())
+  ride_type             RideType
+  passenger_id          BigInt
+  driver_id             BigInt?
+  vehicle_id            BigInt?
+
+  // Pickup & Drop Details
+  pickup_address        String                 @db.Text
+  pickup_latitude       Decimal?                @db.Decimal(10, 8)
+  pickup_longitude      Decimal?                @db.Decimal(11, 8)
+  pickup_landmark       String?                 @db.VarChar(255)
+  drop_address          String?                 @db.Text
+  drop_latitude         Decimal?                @db.Decimal(10, 8)
+  drop_longitude        Decimal?                @db.Decimal(11, 8)
+  drop_landmark         String?                 @db.VarChar(255)
+
+  // Ride Schedule
+  scheduled_date        DateTime                @db.Date
+  scheduled_time        DateTime                @db.Time(0)
+  pickup_datetime       DateTime?               @db.Timestamp(0)
+  start_datetime        DateTime?               @db.Timestamp(0)
+  end_datetime          DateTime?               @db.Timestamp(0)
+
+  // Ride Details
+  distance_km           Decimal?                @db.Decimal(10, 2)
+  duration_minutes      Int?
+  seats_required        Int                     @default(1)
+  seats_available       Int?
+
+  // Pricing
+  base_fare             Decimal?                @db.Decimal(10, 2)
+  distance_fare         Decimal?                @db.Decimal(10, 2)
+  time_fare             Decimal?                @db.Decimal(10, 2)
+  tax_amount            Decimal?                @db.Decimal(10, 2)
+  discount_amount       Decimal                 @default(0.00) @db.Decimal(10, 2)
+  total_fare            Decimal?                @db.Decimal(10, 2)
+
+  // Status
+  ride_status           RideStatus              @default(pending)
+  cancellation_reason   String?                 @db.Text
+  cancelled_by          CancelledBy?
+  cancelled_at          DateTime?               @db.Timestamp(0)
+
+  // Additional Info
+  special_instructions  String?                 @db.Text
+  otp_code              String?                 @db.VarChar(6)
+
+  created_at            DateTime                @default(now()) @db.Timestamp(0)
+  updated_at            DateTime                @default(now()) @updatedAt @db.Timestamp(0)
+
+  // Relations
+  passenger             User                    @relation("passenger_rides", fields: [passenger_id], references: [user_id], onDelete: Cascade)
+  driver                Partner?                @relation("driver_rides", fields: [driver_id], references: [partner_id], onDelete: SetNull)
+  vehicle               Vehicle?                 @relation(fields: [vehicle_id], references: [vehicle_id], onDelete: SetNull)
+  tracking              RideTracking[]
+  payments              Payment[]
+  earnings              PartnerEarning[]
+  reviews               RatingsReview[]
+  support_tickets       SupportTicket[]
+  promo_usage           PromoUsage[]
+  sos_alerts            SosAlert[]
+
+  @@index([passenger_id])
+  @@index([driver_id])
+  @@index([ride_status])
+  @@index([scheduled_date, scheduled_time])
+  @@index([passenger_id, ride_status])
+  @@index([driver_id, ride_status])
+  @@map("rides")
+}
+
+model RentalBooking {
+  booking_id            BigInt                 @id @default(autoincrement())
+  passenger_id          BigInt
+  vehicle_id            BigInt
+  owner_id              BigInt
+
+  // Rental Period
+  start_date            DateTime               @db.Date
+  start_time            DateTime               @db.Time(0)
+  end_date              DateTime               @db.Date
+  end_time              DateTime               @db.Time(0)
+  rental_duration_hours Int?
+  rental_duration_days  Int?
+
+  // Pricing
+  price_per_hour        Decimal?               @db.Decimal(10, 2)
+  price_per_day         Decimal?               @db.Decimal(10, 2)
+  total_rental_amount   Decimal?               @db.Decimal(10, 2)
+  security_deposit      Decimal?               @db.Decimal(10, 2)
+  tax_amount            Decimal?               @db.Decimal(10, 2)
+  total_amount          Decimal?               @db.Decimal(10, 2)
+
+  // Pickup/Return Location
+  pickup_location       String?                 @db.Text
+  return_location       String?                 @db.Text
+
+  // Status
+  booking_status        BookingStatus           @default(pending)
+  cancellation_reason   String?                 @db.Text
+
+  // Documents
+  rental_agreement_url  String?                 @db.VarChar(255)
+
+  created_at            DateTime                @default(now()) @db.Timestamp(0)
+  updated_at            DateTime                @default(now()) @updatedAt @db.Timestamp(0)
+
+  // Relations
+  passenger             User                    @relation(fields: [passenger_id], references: [user_id], onDelete: Cascade)
+  vehicle               Vehicle                 @relation(fields: [vehicle_id], references: [vehicle_id], onDelete: Cascade)
+  owner                 Partner                 @relation("owner_rentals", fields: [owner_id], references: [partner_id], onDelete: Cascade)
+  payments              Payment[]
+  earnings              PartnerEarning[]
+  reviews               RatingsReview[]
+  support_tickets       SupportTicket[]
+  promo_usage           PromoUsage[]
+
+  @@index([passenger_id])
+  @@index([vehicle_id])
+  @@index([booking_status])
+  @@map("rental_bookings")
+}
+
+// =====================================================
+// RIDE TRACKING & LOCATION
+// =====================================================
+
+model RideTracking {
+  tracking_id           BigInt                 @id @default(autoincrement())
+  ride_id               BigInt
+  driver_latitude       Decimal?                @db.Decimal(10, 8)
+  driver_longitude      Decimal?                @db.Decimal(11, 8)
+  speed_kmph            Decimal?                @db.Decimal(5, 2)
+  heading               Decimal?                @db.Decimal(5, 2)
+  eta_minutes           Int?
+  distance_to_pickup_km Decimal?                @db.Decimal(10, 2)
+  recorded_at           DateTime                @default(now()) @db.Timestamp(0)
+
+  // Relations
+  ride                  Ride                    @relation(fields: [ride_id], references: [ride_id], onDelete: Cascade)
+
+  @@index([ride_id, recorded_at])
+  @@map("ride_tracking")
+}
+
+// =====================================================
+// PAYMENTS
+// =====================================================
+
+model Payment {
+  payment_id            BigInt                 @id @default(autoincrement())
+  transaction_type      TransactionType
+  ride_id               BigInt?
+  rental_booking_id     BigInt?
+  payer_id              BigInt
+  payee_id              BigInt?
+
+  amount                Decimal                @db.Decimal(10, 2)
+  payment_method        PaymentMethod
+  payment_status        PaymentStatus          @default(pending)
+
+  // Payment Gateway Details
+  transaction_id        String?                @unique @db.VarChar(100)
+  gateway_name          String?                 @db.VarChar(50)
+  gateway_response      Json?
+
+  payment_date          DateTime                @default(now()) @db.Timestamp(0)
+
+  // Relations
+  ride                  Ride?                   @relation(fields: [ride_id], references: [ride_id], onDelete: SetNull)
+  rental_booking        RentalBooking?          @relation(fields: [rental_booking_id], references: [booking_id], onDelete: SetNull)
+  payer                 User                    @relation("payer_payments", fields: [payer_id], references: [user_id], onDelete: Cascade)
+  payee                 User?                   @relation("payee_payments", fields: [payee_id], references: [user_id], onDelete: SetNull)
+  subscriptions         PartnerSubscription[]
+
+  @@index([payer_id])
+  @@index([transaction_id])
+  @@index([payment_status])
+  @@index([payment_date])
+  @@map("payments")
+}
+
+model PartnerEarning {
+  earning_id            BigInt                 @id @default(autoincrement())
+  partner_id            BigInt
+  ride_id               BigInt?
+  rental_booking_id     BigInt?
+
+  gross_amount          Decimal                @db.Decimal(10, 2)
+  commission_percentage Decimal                @default(15.00) @db.Decimal(5, 2)
+  commission_amount     Decimal                @default(0.00) @db.Decimal(10, 2)
+  final_payout_amount   Decimal                @default(0.00) @db.Decimal(10, 2)
+  net_earnings          Decimal?                @db.Decimal(10, 2)
+
+  payout_status         PayoutStatus            @default(pending)
+  payout_date           DateTime?               @db.Timestamp(0)
+  payout_transaction_id String?                 @db.VarChar(100)
+
+  earned_at             DateTime                @default(now()) @db.Timestamp(0)
+
+  // Relations
+  partner               Partner                 @relation(fields: [partner_id], references: [partner_id], onDelete: Cascade)
+  ride                  Ride?                    @relation(fields: [ride_id], references: [ride_id], onDelete: SetNull)
+  rental_booking        RentalBooking?           @relation(fields: [rental_booking_id], references: [booking_id], onDelete: SetNull)
+
+  @@index([partner_id])
+  @@index([payout_status])
+  @@index([partner_id, earned_at])
+  @@map("partner_earnings")
+}
+
+model PartnerSubscriptionPlan {
+  plan_id               BigInt                 @id @default(autoincrement())
+  plan_name             String                 @db.VarChar(100)
+  billing_type          BillingType
+  plan_price            Decimal                @db.Decimal(10, 2)
+  lead_unlock_price     Decimal                @default(49.00) @db.Decimal(10, 2)
+  commission_percentage Decimal                @default(0.00) @db.Decimal(5, 2)
+  is_active             Boolean                @default(true)
+  created_at            DateTime                @default(now()) @db.Timestamp(0)
+
+  // Relations
+  subscriptions         PartnerSubscription[]
+
+  @@map("partner_subscription_plans")
+}
+
+model PartnerSubscription {
+  subscription_id       BigInt                 @id @default(autoincrement())
+  partner_id            BigInt
+  plan_id               BigInt
+  subscription_status   SubscriptionStatus      @default(pending)
+  start_date            DateTime?               @db.Timestamp(0)
+  end_date              DateTime?               @db.Timestamp(0)
+  payment_id            BigInt?
+  created_at            DateTime                @default(now()) @db.Timestamp(0)
+
+  // Relations
+  partner               Partner                 @relation(fields: [partner_id], references: [partner_id])
+  plan                  PartnerSubscriptionPlan @relation(fields: [plan_id], references: [plan_id])
+  payment               Payment?                 @relation(fields: [payment_id], references: [payment_id])
+
+  @@index([partner_id])
+  @@map("partner_subscriptions")
+}
+
+// =====================================================
+// RATINGS & REVIEWS
+// =====================================================
+
+model RatingsReview {
+  review_id             BigInt                 @id @default(autoincrement())
+  review_type           ReviewType
+  ride_id               BigInt?
+  rental_booking_id     BigInt?
+  reviewer_id           BigInt
+  reviewee_id           BigInt?
+  vehicle_id            BigInt?
+
+  rating                Int
+  review_text           String?                 @db.Text
+  review_tags           Json?                   // ["Clean", "Polite", "On Time"]
+
+  is_visible            Boolean                 @default(true)
+  response_text         String?                 @db.Text
+  responded_at          DateTime?                @db.Timestamp(0)
+
+  created_at            DateTime                 @default(now()) @db.Timestamp(0)
+
+  // Relations
+  ride                  Ride?                    @relation(fields: [ride_id], references: [ride_id], onDelete: Cascade)
+  rental_booking        RentalBooking?           @relation(fields: [rental_booking_id], references: [booking_id], onDelete: Cascade)
+  reviewer              User                     @relation("reviewer", fields: [reviewer_id], references: [user_id], onDelete: Cascade)
+  reviewee              User?                    @relation("reviewee", fields: [reviewee_id], references: [user_id], onDelete: SetNull)
+  vehicle               Vehicle?                  @relation(fields: [vehicle_id], references: [vehicle_id], onDelete: SetNull)
+
+  @@index([reviewer_id])
+  @@index([reviewee_id])
+  @@index([vehicle_id])
+  @@map("ratings_reviews")
+}
+
+// =====================================================
+// NOTIFICATIONS
+// =====================================================
+
+model Notification {
+  notification_id       BigInt                 @id @default(autoincrement())
+  user_id               BigInt
+  notification_type     NotificationType
+  title                 String                 @db.VarChar(255)
+  message               String                 @db.Text
+  data                  Json?                   // Additional data for deep linking
+
+  is_read               Boolean                 @default(false)
+  read_at               DateTime?                @db.Timestamp(0)
+
+  sent_at               DateTime                 @default(now()) @db.Timestamp(0)
+
+  // Relations
+  user                  User                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@index([user_id, is_read])
+  @@map("notifications")
+}
+
+model PushToken {
+  token_id              BigInt                 @id @default(autoincrement())
+  user_id               BigInt
+  device_token          String                 @db.VarChar(255)
+  device_type           DeviceType
+  is_active             Boolean                 @default(true)
+  created_at            DateTime                 @default(now()) @db.Timestamp(0)
+  updated_at            DateTime                 @default(now()) @updatedAt @db.Timestamp(0)
+
+  // Relations
+  user                  User                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@unique([user_id, device_token])
+  @@index([is_active])
+  @@map("push_tokens")
+}
+
+// =====================================================
+// SUPPORT & HELP
+// =====================================================
+
+model SupportTicket {
+  ticket_id             BigInt                 @id @default(autoincrement())
+  user_id               BigInt
+  ride_id               BigInt?
+  rental_booking_id     BigInt?
+
+  ticket_type           TicketType
+  priority              Priority                @default(medium)
+  subject               String                  @db.VarChar(255)
+  description           String                  @db.Text
+
+  status                TicketStatus            @default(open)
+  assigned_to           BigInt?                 // Admin user ID
+  resolution_notes      String?                 @db.Text
+
+  created_at            DateTime                 @default(now()) @db.Timestamp(0)
+  updated_at            DateTime                 @default(now()) @updatedAt @db.Timestamp(0)
+  resolved_at           DateTime?                @db.Timestamp(0)
+
+  // Relations
+  user                  User                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  ride                  Ride?                     @relation(fields: [ride_id], references: [ride_id], onDelete: SetNull)
+  rental_booking        RentalBooking?            @relation(fields: [rental_booking_id], references: [booking_id], onDelete: SetNull)
+
+  @@index([user_id])
+  @@index([status])
+  @@map("support_tickets")
+}
+
+model Faq {
+  faq_id                BigInt                 @id @default(autoincrement())
+  category              FaqCategory
+  question              String                 @db.Text
+  answer                String                 @db.Text
+  display_order         Int                     @default(0)
+  is_active             Boolean                 @default(true)
+  created_at            DateTime                 @default(now()) @db.Timestamp(0)
+  updated_at            DateTime                 @default(now()) @updatedAt @db.Timestamp(0)
+
+  @@index([category, is_active])
+  @@map("faqs")
+}
+
+// =====================================================
+// PROMO CODES & OFFERS
+// =====================================================
+
+model PromoCode {
+  promo_id              BigInt                 @id @default(autoincrement())
+  promo_code            String                 @unique @db.VarChar(50)
+  description           String?                 @db.VarChar(255)
+  discount_type         DiscountType
+  discount_value        Decimal                 @db.Decimal(10, 2)
+  max_discount_amount   Decimal?                @db.Decimal(10, 2)
+  min_order_amount      Decimal?                @db.Decimal(10, 2)
+
+  usage_limit_per_user  Int                     @default(1)
+  total_usage_limit     Int?
+  times_used            Int                     @default(0)
+
+  valid_from            DateTime                @db.Timestamp(0)
+  valid_until           DateTime                @db.Timestamp(0)
+  is_active             Boolean                 @default(true)
+
+  applicable_to         ApplicableTo            @default(all)
+  user_type             PromoUserType           @default(all)
+
+  created_at            DateTime                 @default(now()) @db.Timestamp(0)
+
+  // Relations
+  usage                 PromoUsage[]
+
+  @@index([promo_code])
+  @@index([is_active, valid_from, valid_until])
+  @@map("promo_codes")
+}
+
+model PromoUsage {
+  usage_id              BigInt                 @id @default(autoincrement())
+  promo_id              BigInt
+  user_id               BigInt
+  ride_id               BigInt?
+  rental_booking_id     BigInt?
+  discount_applied      Decimal?                @db.Decimal(10, 2)
+  used_at               DateTime                 @default(now()) @db.Timestamp(0)
+
+  // Relations
+  promo                 PromoCode                @relation(fields: [promo_id], references: [promo_id], onDelete: Cascade)
+  user                  User                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  ride                  Ride?                     @relation(fields: [ride_id], references: [ride_id], onDelete: SetNull)
+  rental_booking        RentalBooking?            @relation(fields: [rental_booking_id], references: [booking_id], onDelete: SetNull)
+
+  @@index([user_id, promo_id])
+  @@map("promo_usage")
+}
+
+// =====================================================
+// EMERGENCY SOS
+// =====================================================
+
+model EmergencyContact {
+  contact_id            BigInt                 @id @default(autoincrement())
+  user_id               BigInt
+  contact_name          String                 @db.VarChar(100)
+  contact_phone         String                 @db.VarChar(20)
+  relationship          String?                 @db.VarChar(50)
+  is_primary            Boolean                 @default(false)
+  created_at            DateTime                 @default(now()) @db.Timestamp(0)
+
+  // Relations
+  user                  User                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("emergency_contacts")
+}
+
+model SosAlert {
+  sos_id                BigInt                 @id @default(autoincrement())
+  user_id               BigInt
+  ride_id               BigInt?
+
+  alert_type            AlertType
+  latitude              Decimal?                @db.Decimal(10, 8)
+  longitude             Decimal?                @db.Decimal(11, 8)
+  location_address      String?                 @db.Text
+
+  alert_status          AlertStatus             @default(active)
+  response_notes        String?                 @db.Text
+
+  triggered_at          DateTime                 @default(now()) @db.Timestamp(0)
+  resolved_at           DateTime?                @db.Timestamp(0)
+
+  // Relations
+  user                  User                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  ride                  Ride?                     @relation(fields: [ride_id], references: [ride_id], onDelete: SetNull)
+
+  @@index([alert_status, triggered_at])
+  @@map("sos_alerts")
+}
+
+// =====================================================
+// ANALYTICS & LOGS
+// =====================================================
+
+model AppSession {
+  session_id            BigInt                 @id @default(autoincrement())
+  user_id               BigInt
+  device_id             String?                 @db.VarChar(255)
+  device_type           DeviceType?
+  app_version           String?                 @db.VarChar(20)
+  os_version            String?                 @db.VarChar(20)
+
+  session_start         DateTime                 @default(now()) @db.Timestamp(0)
+  session_end           DateTime?                @db.Timestamp(0)
+  duration_seconds      Int?
+
+  // Relations
+  user                  User                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@index([user_id, session_start])
+  @@map("app_sessions")
+}
+
+model SearchLog {
+  search_id             BigInt                 @id @default(autoincrement())
+  user_id               BigInt?
+  search_type           SearchType?
+  pickup_location       String?                 @db.Text
+  drop_location         String?                 @db.Text
+  vehicle_type          String?                 @db.VarChar(50)
+  search_date           DateTime?                @db.Date
+  search_time           DateTime?                @db.Time(0)
+  results_count         Int?
+  booking_made          Boolean                 @default(false)
+  searched_at           DateTime                 @default(now()) @db.Timestamp(0)
+
+  // Relations
+  user                  User?                    @relation(fields: [user_id], references: [user_id], onDelete: SetNull)
+
+  @@index([user_id, searched_at])
+  @@map("search_logs")
+}
+
+// =====================================================
+// ADMIN CONFIGURATIONS
+// =====================================================
+
+model AppConfiguration {
+  config_id             BigInt                 @id @default(autoincrement())
+  config_key            String                 @unique @db.VarChar(100)
+  config_value          String                 @db.Text
+  description           String?                 @db.Text
+  updated_at            DateTime                 @default(now()) @updatedAt @db.Timestamp(0)
+
+  @@map("app_configurations")
+}
+
+// =====================================================
+// ENUMS
+// =====================================================
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum UserType {
+  passenger
+  driver
+  both
+}
+
+enum OtpType {
+  login
+  signup
+  verification
+}
+
+enum LocationType {
+  home
+  work
+  other
+}
+
+enum PartnerType {
+  taxi_driver
+  bike_rider
+  vehicle_owner
+}
+
+enum VerificationStatus {
+  pending
+  approved
+  rejected
+  suspended
+}
+
+enum DocumentType {
+  driving_license
+  vehicle_rc
+  insurance
+  aadhar
+  pan
+  other
+}
+
+enum DocVerificationStatus {
+  pending
+  approved
+  rejected
+}
+
+enum VehicleType {
+  taxi
+  bike
+  rental_car
+  commercial_vehicle
+}
+
+enum VehicleCategory {
+  sedan
+  suv
+  hatchback
+  motorcycle
+  auto
+  mini_truck
+  van
+}
+
+enum FuelType {
+  petrol
+  diesel
+  cng
+  electric
+  hybrid
+}
+
+enum RideType {
+  taxi
+  bike
+  rental
+  commercial
+}
+
+enum RideStatus {
+  pending
+  accepted
+  started
+  completed
+  cancelled
+  no_show
+}
+
+enum CancelledBy {
+  passenger
+  driver
+  system
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  active
+  completed
+  cancelled
+}
+
+enum TransactionType {
+  ride
+  rental
+  payout
+  refund
+  driver_unlock
+  driver_subscription
+}
+
+enum PaymentMethod {
+  cash
+  upi
+  wallet
+  card
+  netbanking
+}
+
+enum PaymentStatus {
+  pending
+  completed
+  failed
+  refunded
+}
+
+enum PayoutStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+enum BillingType {
+  one_time
+  monthly
+}
+
+enum SubscriptionStatus {
+  active
+  expired
+  cancelled
+  pending
+}
+
+enum ReviewType {
+  ride
+  rental
+  driver
+  vehicle
+}
+
+enum NotificationType {
+  ride_request
+  ride_accepted
+  ride_started
+  ride_completed
+  payment
+  promotion
+  system
+}
+
+enum DeviceType {
+  android
+  ios
+}
+
+enum TicketType {
+  ride_issue
+  payment_issue
+  driver_complaint
+  vehicle_issue
+  account
+  other
+}
+
+enum Priority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum TicketStatus {
+  open
+  in_progress
+  resolved
+  closed
+}
+
+enum FaqCategory {
+  passenger
+  partner
+  general
+  payment
+  rental
+}
+
+enum DiscountType {
+  percentage
+  fixed
+}
+
+enum ApplicableTo {
+  all
+  ride
+  rental
+}
+
+enum PromoUserType {
+  all
+  new
+  existing
+}
+
+enum AlertType {
+  emergency
+  safety_concern
+  accident
+}
+
+enum AlertStatus {
+  active
+  acknowledged
+  resolved
+}
+
+enum SearchType {
+  ride
+  rental
+  location
+}

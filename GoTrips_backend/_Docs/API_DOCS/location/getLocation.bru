@@ -1,0 +1,51 @@
+meta {
+  name: getLocation
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{URL}}/locations
+  body: none
+  auth: inherit
+}
+
+body:json {
+  {
+    { "district": "Bajali", "points": ["Pathsala", "Sarthebari Road", "Chowk Bazaar", "Howly Gate"] },
+    { "district": "Baksa", "points": ["Mushalpur", "Tamulpur", "Barama Chariali", "Goreswar"] },
+    { "district": "Barpeta", "points": ["Barpeta Road", "Howly", "Sarthebari", "Kalgachia", "Patbausi"] },
+    { "district": "Biswanath", "points": ["Biswanath Chariali", "Gohpur", "Pavoi Road", "Monabarie"] },
+    { "district": "Bongaigaon", "points": ["New Bongaigaon Stn", "Chapaguri", "Borpara", "Abhayapuri"] },
+    { "district": "Cachar", "points": ["Silchar ISBT", "Rangirkhari", "Tarapur", "Malugram", "Sonai"] },
+    { "district": "Charaideo", "points": ["Sonari Town", "Sapakheti", "Moranhat", "Bhojo"] },
+    { "district": "Chirang", "points": ["Kajalgoan", "Basugaon", "Bijni", "Dhaligaon"] },
+    { "district": "Darrang", "points": ["Mangaldai", "Sipajhar", "Kharupetia", "Dalgaon"] },
+    { "district": "Dhemaji", "points": ["Dhemaji Town", "Silapathar", "Jonai", "Gogamukh"] },
+    { "district": "Dhubri", "points": ["Dhubri Ghat", "Gauripur", "Bilasipara", "Golakganj", "Chapor"] },
+    { "district": "Dibrugarh", "points": ["Chowkidingee", "Banipur", "Thana Chariali", "Lahowal", "Moran"] },
+    { "district": "Dima Hasao", "points": ["Haflong", "Maibang", "Mahur", "Umrangso"] },
+    { "district": "Goalpara", "points": ["Goalpara Town", "Dudhnai", "Agia", "Lakhipur"] },
+    { "district": "Golaghat", "points": ["Golaghat Town", "Bokakhat", "Dergaon", "Sarupathar", "Numaligarh"] },
+    { "district": "Hailakandi", "points": ["Hailakandi Town", "Lala", "Algapur", "Katlicherra"] },
+    { "district": "Hojai", "points": ["Hojai Town", "Lanka", "Lumding", "Doboka"] },
+    { "district": "Jorhat", "points": ["Baruah Chariali", "ISBT Jorhat", "Rowriah", "Mariani", "Teok"] },
+    { "district": "Kamrup Metropolitan", "points": ["Paltan Bazaar", "Khanapara", "Adabari", "Jalukbari", "Ganeshguri", "ISBT Betkuchi"] },
+    { "district": "Kamrup Rural", "points": ["Amingaon", "Baihata Chariali", "Rangia", "Chaygaon", "Hajo"] },
+    { "district": "Karbi Anglong", "points": ["Diphu", "Bokajan", "Dokmoka", "Howraghat"] },
+    { "district": "Karimganj", "points": ["Karimganj Town", "Badarpur", "Patharkandi", "Ramkrishna Nagar"] },
+    { "district": "Kokrajhar", "points": ["Kokrajhar Town", "Gossaigaon", "Fakiragram", "Tamarhat"] },
+    { "district": "Lakhimpur", "points": ["North Lakhimpur", "Bihpuria", "Narayanpur", "Dhakuakhana"] },
+    { "district": "Majuli", "points": ["Garamur", "Kamalabari", "Jengraimukh", "Auniati"] },
+    { "district": "Morigaon", "points": ["Morigaon Town", "Jagiroad", "Mayong", "Bhuragaon"] },
+    { "district": "Nagaon", "points": ["Haibargaon", "Nagaon Bypass", "Koliabor", "Dhing", "Samaguri"] },
+    { "district": "Nalbari", "points": ["Nalbari Town", "Tihu", "Mukalmua", "Barama Road"] },
+    { "district": "Sivasagar", "points": ["Sivasagar Town", "Demow", "Nazira", "Amguri"] },
+    { "district": "Sonitpur", "points": ["Mission Chariali", "Tezpur Town", "Dekargaon", "Jamugurihat"] },
+    { "district": "South Salmara-Mankachar", "points": ["Hatsingimari", "Mankachar", "Fularchar"] },
+    { "district": "Tamulpur", "points": ["Tamulpur Town", "Kumarikata", "Nagrijuli"] },
+    { "district": "Tinsukia", "points": ["Thana Chariali", "Borguri", "Doomdooma", "Digboi", "Margherita"] },
+    { "district": "Udalguri", "points": ["Udalguri Town", "Tangla", "Mazbat", "Kalaigaon"] },
+    { "district": "West Karbi Anglong", "points": ["Hamren", "Baithalangso", "Kheroni"] }
+  
+}

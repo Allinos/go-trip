@@ -1,0 +1,25 @@
+meta {
+  name: cancel
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{URL}}/rides/:id/cancel
+  body: none
+  auth: bearer
+}
+
+params:path {
+  id: 1
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIyIiwicGhvbmVOdW1iZXIiOiIrOTE5NDAxMDY5MzM3IiwidXNlclR5cGUiOiJwYXNzZW5nZXIiLCJpYXQiOjE3NzQ1ODkzMDEsImV4cCI6MTc3NTg4NTMwMX0.HFV7iO6NN_yqxvcX37aKQLXXIQnri2xbOir_X1gY8t4
+}
+
+body:json {
+  {
+    "cancellationReason":"ane adasdasdsdi"
+  }
+}

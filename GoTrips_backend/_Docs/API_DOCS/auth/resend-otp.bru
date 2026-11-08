@@ -1,0 +1,18 @@
+meta {
+  name: resend-otp
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{URL}}/auth/resend-otp
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "phoneNumber": "9876543210",
+    "otpType":"signup"
+  }
+}

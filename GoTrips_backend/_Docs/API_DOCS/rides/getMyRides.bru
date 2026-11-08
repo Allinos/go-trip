@@ -1,0 +1,41 @@
+meta {
+  name: getMyRides
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{URL}}/rides/my-rides
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIyIiwicGhvbmVOdW1iZXIiOiIrOTE5NDAxMDY5MzM3IiwidXNlclR5cGUiOiJwYXNzZW5nZXIiLCJpYXQiOjE3NzQ1ODkzMDEsImV4cCI6MTc3NTg4NTMwMX0.HFV7iO6NN_yqxvcX37aKQLXXIQnri2xbOir_X1gY8t4
+}
+
+body:json {
+  {
+    "rideType": "open_ride",
+    "vehicleId": "1",
+    "pickupLocationLat": 34.052235,
+    "pickupLocationLng": -118.243683,
+    "pickupAddress": "Union Station, 800 N Alameda St, Los Angeles, CA 90012",
+    "dropLocationLat": 37.774929,
+    "dropLocationLng": -122.419416,
+    "dropAddress": "Salesforce Tower, 415 Mission St, San Francisco, CA 94105",
+    "totalSeats": 4,
+    "totalCapacityKg": 150.5,
+    "fareAmount": 85.50,
+    "pricePerSeat": 25.00,
+    "pricePerKm": 0.15,
+    "baseFare": 10.00,
+    "scheduledDepartureTime": "2026-03-20T08:30:00Z",
+    "rideCategory": "commercial",
+    "allowPets": false,
+    "allowSmoking": false,
+    "allowLuggage": true,
+    "maxLuggageKg": 25.0,
+    "rideNotes": "Please meet at the North entrance. Car is a silver Tesla Model 3."
+  }
+}

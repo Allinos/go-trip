@@ -1,0 +1,23 @@
+meta {
+  name: update_user_profile
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{URL}}/users/:id/profile-photo
+  body: multipartForm
+  auth: bearer
+}
+
+params:path {
+  id: 1
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxIiwicGhvbmVOdW1iZXIiOiIrOTE5ODc2NTQzMjEwIiwidXNlclR5cGUiOiJwYXNzZW5nZXIiLCJpYXQiOjE3NzI3MTk0NjIsImV4cCI6MTc3MjgwNTg2Mn0.f6chZDgWi65QsfbBWZdBrvx_mUJbSA04k0dOaifJANE
+}
+
+body:multipart-form {
+  profilePhoto: @file(C:\Users\BS\Pictures\3.jpeg)
+}

@@ -1,0 +1,22 @@
+meta {
+  name: refresh-token
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{URL}}/auth/refresh-token
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzE1ODcwNTgsImV4cCI6MTc3MTY3MzQ1OH0.GV7X9i9vucnJhorNCj3CL3PkSHNzgXd56oWWAanXEoQ
+}
+
+body:json {
+  {
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxIiwiaWF0IjoxNzcxNTg5NDc3LCJleHAiOjE3NzQxODE0Nzd9.OiztCWUxrTZmnsFIWUqBnjvBRVtDG5UiMzcyTT9yiXY"
+  
+  }
+}

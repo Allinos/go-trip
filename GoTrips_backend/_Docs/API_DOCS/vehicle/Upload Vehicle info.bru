@@ -1,0 +1,36 @@
+meta {
+  name: Upload Vehicle info
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{URL}}/vehicles/:id
+  body: json
+  auth: bearer
+}
+
+params:path {
+  id: 2
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIyIiwicGhvbmVOdW1iZXIiOiIrOTE5NDAxMDY5MzM3IiwidXNlclR5cGUiOiJwYXNzZW5nZXIiLCJpYXQiOjE3NzMxNTQ5MDYsImV4cCI6MTc3NDQ1MDkwNn0.nBEhF3wnyltuFlbJyPyXXn7mVLx1C6XwbsbvwGKUbe4
+}
+
+body:json {
+  {
+    "vehicle_type": "rental_car",
+    "vehicle_category": "suv",
+    "manufacturer": "Toyota",
+    "model": "Highlander",
+    "year": 2024,
+    "color": "Midnight Blue",
+    "number_plate": "ABC-1234-XYZ",
+    "seating_capacity": 7,
+    "fuel_type": "hybrid",
+    "ac_available": true,
+    "is_available": true,
+    "is_verified": false
+  }
+}
