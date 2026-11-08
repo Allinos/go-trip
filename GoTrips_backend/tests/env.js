@@ -1,0 +1,12 @@
+process.env.NODE_ENV = 'test';
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/gotrip_test?schema=public&connection_limit=5';
+process.env.JWT_ACCESS_SECRET = 'test_access_secret_test_access_secret_1234';
+process.env.JWT_REFRESH_SECRET = 'test_refresh_secret_test_refresh_secret_123';
+process.env.JWT_ADMIN_SECRET = 'test_admin_secret_test_admin_secret_123456';
+process.env.OTP_SECRET = 'test_otp_secret_12345';
+process.env.FILE_URL_SECRET = 'test_file_secret_12345';
+process.env.RAZORPAY_KEY_ID = 'rzp_test_key';
+process.env.RAZORPAY_KEY_SECRET = 'rzp_test_secret';
+process.env.RAZORPAY_WEBHOOK_SECRET = 'rzp_webhook_secret';
+process.env.LOCAL_UPLOAD_DIR = '/tmp/gotrip-test-uploads';
+process.env.JOBS_ENABLED = 'false';

@@ -1,398 +1,104 @@
+# GoTrip API
 
+The Node.js + Express 5 + Prisma + PostgreSQL backend for the **User app**, the **Partner app** and the **Admin panel**.
+
+## Quick start
+
+```bash
+cp .env.example .env            # fill in DATABASE_URL and the secrets
+npm install
+npx prisma migrate deploy       # create tables + indexes
+npm run seed                    # partner types, required documents, Assam districts, FAQs
+npm run admin:create -- --email you@company.com --name "Your Name" --role super_admin
+npm run dev                     # http://localhost:3000/health
+npm test                        # integration tests (needs a local Postgres; uses database gotrip_test)
 ```
 
----
+In development (`SMS_PROVIDER=console`), `POST /auth/otp/send` includes the OTP in the response as `devOtp`, and the server log prints it too.
 
-## 🤖 **AI Prompts for Different Platforms**
+## Architecture
 
-### **📋 Prompt 1: Generate Controllers** (ChatGPT/Claude)
 ```
-I'm building a ride-sharing backend API with Node.js, Express, Prisma, and PostgreSQL.
-
-Create a complete controller file for ride management with these features:
-1. Search for available rides (GET /api/rides/search)
-   - Input: pickup location, drop location, vehicle type, date, time
-   - Output: List of available rides with driver, vehicle, and fare details
-   
-2. Book a ride (POST /api/rides/book)
-   - Input: rideId, passenger details, payment method
-   - Output: Booking confirmation with OTP
-   
-3. Get ride details (GET /api/rides/:id)
-   - Output: Complete ride information with tracking
-
-4. Cancel ride (PUT /api/rides/:id/cancel)
-   - Input: cancellation reason
-   - Output: Cancellation confirmation
-
-5. Get ride history (GET /api/rides/history)
-   - Output: Past rides with pagination
-
-Include:
-- Proper error handling
-- Input validation
-- Response standardization
-- Comments explaining logic
-- Use Prisma for database operations
-
-File path: src/controllers/ride.controller.js
+app.js / server.js            HTTP setup, security headers, CORS, raw-body Razorpay webhook, graceful shutdown
+src/config/env.js             validated environment (refuses to boot on bad config)
+src/lib/                      prisma client, logger (pino, redacts secrets), cache (memory or Redis), validation (zod), JWT, helpers
+src/middleware/               auth (user / partner / admin RBAC), rate limits, uploads, error handler
+src/services/                 storage (S3/R2/local + sharp image compression), sms, email (SMTP), push (FCM), razorpay, notify, settings
+src/modules/                  feature modules (routes + logic)
+  auth.js                     OTP login, refresh-token rotation with reuse detection, logout
+  users.js                    /me profile, photo, account deletion, push tokens, notifications, saved places, tickets
+  partners/service.js         onboarding state machine (resume anywhere) + driver listing sync
+  partners/routes.js          register, documents, driver profile, dashboard, earnings, live location
+  vehicles.js                 partner vehicles (verification, ON/OFF, rental settings, photos, docs) + public rentals
+  trips.js                    start/return trips with ordered stops, search by any stop pair
+  bookings.js                 booking requests, accept/reject with atomic seat reservation, shared location
+  payments.js                 Razorpay registration fee: order, hosted checkout, verify, webhook, reconciliation
+  marketplace.js              public driver marketplace + call tracking
+  goods.js                    goods transport orders (built, DISABLED by the goods_orders_enabled flag)
+  catalog.js                  /config, categories, districts/places, FAQs
+  admin/                      complete admin API (dashboard, verification queues, payments, settings, RBAC, audit log)
+src/jobs/scheduler.js         expiry/auto-complete/reconciliation jobs (Postgres advisory locks, so they're safe in a cluster)
+prisma/schema.prisma          data model; prisma/migrations has extra SQL: trigram indexes, CHECK constraints, partial unique index
 ```
 
-### **📋 Prompt 2: Generate Services** (ChatGPT/Claude)
-```
-Create a Firebase Cloud Messaging (FCM) service for sending push notifications in a Node.js backend.
+All responses use one shape: `{ success: true, data, meta? }` or `{ success: false, error: { code, message, details? } }`.
 
-Requirements:
-1. Function to send notification to single device
-2. Function to send notification to multiple devices
-3. Function to send notification to topic
-4. Handle success and failure responses
-5. Log all notification attempts
+## Key flows
 
-Include:
-- Firebase Admin SDK setup
-- Error handling
-- Retry logic for failed notifications
-- TypeScript types (optional)
+### Partner onboarding (resumable)
+`profile (name)` → `category` → `details` → `documents` → `payment` (only when the category has a fee) → **active**
 
-File path: src/services/fcm.service.js
+The state is computed from stored data (`GET /partner/onboarding` → `nextStep`). A partner who quits midway resumes at the right step the next time they log in. Partner types and the documents each type needs are stored in the database, and the admin edits them under **Admin → Partner types**. Seeded types:
 
-Environment variables to use:
-- FIREBASE_PROJECT_ID
-- FIREBASE_CLIENT_EMAIL
-- FIREBASE_PRIVATE_KEY
-```
+| code | Name | Fee | Can |
+|---|---|---|---|
+| `driver` | Driver | ₹499 / 365 days | marketplace profile |
+| `taxi` | Taxi / Passenger vehicle owner | free | vehicles, start/return trips |
+| `rental` | Car rental provider | free | vehicles, rentals, trips |
+| `commercial` | Commercial vehicle / Fleet owner | free | vehicles, trips, goods orders (disabled) |
 
-### **📋 Prompt 3: Generate AWS S3 Upload** (ChatGPT/Claude)
-```
-Create an AWS S3 file upload service for a Node.js backend using AWS SDK v3.
+### Registration fee (Razorpay)
+1. `POST /partner/payments/registration-order`: the server computes the amount from the category and creates a Razorpay order. A recent unpaid order is reused, so retries don't create duplicates.
+2. The app opens the returned `checkoutUrl` in a WebView. This hosted Razorpay Checkout page works in Expo Go, with no native module needed.
+3. `POST /partner/payments/verify` checks the HMAC signature, then **fetches the payment from Razorpay** and confirms the order id, the amount and `captured` status.
+4. `POST /payments/webhook/razorpay` (configure it in the Razorpay dashboard) does the same check server-to-server, so the payment still completes when the app closes mid-payment. Each webhook event is processed only once.
+5. A job reconciles any orders still unpaid after 5 minutes.
 
-Features needed:
-1. Upload single file to S3
-2. Upload multiple files
-3. Generate pre-signed URLs for secure uploads
-4. Delete files from S3
-5. Get file URL
+On success: `feePaidAt` and `listingExpiresAt` are set, onboarding completes, the driver is **listed on the marketplace**, and a receipt goes out by push and email.
 
-Requirements:
-- Use @aws-sdk/client-s3
-- Support image and PDF uploads
-- File size validation (max 5MB)
-- Generate unique filenames
-- Organize files in folders (users/, vehicles/, documents/)
-- Return public URLs
+### Vehicles and verification
+New or edited vehicles are `pending`. Changing the registration number, class, make, model or year re-submits the vehicle. Only `approved` vehicles appear publicly or can be used for trips. Partners can switch a vehicle and its rental availability ON/OFF at any time.
 
-File path: src/services/s3.service.js
+### Trips (Start and Return)
+A trip has ordered stops (origin, intermediate points, destination) with optional per-stop fares. Search matches any `from` stop that comes **before** a `to` stop, so a passenger from an intermediate town finds the trip. `POST /partner/trips/:id/return-trip` creates the reversed trip in one tap. Booking requests notify the partner (FCM + optional SMS). On accept, seats are reserved with a single conditional `UPDATE`, so concurrent accepts can never overbook.
 
-Use environment variables:
-- AWS_ACCESS_KEY_ID
-- AWS_SECRET_ACCESS_KEY
-- AWS_REGION
-- AWS_S3_BUCKET
-```
+### Live location (no paid tracking service)
+The partner app posts its position every ~30 s while sharing (the server accepts at most one update per 10 s). Only the latest point is stored. Passengers with an **accepted** booking see it with a Google Maps link (`https://www.google.com/maps/search/?api=1&query=lat,lng`). Sharing ends automatically after the chosen time.
 
-### **📋 Prompt 4: Generate Middleware** (ChatGPT/Claude)
-```
-Create JWT authentication middleware for Express.js API.
+### Earnings
+Estimates only, calculated from accepted and completed booking fares. No payouts, wallets or bank details exist anywhere in the system.
 
-Requirements:
-1. Verify JWT token from Authorization header
-2. Extract user information from token
-3. Attach user to req.user
-4. Handle token expiration
-5. Handle invalid tokens
-6. Support both access and refresh tokens
+### Goods orders
+Built but **disabled**. Every route returns `403 FEATURE_DISABLED` until a super admin turns on `goods_orders_enabled` in Admin → Settings. The apps read `GET /config → features.goodsOrders`.
 
-Also create:
-- Function to generate JWT tokens
-- Function to verify tokens
-- Function to refresh tokens
+## Security
+- OTPs are HMAC-hashed and expire. Brute force is blocked three ways: a per-code attempt lock, IP+phone rate limits, a 30 s resend gap and 10 codes per day. Each code can be used only once.
+- Short-lived access JWTs (30 min) with separate audiences for user, partner and admin. Refresh tokens are stored as SHA-256 hashes, rotated on every use, and replay revokes all of the user's sessions.
+- Admin auth: bcrypt passwords, separate secret, `tokenVersion` invalidation, and three roles (`super_admin` / `admin` / `support`). Every admin action is written to the audit log.
+- Every input is validated with zod (unknown fields are dropped). Prisma parameterises every query, including the raw SQL.
+- Uploads: type allow-list, magic-byte check, size limit, images re-encoded (EXIF/GPS stripped). All files are private and served only through expiring signed URLs.
+- Phone numbers on public listings are shown only to logged-in users, and each "Call" tap is recorded.
+- Helmet, a CORS allow-list, rate limits, a 1 MB JSON limit, request ids, redacted logs, and Play Store-compliant account deletion.
 
-File paths:
-- src/middleware/auth.middleware.js
-- src/utils/jwt.utils.js
+## Scaling to 20k+ users
+- **One server is enough to start.** A 2 vCPU / 4 GB VM can serve this load easily. Run `pm2 start server.js -i max` (cluster mode).
+- **Postgres:** set `connection_limit` in `DATABASE_URL` so that workers × limit stays under `max_connections`. Add PgBouncer if you go multi-server. Hot queries have composite, partial and trigram indexes.
+- **Redis (optional):** set `REDIS_URL` to share the cache across workers. Categories, settings, districts and listing pages are cached with short TTLs, so they reach the database rarely.
+- **Files:** use `STORAGE_DRIVER=s3` with Cloudflare R2 (no egress fees) or S3 once you run more than one server. Images are compressed to roughly 100–300 KB.
+- **Background jobs:** they use advisory locks, so running several instances is safe.
 
-Use environment variables:
-- JWT_SECRET
-- JWT_EXPIRE
-- JWT_REFRESH_SECRET
-- JWT_REFRESH_EXPIRE
-```
-
-### **📋 Prompt 5: Generate Validators** (ChatGPT/Claude)
-```
-Create request validation middleware using Joi for ride booking API.
-
-Validate:
-1. Phone number (with country code)
-2. OTP (6 digits)
-3. Location coordinates (latitude, longitude)
-4. Date and time (future dates only)
-5. Vehicle type enum
-6. Payment method enum
-
-Create validation schemas for:
-- User registration
-- Ride booking
-- Partner document upload
-- Payment initiation
-
-File path: src/validators/
-
-Return validation errors in standardized format.
-```
-
-### **📋 Prompt 6: Generate WebSocket Handler** (Cursor/Copilot)
-```
-Create Socket.IO real-time tracking handler for ride tracking.
-
-Features:
-1. User joins ride room
-2. Driver sends location updates every 5 seconds
-3. Passenger receives real-time location
-4. Calculate and emit ETA updates
-5. Handle driver offline/online status
-6. Emit ride status changes
-
-Events to handle:
-- join-ride
-- leave-ride
-- location-update
-- ride-status-change
-
-File path: src/websocket/handlers/tracking.handler.js
-```
-
-### **📋 Prompt 7: Generate Prisma Models** (ChatGPT/Claude)
-```
-Convert this PostgreSQL schema to Prisma schema format:
-
-[Paste your SQL schema here]
-
-Include:
-- All tables as models
-- Proper data types
-- Relations between models
-- Indexes
-- Default values
-- Enums
-- Timestamps (createdAt, updatedAt)
-
-Generate for Prisma Client with:
-- camelCase field names
-- snake_case database columns (@map)
-- Proper foreign key constraints
-```
-
-### **📋 Prompt 8: Generate API Routes** (ChatGPT/Claude)
-```
-Create Express.js routes for partner/driver management API.
-
-Routes needed:
-POST   /api/partners/register - Register as partner
-POST   /api/partners/documents/upload - Upload verification documents
-GET    /api/partners/profile - Get partner profile
-PUT    /api/partners/profile - Update partner profile
-PUT    /api/partners/status - Toggle online/offline
-GET    /api/partners/earnings - Get earnings summary
-GET    /api/partners/rides - Get ride requests
-POST   /api/partners/rides/:id/accept - Accept ride
-POST   /api/partners/rides/:id/reject - Reject ride
-
-Include:
-- Authentication middleware
-- Validation middleware
-- Route protection (partners only)
-- File upload middleware for documents
-
-File path: src/routes/partner.routes.js
-```
-
-### **📋 Prompt 9: Database Migrations** (ChatGPT/Claude)
-```
-Generate Prisma migration commands to:
-1. Create all tables from schema
-2. Add indexes for performance
-3. Seed initial data (configs, FAQs)
-
-Also create a seed.js file to populate:
-- App configurations
-- Default FAQs
-- Test users (development only)
-- Sample promo codes
-
-File path: prisma/seed.js
-```
-
-### **📋 Prompt 10: Error Handler** (ChatGPT/Claude)
-```
-Create a centralized error handling middleware for Express.js.
-
-Handle:
-- Validation errors (Joi)
-- Database errors (Prisma)
-- JWT errors
-- File upload errors
-- Payment gateway errors
-- Custom API errors
-
-Return standardized error response:
-{
-  "success": false,
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "User-friendly message",
-    "details": {...}
-  },
-  "timestamp": "ISO date"
-}
-
-File path: src/middleware/error.middleware.js
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-rideflow-mobile-api/
-│
-├── src/
-│   ├── config/
-│   │   ├── database.js              # PostgreSQL connection
-│   │   ├── firebase.js              # Firebase Admin SDK config
-│   │   ├── aws.js                   # AWS S3 configuration
-│   │   ├── app.config.js            # General app settings
-│   │   └── constants.js             # App constants
-│   │
-│   ├── controllers/
-│   │   ├── auth.controller.js       # OTP, login, signup
-│   │   ├── user.controller.js       # User profile, locations
-│   │   ├── partner.controller.js    # Partner registration, documents
-│   │   ├── ride.controller.js       # Ride booking, search
-│   │   ├── rental.controller.js     # Vehicle rental booking
-│   │   ├── vehicle.controller.js    # Vehicle management
-│   │   ├── payment.controller.js    # Payment processing
-│   │   ├── notification.controller.js # Push notifications
-│   │   ├── tracking.controller.js   # Live ride tracking
-│   │   ├── review.controller.js     # Ratings & reviews
-│   │   ├── support.controller.js    # Support tickets
-│   │   └── promo.controller.js      # Promo codes
-│   │
-│   ├── models/
-│   │   ├── user.model.js            # User queries
-│   │   ├── partner.model.js         # Partner queries
-│   │   ├── ride.model.js            # Ride queries
-│   │   ├── rental.model.js          # Rental queries
-│   │   ├── vehicle.model.js         # Vehicle queries
-│   │   ├── payment.model.js         # Payment queries
-│   │   ├── notification.model.js    # Notification queries
-│   │   └── review.model.js          # Review queries
-│   │
-│   ├── routes/
-│   │   ├── auth.routes.js           # /api/auth/*
-│   │   ├── user.routes.js           # /api/users/*
-│   │   ├── partner.routes.js        # /api/partners/*
-│   │   ├── ride.routes.js           # /api/rides/*
-│   │   ├── rental.routes.js         # /api/rentals/*
-│   │   ├── vehicle.routes.js        # /api/vehicles/*
-│   │   ├── payment.routes.js        # /api/payments/*
-│   │   ├── notification.routes.js   # /api/notifications/*
-│   │   ├── review.routes.js         # /api/reviews/*
-│   │   ├── support.routes.js        # /api/support/*
-│   │   └── index.js                 # Main route aggregator
-│   │
-│   ├── middleware/
-│   │   ├── auth.middleware.js       # JWT authentication
-│   │   ├── validation.middleware.js # Request validation
-│   │   ├── upload.middleware.js     # File upload (S3)
-│   │   ├── rateLimit.middleware.js  # Rate limiting
-│   │   ├── error.middleware.js      # Error handler
-│   │   └── logger.middleware.js     # Request logging
-│   │
-│   ├── services/
-│   │   ├── otp.service.js           # OTP generation & verification
-│   │   ├── sms.service.js           # SMS via Twilio/AWS SNS
-│   │   ├── email.service.js         # Email notifications
-│   │   ├── fcm.service.js           # Firebase Cloud Messaging
-│   │   ├── s3.service.js            # AWS S3 file operations
-│   │   ├── payment.service.js       # Razorpay/Stripe integration
-│   │   ├── maps.service.js          # Google Maps API
-│   │   ├── fare.service.js          # Fare calculation logic
-│   │   └── socket.service.js        # WebSocket management
-│   │
-│   ├── utils/
-│   │   ├── jwt.utils.js             # JWT sign/verify
-│   │   ├── validator.utils.js       # Custom validators
-│   │   ├── response.utils.js        # Standardized responses
-│   │   ├── helpers.js               # General helper functions
-│   │   ├── logger.js                # Winston logger setup
-│   │   └── encryption.utils.js      # Bcrypt, hashing
-│   │
-│   ├── validators/
-│   │   ├── auth.validator.js        # Auth validation schemas
-│   │   ├── user.validator.js        # User validation schemas
-│   │   ├── ride.validator.js        # Ride validation schemas
-│   │   ├── partner.validator.js     # Partner validation schemas
-│   │   └── common.validator.js      # Shared validations
-│   │
-│   ├── websocket/
-│   │   ├── handlers/
-│   │   │   ├── ride.handler.js      # Ride-related socket events
-│   │   │   ├── tracking.handler.js  # Location tracking events
-│   │   │   └── notification.handler.js # Real-time notifications
-│   │   └── index.js                 # Socket.IO setup
-│   │
-│   └── jobs/                        # Background jobs (optional)
-│       ├── payoutJob.js             # Process partner payouts
-│       ├── notificationJob.js       # Scheduled notifications
-│       └── cleanupJob.js            # Cleanup old data
-│
-├── prisma/                          # If using Prisma
-│   ├── schema.prisma                # Database schema
-│   ├── migrations/                  # Auto-generated migrations
-│   └── seed.js                      # Database seeding
-│
-├── database/                        # If NOT using Prisma
-│   ├── migrations/                  # SQL migration files
-│   │   ├── 001_create_users.sql
-│   │   ├── 002_create_partners.sql
-│   │   └── ...
-│   ├── seeds/                       # Seed data
-│   │   └── initial_data.sql
-│   └── schema.sql                   # Your complete schema
-│
-├── tests/
-│   ├── unit/
-│   │   ├── auth.test.js
-│   │   ├── ride.test.js
-│   │   └── payment.test.js
-│   ├── integration/
-│   │   └── api.test.js
-│   └── setup.js
-│
-├── uploads/                         # Temporary local uploads
-│   └── .gitkeep
-│
-├── logs/
-│   ├── error.log
-│   ├── combined.log
-│   └── .gitkeep
-│
-├── .env
-├── .env.example
-├── .gitignore
-├── .eslintrc.js
-├── .prettierrc
-├── package.json
-├── server.js                        # Main entry point
-├── app.js                           # Express app setup
-├── ecosystem.config.js              # PM2 configuration
-└── README.md
+## Cost-effective providers
+- SMS: Fast2SMS or MSG91 (DLT-registered OTP template).
+- Email: Amazon SES SMTP (about $0.10 per 1,000 emails) or the Brevo free tier.
+- Push: FCM (free).
+- Maps: Google Maps deep links (free). No paid Maps API is required.
