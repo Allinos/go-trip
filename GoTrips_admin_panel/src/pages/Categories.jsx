@@ -75,7 +75,7 @@ export default function Categories() {
                       {list.map((r) => (
                         <div key={r.id} className="row small" style={{ gap: 6 }}>
                           <span>
-                            {r.label} {!r.isRequired && <span className="muted">(optional)</span>}
+                            {r.label} {!r.isRequired && <span className="muted">(optional)</span>} {!r.translations?.as?.label && <span className="badge amber" title="No Assamese label yet">as?</span>}
                           </span>
                           {isSuper && (
                             <>
@@ -110,10 +110,10 @@ export default function Categories() {
 
 function CategoryModal({ category, onClose }) {
   const isNew = !category.id;
-  const [f, setF] = useState({ code: '', name: '', description: '', registrationFee: 0, feeValidityDays: '', isActive: true, sortOrder: 0, ...category, feeRupees: (category.registrationFee || 0) / 100 });
+  const [f, setF] = useState({ code: '', name: '', description: '', registrationFee: 0, feeValidityDays: '', isActive: true, sortOrder: 0, ...category, feeRupees: (category.registrationFee || 0) / 100, asName: category.translations?.as?.name || '', asDescription: category.translations?.as?.description || '' });
   const save = useAction(
     () => {
-      const body = { name: f.name, description: f.description || null, registrationFee: Math.round(Number(f.feeRupees) * 100), feeValidityDays: f.feeValidityDays ? Number(f.feeValidityDays) : null, isActive: f.isActive, sortOrder: Number(f.sortOrder) || 0, ...Object.fromEntries(CAPS.map(([k]) => [k, !!f[k]])) };
+      const body = { name: f.name, description: f.description || null, registrationFee: Math.round(Number(f.feeRupees) * 100), feeValidityDays: f.feeValidityDays ? Number(f.feeValidityDays) : null, isActive: f.isActive, sortOrder: Number(f.sortOrder) || 0, ...Object.fromEntries(CAPS.map(([k]) => [k, !!f[k]])), translations: { as: { name: f.asName.trim() || null, description: f.asDescription.trim() || null } } };
       return isNew ? api('/categories', { method: 'POST', body: { ...body, code: f.code } }) : api(`/categories/${category.id}`, { method: 'PATCH', body });
     },
     { success: 'Saved', invalidate: ['categories'] }
@@ -132,6 +132,14 @@ function CategoryModal({ category, onClose }) {
       <Field label="Description (shown in the partner app)">
         <input className="input" value={f.description || ''} onChange={set('description')} />
       </Field>
+      <div className="grid grid-2">
+        <Field label="Name in Assamese (অসমীয়া)">
+          <input className="input" lang="as" value={f.asName} onChange={set('asName')} placeholder="যেনে: চালক" />
+        </Field>
+        <Field label="Description in Assamese">
+          <input className="input" lang="as" value={f.asDescription} onChange={set('asDescription')} />
+        </Field>
+      </div>
       <div className="grid grid-2">
         <Field label="Registration fee (₹)" hint="0 = free">
           <input className="input" type="number" min="0" value={f.feeRupees} onChange={set('feeRupees')} />
@@ -154,11 +162,11 @@ function CategoryModal({ category, onClose }) {
 
 function RequirementModal({ req, onClose }) {
   const isNew = !req.id;
-  const [f, setF] = useState({ label: '', hint: '', requiresNumber: false, requiresExpiry: false, requiresBack: false, sortOrder: 0, docType: '', ...req });
+  const [f, setF] = useState({ label: '', hint: '', requiresNumber: false, requiresExpiry: false, requiresBack: false, sortOrder: 0, docType: '', ...req, asLabel: req.translations?.as?.label || '', asHint: req.translations?.as?.hint || '' });
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
   const save = useAction(
     () => {
-      const body = { label: f.label, hint: f.hint || null, isRequired: !!f.isRequired, requiresNumber: !!f.requiresNumber, requiresExpiry: !!f.requiresExpiry, requiresBack: !!f.requiresBack, sortOrder: Number(f.sortOrder) || 0 };
+      const body = { label: f.label, hint: f.hint || null, isRequired: !!f.isRequired, requiresNumber: !!f.requiresNumber, requiresExpiry: !!f.requiresExpiry, requiresBack: !!f.requiresBack, sortOrder: Number(f.sortOrder) || 0, translations: { as: { label: f.asLabel.trim() || null, hint: f.asHint.trim() || null } } };
       return isNew ? api(`/categories/${req.categoryId}/requirements`, { method: 'POST', body: { ...body, scope: f.scope, docType: f.docType } }) : api(`/requirements/${req.id}`, { method: 'PATCH', body });
     },
     { success: 'Saved', invalidate: ['categories'] }
@@ -184,6 +192,14 @@ function RequirementModal({ req, onClose }) {
       <Field label="Help text">
         <input className="input" value={f.hint || ''} onChange={set('hint')} />
       </Field>
+      <div className="grid grid-2">
+        <Field label="Label in Assamese (অসমীয়া)">
+          <input className="input" lang="as" value={f.asLabel} onChange={set('asLabel')} />
+        </Field>
+        <Field label="Help text in Assamese">
+          <input className="input" lang="as" value={f.asHint} onChange={set('asHint')} />
+        </Field>
+      </div>
       {[
         ['isRequired', 'Required'],
         ['requiresNumber', 'Ask for document number'],

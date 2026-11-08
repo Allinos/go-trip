@@ -435,6 +435,9 @@ router.post('/payments/:id/reconcile', MANAGER, validate({ params: idParam }), a
 });
 
 // ============================ CATEGORIES & DOCUMENT REQUIREMENTS ============================
+const asText = (max) => z.string().trim().max(max).optional().nullable();
+const translationsOf = (shape) => z.object({ as: z.object(shape).partial() }).partial().optional().nullable();
+
 const categoryBody = z.object({
   code: z.string().trim().toLowerCase().regex(/^[a-z][a-z0-9_]{1,39}$/, 'Use lowercase letters, numbers and _'),
   name: trimmed(80),
@@ -449,6 +452,7 @@ const categoryBody = z.object({
   canViewGoodsOrders: z.boolean().default(false),
   isActive: z.boolean().default(true),
   sortOrder: z.coerce.number().int().default(0),
+  translations: translationsOf({ name: asText(80), description: asText(255) }),
 });
 const reqBody = z.object({
   scope: z.enum(['partner', 'vehicle']),
@@ -460,6 +464,7 @@ const reqBody = z.object({
   requiresExpiry: z.boolean().default(false),
   requiresBack: z.boolean().default(false),
   sortOrder: z.coerce.number().int().default(0),
+  translations: translationsOf({ label: asText(80), hint: asText(255) }),
 });
 
 router.get('/categories', ANY, async (_req, res) => {
@@ -544,7 +549,7 @@ router.patch('/tickets/:id', ANY, validate({ params: idParam, body: z.object({ s
   res.json({ success: true, data: t });
 });
 
-const faqBody = z.object({ audience: z.enum(['all', 'user', 'partner']).default('all'), question: trimmed(300, 5), answer: trimmed(2000, 5), sortOrder: z.coerce.number().int().default(0), isActive: z.boolean().default(true) });
+const faqBody = z.object({ audience: z.enum(['all', 'user', 'partner']).default('all'), question: trimmed(300, 5), answer: trimmed(2000, 5), sortOrder: z.coerce.number().int().default(0), isActive: z.boolean().default(true), translations: translationsOf({ question: asText(300), answer: asText(2000) }) });
 router.get('/faqs', ANY, async (_req, res) => res.json({ success: true, data: await prisma.faq.findMany({ orderBy: [{ audience: 'asc' }, { sortOrder: 'asc' }] }) }));
 router.post('/faqs', MANAGER, validate({ body: faqBody }), async (req, res) => {
   const f = await prisma.faq.create({ data: req.body });

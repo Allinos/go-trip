@@ -27,6 +27,7 @@ export default function Faqs() {
           columns={[
             { title: 'Question', render: (f) => <span className="strong">{f.question}</span> },
             { title: 'Shown in', render: (f) => label(f.audience === 'all' ? 'both apps' : `${f.audience} app`) },
+            { title: 'Assamese', render: (f) => (f.translations?.as?.question ? <Badge tone="green">Yes</Badge> : <Badge tone="amber">Missing</Badge>) },
             { title: 'Order', key: 'sortOrder' },
             { title: 'Status', render: (f) => <Badge tone={f.isActive ? 'green' : ''}>{f.isActive ? 'Visible' : 'Hidden'}</Badge> },
             { title: '', render: (f) => <button className="btn btn-sm btn-danger" onClick={(e) => (e.stopPropagation(), window.confirm('Delete this FAQ?') && del.mutate(f.id))}>Delete</button> },
@@ -39,10 +40,10 @@ export default function Faqs() {
 }
 
 function FaqModal({ faq, onClose }) {
-  const [f, setF] = useState(faq);
+  const [f, setF] = useState({ ...faq, asQuestion: faq.translations?.as?.question || '', asAnswer: faq.translations?.as?.answer || '' });
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
   const save = useAction(() => {
-    const body = { audience: f.audience, question: f.question, answer: f.answer, sortOrder: Number(f.sortOrder) || 0, isActive: !!f.isActive };
+    const body = { audience: f.audience, question: f.question, answer: f.answer, sortOrder: Number(f.sortOrder) || 0, isActive: !!f.isActive, translations: { as: { question: f.asQuestion.trim() || null, answer: f.asAnswer.trim() || null } } };
     return faq.id ? api(`/faqs/${faq.id}`, { method: 'PATCH', body }) : api('/faqs', { method: 'POST', body });
   }, { success: 'Saved', invalidate: ['faqs'] });
   return (
@@ -52,6 +53,12 @@ function FaqModal({ faq, onClose }) {
       </Field>
       <Field label="Answer">
         <textarea className="input" value={f.answer || ''} onChange={set('answer')} />
+      </Field>
+      <Field label="Question in Assamese (অসমীয়া)" hint="Shown to users who chose Assamese. Leave empty to show English.">
+        <input className="input" lang="as" value={f.asQuestion} onChange={set('asQuestion')} />
+      </Field>
+      <Field label="Answer in Assamese">
+        <textarea className="input" lang="as" value={f.asAnswer} onChange={set('asAnswer')} />
       </Field>
       <div className="grid grid-2">
         <Field label="Shown in">
