@@ -31,6 +31,13 @@ Goods orders: built, switched OFF (Admin → Settings → Goods transport)
 
 Money flow: the **only** online payment is the partner registration/listing fee (Razorpay). Trip fares are paid directly to the driver. Earnings in the partner app are estimates.
 
+## Languages (English and Assamese)
+
+- **Apps:** both apps are fully translated (about 830 strings). Users switch with the English | অসমীয়া toggle on the first screen, on Home, or in Account. The choice is saved on the phone and on the server.
+- **Server-sent messages:** push notifications, SMS (including the OTP) and emails are sent in each user's saved language. Error messages, partner types, document names and FAQs also come back in the language of the request (`Accept-Language`).
+- **Admin panel:** has Assamese fields for partner types, required documents and FAQs.
+- **Adding text:** wrap new UI text in `t('English text')` and add the Assamese line to `src/i18n/as.json` (Partner app) or `i18n/as.json` (User app). Missing translations fall back to English.
+
 ## Local setup (about 10 minutes)
 
 ```bash
@@ -71,14 +78,26 @@ In development, SMS is printed to the API log and the apps show the OTP on scree
 10. **Backups:** nightly `pg_dump` (or managed DB snapshots), plus versioning on the storage bucket.
 11. **Fees and documents:** review fees and required documents in **Admin → Partner types & fees** (the defaults are seeded).
 
-## Performance
+## Performance and capacity
 
-Load-tested on a 4-core machine with 20,000 users, 2,000 partners, 4,000 trips (all on the same corridor, the worst case), 16,000 stops and 30,000 bookings. One Node process, pool size 20, 100 users requesting at once:
+**Can it handle 5,000–10,000 users at the same time? Yes.** This was measured, not estimated. The test (`GoTrips_backend/scripts/load-test`) simulates real people: each user does an action every 5–15 seconds (search trips, browse drivers and rentals, open details, check bookings and notifications, book a seat). 10% are partners sending live-location pings and checking their dashboard, and half use Assamese. Setup: one 4-core / 16 GB machine running 4 API workers (PM2-style cluster), Postgres 16 and Redis, plus the load generator itself. Data: 20,000 users, 2,000 partners, 4,000 vehicles, 6,000 trips, 40,000 bookings, 60,000 notifications.
 
-| Endpoint | Throughput | Avg latency |
-|---|---|---|
-| `GET /trips/search` (stop-pair search, 20 results, ~28 KB) | ~1,200 req/s | ~80 ms |
-| `GET /marketplace/drivers` | ~3,000 req/s | ~33 ms |
-| `GET /rentals` (GPS radius) | ~4,000 req/s | ~25 ms |
+| Users online at once | Requests/s | Errors | Median | 95th percentile | 99th percentile |
+|---|---|---|---|---|---|
+| 5,000 | ~420 | **0** | 7 ms | 48 ms | 173 ms |
+| **10,000** | ~870 | **0** | **7 ms** | **66 ms** | 807 ms |
+| 20,000 (stress) | ~1,700 | **0** | 64 ms | 761 ms | 1.6 s |
 
-Peak load for 20k registered users is typically well under 100 req/s, so one server with PM2 cluster mode has a large safety margin. To grow further: add Redis (`REDIS_URL`) for a shared cache and rate limits, PgBouncer, and a second API server behind the load balancer. Background jobs are already safe to run on several servers.
+The load test found and fixed three problems:
+- **Search caching:** every booking request wiped all cached trip searches. Invalidation is now precise: a new request changes no seats, an accept clears one trip, and all search pages are cleared only when a trip becomes full or free again. Database CPU went from about 180% to 45%.
+- **Rate limiting:** the Redis rate-limit store could fail to load at startup, which would have silently disabled rate limits in cluster mode. It now has its own queued connection.
+- **Hot-path overhead:** the cache is now two-level (3 s in process memory, then Redis), and hot listings are stored as ready-made JSON with a precomputed ETag. Trip search uses anchored place matching and no longer contains phone numbers, so logged-in and anonymous users share one cache entry.
+
+**Recommended production setup for 10,000 users online at once:**
+- **API server:** 4 vCPU / 8 GB running `pm2 start ecosystem.config.js` (4 workers) behind nginx, with `REDIS_URL` set. Keep workers × `connection_limit` below Postgres `max_connections` (e.g. 4 × 20 = 80 < 100), or add PgBouncer.
+- **Database:** managed PostgreSQL with 2 vCPU / 4 GB, with backups and `pg_stat_statements` enabled.
+- **Redis:** a small instance (256 MB is plenty).
+- **Files:** Cloudflare R2 or S3 (no local disk when running more than one server).
+- **Beyond about 15,000 online at once:** add a second identical API server behind the load balancer. Everything (cache, rate limits, background jobs) is already safe with several servers.
+
+Each app also caches screens on the phone (last data shown instantly, refreshed in the background, usable offline) and photos on disk. That cuts repeat requests and makes the apps feel fast on slow mobile networks.

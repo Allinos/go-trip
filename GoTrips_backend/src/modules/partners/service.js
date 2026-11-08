@@ -26,7 +26,7 @@ async function categories() {
     prisma.partnerCategory.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' }, include: { requirements: { orderBy: { sortOrder: 'asc' } } } })
   );
 }
-const clearCategoryCache = () => cache.del(CATEGORIES_KEY);
+const clearCategoryCache = () => Promise.all([cache.del(CATEGORIES_KEY), cache.delPrefix('catalog:config:')]);
 
 async function categoryByCode(code) {
   return (await categories()).find((c) => c.code === code) || null;

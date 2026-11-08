@@ -1,14 +1,22 @@
 'use strict';
 const { rateLimit } = require('express-rate-limit');
 const env = require('../config/env');
-const { redis } = require('../lib/cache');
+const logger = require('../lib/logger');
 
 const handler = (_req, res) => res.status(429).json({ success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests. Please wait a moment and try again.' } });
 
 // With Redis, counters are shared by every PM2 worker / server, so limits stay correct when scaled out.
+// Own connection: the store loads its Lua scripts at startup, so commands must queue until Redis is
+// connected (the cache client deliberately fails fast instead).
 let RedisStore = null;
-if (redis) ({ RedisStore } = require('rate-limit-redis'));
-const store = (prefix) => (RedisStore ? new RedisStore({ prefix: `rl:${prefix}:`, sendCommand: (...args) => redis.call(...args) }) : undefined);
+let rlRedis = null;
+if (env.REDIS_URL && !env.isTest) {
+  ({ RedisStore } = require('rate-limit-redis'));
+  const Redis = require('ioredis');
+  rlRedis = new Redis(env.REDIS_URL, { enableOfflineQueue: true, maxRetriesPerRequest: 2 });
+  rlRedis.on('error', (e) => logger.warn({ err: e.message }, 'rate-limit redis error'));
+}
+const store = (prefix) => (RedisStore ? new RedisStore({ prefix: `rl:${prefix}:`, sendCommand: (...args) => rlRedis.call(...args) }) : undefined);
 
 const make = (name, windowMs, limit, keyGenerator) =>
   rateLimit({

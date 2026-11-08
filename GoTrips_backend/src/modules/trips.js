@@ -13,8 +13,14 @@ const { partnerContact, contactSelect } = require('./vehicles');
 
 const MAX_DAYS_AHEAD = 60;
 
-/** Drop cached search pages after any change to trips or seat counts. */
+/** Drop every cached search page (trip created / edited / cancelled, or a trip became full / free again). */
 const clearSearchCache = () => cache.delPrefix('trips:search:');
+/**
+ * Seat counts changed on one trip: refresh just that trip's page. Search pages keep their short TTL
+ * (the booking request itself always re-checks seats), unless the trip just became full or free again.
+ */
+const clearTripCache = (tripId, { all = false } = {}) =>
+  all ? clearSearchCache() : cache.del(`trips:search:detail:${tripId}:0`, `trips:search:detail:${tripId}:1`);
 
 const stopSchema = z.object({
   placeName: trimmed(120, 2),
@@ -354,9 +360,12 @@ publicRouter.get(
     let [winStart, winEnd] = q.date ? dayWindow(q.date) : [now, new Date(now.getTime() + MAX_DAYS_AHEAD * 86400_000)];
     if (winStart < now) winStart = now;
 
-    const like = (k) => `%${k}%`;
-    const fromCond = fromKey ? Prisma.sql`AND (a.place_key LIKE ${like(fromKey)} OR lower(a.district) = ${fromKey})` : Prisma.empty;
-    const toCond = toKey ? Prisma.sql`AND (b.place_key LIKE ${like(toKey)} OR lower(b.district) = ${toKey})` : Prisma.empty;
+    // Match a place name from its start or from any word start ("guwahati" → "Guwahati ISBT", "isbt" → "Guwahati ISBT").
+    // Anchored patterns are much cheaper than a plain '%text%' scan.
+    const starts = (k) => `${k}%`;
+    const words = (k) => `% ${k}%`;
+    const fromCond = fromKey ? Prisma.sql`AND (a.place_key LIKE ${starts(fromKey)} OR a.place_key LIKE ${words(fromKey)} OR lower(a.district) = ${fromKey})` : Prisma.empty;
+    const toCond = toKey ? Prisma.sql`AND (b.place_key LIKE ${starts(toKey)} OR b.place_key LIKE ${words(toKey)} OR lower(b.district) = ${toKey})` : Prisma.empty;
     const typeCond = q.type ? Prisma.sql`AND t.trip_type = ${q.type}::"TripType"` : Prisma.empty;
 
     // For each trip pick the earliest matching pickup stop and the first matching drop stop after it.
@@ -373,10 +382,10 @@ publicRouter.get(
         ${fromKey ? fromCond : Prisma.sql`AND a.seq = 0`}
         ${toKey ? toCond : Prisma.sql`AND b.seq = (SELECT max(seq) FROM trip_stops s WHERE s.trip_id = t.id)`}`;
 
-    const loggedIn = !!req.user;
-    // Popular routes are searched again and again: cache each page for a few seconds.
-    // Cache is cleared whenever a trip or its seats change (see clearSearchCache).
-    const payload = await cache.wrap(`trips:search:${loggedIn ? 1 : 0}:${JSON.stringify(q)}`, 15, async () => {
+    // Popular routes are searched again and again. Results never contain phone numbers (those are on the
+    // trip page), so every user shares one cached page per normalised query. Any trip or seat change clears it.
+    const searchKey = `trips:search:${JSON.stringify([fromKey, toKey, q.date || '', q.seats, q.type || '', page, limit])}`;
+    await cache.sendCached(req, res, searchKey, 30, async () => {
       // One query: DISTINCT ON picks the best stop pair per trip, COUNT(*) OVER() gives the total for paging.
       const rows = await prisma.$queryRaw`
         SELECT m.*, COUNT(*) OVER()::int AS total FROM (
@@ -394,14 +403,13 @@ publicRouter.get(
           const t = byId[r.id];
           const stops = [...t.stops].sort((x, y) => x.seq - y.seq);
           return {
-            ...(await serializeTrip(t, { loggedIn })),
+            ...(await serializeTrip(t, { loggedIn: false })),
             match: { pickupSeq: r.pickup_seq, dropSeq: r.drop_seq, pickupName: stops[r.pickup_seq].placeName, dropName: stops[r.drop_seq].placeName, farePerSeat: estimateFare(t, stops, r.pickup_seq, r.drop_seq, 1) },
           };
         })
       );
-      return { data, meta: pageMeta(page, limit, total) };
+      return { success: true, data, meta: pageMeta(page, limit, total) };
     });
-    res.json({ success: true, data: payload.data, meta: payload.meta });
   }
 );
 
@@ -417,4 +425,4 @@ publicRouter.get('/:id', optionalAuth, validate({ params: idParam }), async (req
   res.json({ success: true, data: { ...trip, myBooking } });
 });
 
-module.exports = { partnerRouter, publicRouter, serializeTrip, estimateFare, tripInclude, clearSearchCache };
+module.exports = { partnerRouter, publicRouter, serializeTrip, estimateFare, tripInclude, clearSearchCache, clearTripCache };

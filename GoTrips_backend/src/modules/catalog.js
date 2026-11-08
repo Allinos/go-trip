@@ -31,8 +31,10 @@ const vary = (_req, res, next) => (res.setHeader('Vary', 'Accept-Language'), nex
 
 router.get('/config', vary, publicCache(60), async (req, res) => {
   const lang = langOf(req);
-  const [s, cats] = await Promise.all([settings.publicSettings(), partnerService.categories()]);
-  res.json({ success: true, data: { ...s, languages: ['en', 'as'], vehicleClasses: VEHICLE_CLASSES, categories: cats.map((c) => serializeCategory(c, lang)) } });
+  await cache.sendCached(req, res, `catalog:config:${lang}`, 60, async () => {
+    const [s, cats] = await Promise.all([settings.publicSettings(), partnerService.categories()]);
+    return { success: true, data: { ...s, languages: ['en', 'as'], vehicleClasses: VEHICLE_CLASSES, categories: cats.map((c) => serializeCategory(c, lang)) } };
+  });
 });
 
 router.get('/categories', vary, publicCache(300), async (req, res) => {

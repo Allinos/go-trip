@@ -33,20 +33,30 @@ function memSet(key, val, ttlSec) {
   mem.set(key, { val, exp: Date.now() + ttlSec * 1000 });
 }
 
+// Two levels: L1 = this process's memory, L2 = Redis (shared by all workers / servers).
+// With Redis, L1 keeps entries only a few seconds so a change made on another worker shows up quickly.
+const L1_MAX_SEC = 3;
+const l1Ttl = (ttlSec) => (redis ? Math.min(ttlSec, L1_MAX_SEC) : ttlSec);
+
 async function get(key) {
+  const local = memGet(key);
+  if (local !== undefined) return local;
   if (redis && redis.status === 'ready') {
     try {
       const raw = await redis.get(key);
-      return raw == null ? undefined : JSON.parse(raw);
+      if (raw == null) return undefined;
+      const val = JSON.parse(raw);
+      memSet(key, val, L1_MAX_SEC);
+      return val;
     } catch (e) {
       logger.warn({ err: e.message }, 'cache get failed');
     }
   }
-  return memGet(key);
+  return undefined;
 }
 
 async function set(key, val, ttlSec = 60) {
-  memSet(key, val, ttlSec);
+  memSet(key, val, l1Ttl(ttlSec));
   if (redis && redis.status === 'ready') {
     try {
       await redis.set(key, JSON.stringify(val), 'EX', ttlSec);
@@ -84,6 +94,30 @@ async function delPrefix(prefix) {
   }
 }
 
+/**
+ * Cache a finished JSON response: the body is serialised once and the ETag computed once,
+ * so a cache hit is just "send these bytes" (no JSON.parse / stringify / hashing per request).
+ * loader() returns the response object ({ success, data, meta }); return null for 404.
+ */
+const etagOf = (body) => `W/"${require('crypto').createHash('sha1').update(body).digest('base64').slice(0, 27)}"`;
+async function sendCached(req, res, key, ttlSec, loader) {
+  let hit = await get(key);
+  if (hit === undefined) {
+    const obj = await loader();
+    if (obj == null) return false;
+    const body = JSON.stringify(obj);
+    hit = { b: body, e: etagOf(body) };
+    await set(key, hit, ttlSec);
+  }
+  res.setHeader('ETag', hit.e);
+  if (req.headers['if-none-match'] === hit.e) {
+    res.status(304).end();
+    return true;
+  }
+  res.type('application/json').send(hit.b);
+  return true;
+}
+
 /** Read-through helper. */
 async function wrap(key, ttlSec, loader) {
   const hit = await get(key);
@@ -115,4 +149,4 @@ function drainCounters() {
 const dashKey = (partnerId) => `dash:${partnerId}`;
 const invalidateDashboard = (partnerId) => (partnerId ? del(dashKey(partnerId)).catch(() => {}) : Promise.resolve());
 
-module.exports = { get, set, del, delPrefix, wrap, redis, bump, drainCounters, dashKey, invalidateDashboard };
+module.exports = { get, set, del, delPrefix, wrap, sendCached, redis, bump, drainCounters, dashKey, invalidateDashboard };

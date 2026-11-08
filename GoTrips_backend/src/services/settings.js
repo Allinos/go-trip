@@ -34,6 +34,7 @@ async function update(patch) {
   const keys = Object.keys(patch).filter((k) => k in DEFAULTS);
   await prisma.$transaction(keys.map((key) => prisma.appSetting.upsert({ where: { key }, create: { key, value: patch[key] }, update: { value: patch[key] } })));
   await cache.del(KEY);
+  await cache.delPrefix('catalog:config:');
   return all();
 }
 

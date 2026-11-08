@@ -342,7 +342,7 @@ publicRouter.get(
     };
     const loggedIn = !!req.user;
     const cacheKey = `rent:${loggedIn ? 1 : 0}:${JSON.stringify(qy)}`;
-    const payload = await cache.wrap(cacheKey, 30, async () => {
+    await cache.sendCached(req, res, cacheKey, 30, async () => {
       let rows;
       let total;
       if (qy.lat != null && qy.lng != null) {
@@ -367,9 +367,8 @@ publicRouter.get(
         ]);
       }
       const items = await Promise.all(rows.map(async (v) => ({ ...(await serialize(v)), distanceKm: v.distanceKm ?? null, owner: await partnerContact(v.partner, loggedIn) })));
-      return { items, meta: pageMeta(page, limit, total) };
+      return { success: true, data: items, meta: pageMeta(page, limit, total) };
     });
-    res.json({ success: true, data: payload.items, meta: payload.meta });
   }
 );
 

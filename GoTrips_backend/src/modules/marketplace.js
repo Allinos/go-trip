@@ -123,11 +123,10 @@ router.get(
     };
     const orderBy = q.sort === 'experience' ? [{ experienceYears: 'desc' }, { listedAt: 'desc' }] : q.sort === 'recent' ? [{ listedAt: 'desc' }] : [{ partner: { verificationStatus: 'asc' } }, { completeness: 'desc' }, { listedAt: 'desc' }];
     const loggedIn = !!req.user;
-    const payload = await cache.wrap(`mkt:${JSON.stringify(q)}`, 30, async () => {
+    await cache.sendCached(req, res, `mkt:${loggedIn ? 1 : 0}:${JSON.stringify(q)}`, 30, async () => {
       const [rows, total] = await Promise.all([prisma.driverProfile.findMany({ where, select: driverSelect, orderBy, skip, take }), prisma.driverProfile.count({ where })]);
-      return { items: await Promise.all(rows.map((d) => serializeDriver(d, { loggedIn }))), meta: pageMeta(page, limit, total) };
+      return { success: true, data: await Promise.all(rows.map((d) => serializeDriver(d, { loggedIn }))), meta: pageMeta(page, limit, total) };
     });
-    res.json({ success: true, data: payload.items, meta: payload.meta });
   }
 );
 

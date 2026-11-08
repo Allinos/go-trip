@@ -8,7 +8,7 @@ const { authenticate, requireActivePartner } = require('../middleware/auth');
 const { writeLimiter } = require('../middleware/rateLimit');
 const { badRequest, notFound, conflict } = require('../lib/errors');
 const { shortCode, paginate, pageMeta, mapsUrl } = require('../lib/util');
-const { serializeTrip, estimateFare, tripInclude, clearSearchCache } = require('./trips');
+const { serializeTrip, estimateFare, tripInclude, clearTripCache } = require('./trips');
 const { contactSelect } = require('./vehicles');
 
 const STATUSES = ['pending', 'accepted', 'rejected', 'cancelled', 'completed', 'expired'];
@@ -32,12 +32,18 @@ const serializeBooking = (b) => ({
   createdAt: b.createdAt,
 });
 
-/** Atomically take seats. Returns false if not enough seats left (no race conditions). */
-async function reserveSeats(tx, tripId, seats) {
-  const n = await tx.$executeRaw`UPDATE trips SET available_seats = available_seats - ${seats}, updated_at = now() WHERE id = ${tripId} AND status = 'scheduled' AND available_seats >= ${seats}`;
-  return n === 1;
+/** Atomically take seats. Returns false if not enough seats left (no race conditions). Records whether the trip became full. */
+async function reserveSeats(tx, tripId, seats, locals) {
+  const rows = await tx.$queryRaw`UPDATE trips SET available_seats = available_seats - ${seats}, updated_at = now() WHERE id = ${tripId} AND status = 'scheduled' AND available_seats >= ${seats} RETURNING available_seats`;
+  if (!rows.length) return false;
+  if (locals) Object.assign(locals, { tripId, searchAll: rows[0].available_seats === 0 });
+  return true;
 }
-const releaseSeats = (tx, tripId, seats) => tx.$executeRaw`UPDATE trips SET available_seats = LEAST(total_seats, available_seats + ${seats}), updated_at = now() WHERE id = ${tripId}`;
+async function releaseSeats(tx, tripId, seats, locals) {
+  const rows = await tx.$queryRaw`UPDATE trips SET available_seats = LEAST(total_seats, available_seats + ${seats}), updated_at = now() WHERE id = ${tripId} RETURNING available_seats`;
+  // A full trip that has seats again must reappear in search results.
+  if (locals) Object.assign(locals, { tripId, searchAll: rows[0]?.available_seats === seats });
+}
 
 /** Location the partner is sharing, visible only to passengers with an accepted booking. */
 async function sharedLocation(partnerId, tripId) {
@@ -52,7 +58,7 @@ const clearAfterWrite = (req, res, next) => {
   if (req.method !== 'GET')
     res.on('finish', () => {
       if (res.statusCode >= 400) return;
-      clearSearchCache();
+      if (res.locals.tripId) clearTripCache(res.locals.tripId, { all: res.locals.searchAll });
       cache.invalidateDashboard(req.partner?.id || res.locals.partnerId);
     });
   next();
@@ -143,7 +149,7 @@ userRouter.post('/:id/cancel', validate({ params: idParam, body: z.object({ reas
   const updated = await prisma.$transaction(async (tx) => {
     const r = await tx.booking.updateMany({ where: { id: b.id, status: b.status }, data: { status: 'cancelled', cancelledBy: 'user', statusReason: req.body.reason || 'Cancelled by passenger' } });
     if (r.count !== 1) throw conflict('Booking status changed. Please refresh.');
-    if (b.status === 'accepted') await releaseSeats(tx, b.tripId, b.seats);
+    if (b.status === 'accepted') await releaseSeats(tx, b.tripId, b.seats, res.locals);
     return tx.booking.findUnique({ where: { id: b.id } });
   });
   res.locals.partnerId = b.partnerId;
@@ -182,7 +188,7 @@ partnerRouter.post('/:id/accept', validate({ params: idParam }), async (req, res
   if (b.status !== 'pending') throw badRequest(`This request is already ${b.status}`);
   if (b.trip.status !== 'scheduled') throw badRequest('This trip is not open anymore');
   const updated = await prisma.$transaction(async (tx) => {
-    if (!(await reserveSeats(tx, b.tripId, b.seats))) throw conflict('Not enough seats left on this trip to accept this request', 'NOT_ENOUGH_SEATS');
+    if (!(await reserveSeats(tx, b.tripId, b.seats, res.locals))) throw conflict('Not enough seats left on this trip to accept this request', 'NOT_ENOUGH_SEATS');
     const r = await tx.booking.updateMany({ where: { id: b.id, status: 'pending' }, data: { status: 'accepted', respondedAt: new Date() } });
     if (r.count !== 1) throw conflict('This request was changed. Please refresh.');
     return tx.booking.findUnique({ where: { id: b.id } });
@@ -207,7 +213,7 @@ partnerRouter.post('/:id/cancel', validate({ params: idParam, body: z.object({ r
   const updated = await prisma.$transaction(async (tx) => {
     const r = await tx.booking.updateMany({ where: { id: b.id, status: 'accepted' }, data: { status: 'cancelled', cancelledBy: 'partner', statusReason: req.body.reason } });
     if (r.count !== 1) throw conflict('This booking was changed. Please refresh.');
-    await releaseSeats(tx, b.tripId, b.seats);
+    await releaseSeats(tx, b.tripId, b.seats, res.locals);
     return tx.booking.findUnique({ where: { id: b.id } });
   });
   notify.bookingCancelledByPartner(updated, req.body.reason);
