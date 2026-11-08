@@ -5,6 +5,7 @@ import { partnerApi } from '../../api';
 import { useApi } from '../../hooks/useApi';
 import { colors, font } from '../../theme';
 import { dateLabel, rupees } from '../../utils/format';
+import { t } from '../../i18n';
 
 const PERIODS = [
   { value: 'week', label: '7 days' },
@@ -14,7 +15,7 @@ const PERIODS = [
 ];
 
 function Bars({ series, bucket }) {
-  if (!series?.length) return <Text style={font.sub}>No bookings in this period yet.</Text>;
+  if (!series?.length) return <Text style={font.sub}>{t("No bookings in this period yet.")}</Text>;
   const max = Math.max(...series.map((x) => x.earned + x.upcoming), 1);
   return (
     <View>
@@ -29,8 +30,8 @@ function Bars({ series, bucket }) {
       <Row style={{ justifyContent: 'space-between', marginTop: 6 }}>
         <Text style={font.small}>{new Date(series.slice(-14)[0].bucket).toLocaleDateString('en-IN', bucket === 'month' ? { month: 'short' } : { day: 'numeric', month: 'short' })}</Text>
         <Row gap={10}>
-          <Row gap={4}><View style={{ width: 10, height: 10, backgroundColor: colors.green, borderRadius: 2 }} /><Text style={font.small}>Completed</Text></Row>
-          <Row gap={4}><View style={{ width: 10, height: 10, backgroundColor: colors.primaryBorder, borderRadius: 2 }} /><Text style={font.small}>Upcoming</Text></Row>
+          <Row gap={4}><View style={{ width: 10, height: 10, backgroundColor: colors.green, borderRadius: 2 }} /><Text style={font.small}>{t("Completed")}</Text></Row>
+          <Row gap={4}><View style={{ width: 10, height: 10, backgroundColor: colors.primaryBorder, borderRadius: 2 }} /><Text style={font.small}>{t("Upcoming")}</Text></Row>
         </Row>
       </Row>
     </View>
@@ -39,9 +40,9 @@ function Bars({ series, bucket }) {
 
 export default function EarningsScreen({ navigation }) {
   const [period, setPeriod] = useState('month');
-  const { data: e, error, loading, reload, refresh, refreshing } = useApi(() => partnerApi.earnings(period), [period]);
+  const { data: e, error, loading, reload, refresh, refreshing } = useApi(() => partnerApi.earnings(period), [period], { cacheKey: `earnings:${period}` });
   return (
-    <Screen title="Earnings" refreshing={refreshing} onRefresh={refresh}>
+    <Screen title={t("Earnings")} refreshing={refreshing} onRefresh={refresh}>
       <Chips options={PERIODS} value={period} onChange={setPeriod} />
       {loading ? (
         <Loading />
@@ -51,26 +52,26 @@ export default function EarningsScreen({ navigation }) {
         <>
           <Notice tone="blue" icon="information-circle" text={e.note} />
           <Row style={{ marginBottom: 12 }}>
-            <Stat label="Earned" value={rupees(e.summary.earned)} sub={`${e.summary.completedBookings} completed`} icon="checkmark-done" tone="green" />
-            <Stat label="Upcoming" value={rupees(e.summary.upcoming)} sub={`${e.summary.acceptedBookings} confirmed`} icon="time" tone="amber" />
+            <Stat label={t("Earned")} value={rupees(e.summary.earned)} sub={t("{0} completed", [e.summary.completedBookings])} icon="checkmark-done" tone="green" />
+            <Stat label={t("Upcoming")} value={rupees(e.summary.upcoming)} sub={t("{0} confirmed", [e.summary.acceptedBookings])} icon="time" tone="amber" />
           </Row>
           <Row style={{ marginBottom: 16 }}>
-            <Stat label="Seats sold" value={e.summary.seatsSold} icon="people" tone="blue" />
-            <Stat label="Bookings" value={e.summary.completedBookings + e.summary.acceptedBookings} icon="receipt" />
+            <Stat label={t("Seats sold")} value={e.summary.seatsSold} icon="people" tone="blue" />
+            <Stat label={t("Bookings")} value={e.summary.completedBookings + e.summary.acceptedBookings} icon="receipt" />
           </Row>
-          <Section title="Trend" icon="bar-chart">
+          <Section title={t("Trend")} icon="bar-chart">
             <Card>
               <Bars series={e.series} bucket={period === 'year' || period === 'all' ? 'month' : 'day'} />
             </Card>
           </Section>
           {e.byVehicle?.length > 0 && (
-            <Section title="By vehicle" icon="car">
+            <Section title={t("By vehicle")} icon="car">
               <Card>
                 {e.byVehicle.map((v) => (
                   <Row key={v.id} style={{ justifyContent: 'space-between', paddingVertical: 6 }}>
                     <View>
                       <Text style={font.body}>{v.make} {v.model}</Text>
-                      <Text style={font.small}>{v.registrationNumber} · {v.bookings} bookings</Text>
+                      <Text style={font.small}>{v.registrationNumber}{" · "}{v.bookings}{" "}{t("bookings")}</Text>
                     </View>
                     <Text style={[font.h3]}>{rupees(v.estimated)}</Text>
                   </Row>
@@ -78,22 +79,22 @@ export default function EarningsScreen({ navigation }) {
               </Card>
             </Section>
           )}
-          <Section title="Booking history" icon="list">
+          <Section title={t("Booking history")} icon="list">
             {e.history.length ? (
               e.history.map((b) => (
                 <Card key={b.id} style={{ marginBottom: 8 }} onPress={() => navigation.navigate('BookingDetail', { id: b.id })}>
                   <Row style={{ justifyContent: 'space-between' }}>
-                    <Text style={font.h3}>{b.pickupName} → {b.dropName}</Text>
+                    <Text style={font.h3}>{b.pickupName}{" → "}{b.dropName}</Text>
                     <Text style={font.h3}>{rupees(b.fareEstimate)}</Text>
                   </Row>
                   <Row style={{ justifyContent: 'space-between', marginTop: 4 }}>
-                    <Text style={font.small}>{dateLabel(b.departureAt)} · {b.passengerName || 'Passenger'} · {b.seats} seat(s)</Text>
+                    <Text style={font.small}>{dateLabel(b.departureAt)}{" · "}{b.passengerName || t("Passenger")}{" · "}{b.seats}{" "}{t("seat(s)")}</Text>
                     <Badge status={b.status} />
                   </Row>
                 </Card>
               ))
             ) : (
-              <Text style={font.sub}>No bookings yet.</Text>
+              <Text style={font.sub}>{t("No bookings yet.")}</Text>
             )}
           </Section>
         </>

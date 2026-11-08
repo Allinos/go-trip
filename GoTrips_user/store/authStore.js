@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Platform } from 'react-native';
 import { authAPI, catalogAPI, setSessionExpiredHandler, tokens } from '../services/api';
+import { clearCache, readCache, setCacheScope, writeCache } from '../services/cache';
 
 /**
  * Customers can browse without an account. Logging in is required to book, call, or see bookings.
@@ -13,13 +14,27 @@ const useAuthStore = create((set, get) => ({
   config: null,
   districts: [],
 
+  /** App config + districts: saved copy first (instant, offline), then refreshed from the server. */
+  reloadCatalog: async () => {
+    const cached = await readCache('catalog');
+    if (cached) set(cached.data);
+    try {
+      const [config, districts] = await Promise.all([catalogAPI.config(), catalogAPI.districts()]);
+      const fresh = { config: config.data, districts: districts.data };
+      set(fresh);
+      writeCache('catalog', fresh);
+    } catch {
+      /* keep cached copy */
+    }
+  },
+
   initialize: async () => {
     setSessionExpiredHandler(() => set({ user: null, isAuthenticated: false }));
-    catalogAPI.config().then((r) => set({ config: r.data })).catch(() => {});
-    catalogAPI.districts().then((r) => set({ districts: r.data })).catch(() => {});
+    get().reloadCatalog();
     try {
       if (await tokens.load()) {
         const r = await authAPI.me();
+        setCacheScope(r.data.user.id);
         set({ user: r.data.user, isAuthenticated: true });
       }
     } catch (e) {
@@ -34,6 +49,7 @@ const useAuthStore = create((set, get) => ({
   verifyOtp: async (phone, otp) => {
     const r = await authAPI.verifyOtp(phone, otp, Platform.OS);
     await tokens.save(r.data);
+    setCacheScope(r.data.user.id);
     set({ user: r.data.user, isAuthenticated: true });
     return r.data;
   },
@@ -48,6 +64,8 @@ const useAuthStore = create((set, get) => ({
       /* ignore */
     }
     await tokens.clear();
+    await clearCache();
+    setCacheScope(null);
     set({ user: null, isAuthenticated: false });
   },
 }));

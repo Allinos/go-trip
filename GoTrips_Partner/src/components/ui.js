@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, font, radius, shadow, space } from '../theme';
 import { STATUS_TEXT, titleCase } from '../utils/format';
+import { t } from '../i18n';
 
 // ---------------- Layout ----------------
 
@@ -13,7 +14,7 @@ export function Header({ title, back = true, right, onBack }) {
   return (
     <View style={s.header}>
       {back ? (
-        <Pressable hitSlop={12} onPress={onBack || (() => nav.goBack())} style={s.headerBtn} accessibilityLabel="Go back">
+        <Pressable hitSlop={12} onPress={onBack || (() => nav.goBack())} style={s.headerBtn} accessibilityLabel={t("Go back")}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
       ) : (
@@ -125,7 +126,7 @@ export function Input({ label, hint, error, prefix, style, inputStyle, required,
       {label && (
         <Text style={s.label}>
           {label}
-          {required && <Text style={{ color: colors.primary }}> *</Text>}
+          {required && <Text style={{ color: colors.primary }}>{" *"}</Text>}
         </Text>
       )}
       <View style={[s.inputWrap, focus && { borderColor: colors.primary }, error && { borderColor: colors.primaryDark }, props.multiline && { alignItems: 'flex-start' }]}>
@@ -148,18 +149,18 @@ export function Select({ label, value, options, onChange, placeholder = 'Select'
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const current = options.find((o) => o.value === value);
-  const filtered = useMemo(() => (q ? options.filter((o) => `${o.label} ${o.sub || ''}`.toLowerCase().includes(q.toLowerCase())) : options), [q, options]);
+  const filtered = useMemo(() => (q ? options.filter((o) => `${o.label} ${t(o.label)} ${o.sub || ''}`.toLowerCase().includes(q.toLowerCase())) : options), [q, options]);
   return (
     <View style={[{ marginBottom: space.lg }, style]}>
       {label && (
         <Text style={s.label}>
           {label}
-          {required && <Text style={{ color: colors.primary }}> *</Text>}
+          {required && <Text style={{ color: colors.primary }}>{" *"}</Text>}
         </Text>
       )}
       <Pressable style={s.inputWrap} onPress={() => setOpen(true)} accessibilityRole="button">
         <Text style={[s.input, { paddingVertical: 14, color: current ? colors.text : colors.faint }]} numberOfLines={1}>
-          {current ? (renderValue ? renderValue(current) : current.label) : placeholder}
+          {current ? (renderValue ? renderValue(current) : t(current.label)) : placeholder}
         </Text>
         <Ionicons name="chevron-down" size={18} color={colors.sub} />
       </Pressable>
@@ -169,7 +170,7 @@ export function Select({ label, value, options, onChange, placeholder = 'Select'
           <Header title={label || placeholder} onBack={() => setOpen(false)} />
           {(searchable || options.length > 12) && (
             <View style={{ paddingHorizontal: space.lg }}>
-              <Input placeholder="Search…" value={q} onChangeText={setQ} autoFocus />
+              <Input placeholder={t("Search…")} value={q} onChangeText={setQ} autoFocus />
             </View>
           )}
           <FlatList
@@ -186,13 +187,13 @@ export function Select({ label, value, options, onChange, placeholder = 'Select'
                 }}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={font.body}>{item.label}</Text>
+                  <Text style={font.body}>{t(item.label)}</Text>
                   {item.sub ? <Text style={font.small}>{item.sub}</Text> : null}
                 </View>
                 {item.value === value && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
               </Pressable>
             )}
-            ListEmptyComponent={<Empty text="Nothing found" />}
+            ListEmptyComponent={<Empty text={t("Nothing found")} />}
           />
         </SafeAreaView>
       </Modal>
@@ -209,7 +210,7 @@ export function Chips({ label, options, value, onChange, multiple, required, hin
       {label && (
         <Text style={s.label}>
           {label}
-          {required && <Text style={{ color: colors.primary }}> *</Text>}
+          {required && <Text style={{ color: colors.primary }}>{" *"}</Text>}
         </Text>
       )}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -218,7 +219,7 @@ export function Chips({ label, options, value, onChange, multiple, required, hin
           return (
             <Pressable key={String(o.value)} onPress={() => toggle(o.value)} style={[s.chip, on && s.chipOn]} accessibilityState={{ selected: on }}>
               {on && multiple && <Ionicons name="checkmark" size={14} color={colors.primary} />}
-              <Text style={{ color: on ? colors.primaryDark : colors.text, fontWeight: on ? '600' : '400' }}>{o.label}</Text>
+              <Text style={{ color: on ? colors.primaryDark : colors.text, fontWeight: on ? '600' : '400' }}>{t(o.label)}</Text>
             </Pressable>
           );
         })}
@@ -248,11 +249,11 @@ export function Stepper({ label, value, onChange, min = 1, max = 50, sub }) {
         <Text style={font.h3}>{label}</Text>
         {sub ? <Text style={font.small}>{sub}</Text> : null}
       </View>
-      <Pressable onPress={() => onChange(Math.max(min, value - 1))} style={s.stepBtn} accessibilityLabel="Decrease">
+      <Pressable onPress={() => onChange(Math.max(min, value - 1))} style={s.stepBtn} accessibilityLabel={t("Decrease")}>
         <Ionicons name="remove" size={22} color={colors.primary} />
       </Pressable>
       <Text style={[font.h2, { minWidth: 34, textAlign: 'center' }]}>{value}</Text>
-      <Pressable onPress={() => onChange(Math.min(max, value + 1))} style={s.stepBtn} accessibilityLabel="Increase">
+      <Pressable onPress={() => onChange(Math.min(max, value + 1))} style={s.stepBtn} accessibilityLabel={t("Increase")}>
         <Ionicons name="add" size={22} color={colors.primary} />
       </Pressable>
     </View>
@@ -311,7 +312,7 @@ export const Loading = ({ full }) => (
   </View>
 );
 
-export const ErrorView = ({ message, onRetry }) => <Empty icon="cloud-offline-outline" text={message || 'Could not load. Check your internet.'} action={onRetry && <Button small variant="secondary" title="Try again" onPress={onRetry} />} />;
+export const ErrorView = ({ message, onRetry }) => <Empty icon="cloud-offline-outline" text={message || t("Could not load. Check your internet.")} action={onRetry && <Button small variant="secondary" title={t("Try again")} onPress={onRetry} />} />;
 
 export const Notice = ({ tone = 'amber', icon = 'information-circle', title, text, action }) => {
   const [bg, fg] = TONES[tone];
@@ -332,11 +333,10 @@ export function ProgressSteps({ steps, current }) {
   return (
     <View style={{ paddingHorizontal: space.lg, paddingBottom: space.md }}>
       <Row style={{ justifyContent: 'space-between', marginBottom: 6 }}>
-        <Text style={[font.sub, { fontWeight: '600', color: colors.text }]}>
-          Step {idx + 1}: {steps[idx]?.label}
+        <Text style={[font.sub, { fontWeight: '600', color: colors.text }]}>{t("Step")}{" "}{idx + 1}{": "}{t(steps[idx]?.label)}
         </Text>
         <Text style={font.small}>
-          {idx + 1} of {steps.length}
+          {idx + 1}{" "}{t("of")}{" "}{steps.length}
         </Text>
       </Row>
       <View style={{ height: 6, backgroundColor: colors.primaryBorder, borderRadius: 3 }}>
@@ -389,15 +389,15 @@ export function PromptModal({ visible, title, message, placeholder, confirmText 
           {presets.length > 0 && (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
               {presets.map((p) => (
-                <Pressable key={p} style={[s.chip, text === p && s.chipOn]} onPress={() => setText(p)}>
-                  <Text>{p}</Text>
+                <Pressable key={p} style={[s.chip, text === t(p) && s.chipOn]} onPress={() => setText(t(p))}>
+                  <Text>{t(p)}</Text>
                 </Pressable>
               ))}
             </View>
           )}
           <Input style={{ marginTop: 12 }} placeholder={placeholder} value={text} onChangeText={setText} multiline maxLength={250} />
           <Row style={{ justifyContent: 'flex-end' }}>
-            <Button title="Back" variant="ghost" onPress={onClose} small />
+            <Button title={t("Back")} variant="ghost" onPress={onClose} small />
             <Button title={confirmText} variant={danger ? 'primary' : 'success'} loading={busy} disabled={required && text.trim().length < 3} onPress={submit} small />
           </Row>
         </View>

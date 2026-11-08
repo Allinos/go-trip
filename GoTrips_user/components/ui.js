@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BOOKING_STATUS, BORDER_RADIUS, COLORS, SPACING, TYPOGRAPHY } from '../constants';
+import { t } from '../i18n';
 
 export function Button({ title, onPress, variant = 'primary', loading, disabled, icon, style, small }) {
   const v = { primary: [COLORS.primary, '#fff', COLORS.primary], outline: ['#fff', COLORS.primary, COLORS.primary], ghost: ['transparent', COLORS.primary, 'transparent'], success: [COLORS.success, '#fff', COLORS.success], dark: [COLORS.text.primary, '#fff', COLORS.text.primary] }[variant];
@@ -43,7 +44,7 @@ export function Header({ title, right, back = true }) {
     <SafeAreaView edges={['top']} style={{ backgroundColor: COLORS.background }}>
       <View style={s.header}>
         {back && (
-          <Pressable hitSlop={12} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} accessibilityLabel="Back">
+          <Pressable hitSlop={12} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} accessibilityLabel={t("Back")}>
             <MaterialIcons name="arrow-back" size={24} color={COLORS.text.primary} />
           </Pressable>
         )}
@@ -60,7 +61,7 @@ export const StatusBadge = ({ status }) => {
   const st = BOOKING_STATUS[status] || { label: status, color: COLORS.text.secondary, bg: COLORS.divider };
   return (
     <View style={{ backgroundColor: st.bg, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, alignSelf: 'flex-start' }}>
-      <Text style={{ color: st.color, fontWeight: '700', fontSize: 12 }}>{st.label}</Text>
+      <Text style={{ color: st.color, fontWeight: '700', fontSize: 12 }}>{t(st.label)}</Text>
     </View>
   );
 };
@@ -68,13 +69,13 @@ export const StatusBadge = ({ status }) => {
 export const Pill = ({ text, color = COLORS.primary, bg = COLORS.primaryLight, icon }) => (
   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: bg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, alignSelf: 'flex-start' }}>
     {icon && <MaterialIcons name={icon} size={13} color={color} />}
-    <Text style={{ color, fontWeight: '600', fontSize: 12 }}>{text}</Text>
+    <Text style={{ color, fontWeight: '600', fontSize: 12 }}>{t(text)}</Text>
   </View>
 );
 
 export const Chip = ({ label, active, onPress }) => (
   <Pressable onPress={onPress} style={[s.chip, active && s.chipOn]} accessibilityState={{ selected: active }}>
-    <Text style={[TYPOGRAPHY.caption, { color: active ? COLORS.primary : COLORS.text.secondary, fontWeight: active ? '700' : '500' }]}>{label}</Text>
+    <Text style={[TYPOGRAPHY.caption, { color: active ? COLORS.primary : COLORS.text.secondary, fontWeight: active ? '700' : '500' }]}>{t(label)}</Text>
   </Pressable>
 );
 
@@ -92,7 +93,7 @@ export const Loading = () => (
   </View>
 );
 
-export const ErrorView = ({ message, onRetry }) => <Empty icon="cloud-off" text={message} action={onRetry && <Button small variant="outline" title="Try again" onPress={onRetry} />} />;
+export const ErrorView = ({ message, onRetry }) => <Empty icon="cloud-off" text={message} action={onRetry && <Button small variant="outline" title={t("Try again")} onPress={onRetry} />} />;
 
 export function Input({ label, style, prefix, ...props }) {
   return (

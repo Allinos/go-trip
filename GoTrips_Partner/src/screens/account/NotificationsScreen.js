@@ -6,11 +6,12 @@ import { meApi } from '../../api';
 import { useApi } from '../../hooks/useApi';
 import { colors, font } from '../../theme';
 import { ago } from '../../utils/format';
+import { t } from '../../i18n';
 
 const ICON = { booking_request: 'person-add', booking_cancelled: 'close-circle', vehicle_approved: 'checkmark-circle', vehicle_rejected: 'alert-circle', documents_approved: 'shield-checkmark', documents_rejected: 'alert-circle', payment_success: 'card', registration_complete: 'ribbon', listing_expiring: 'time', support_reply: 'chatbubbles' };
 
 export default function NotificationsScreen({ navigation }) {
-  const { data, error, loading, reload, refresh, refreshing } = useApi(() => meApi.notifications());
+  const { data, error, loading, reload, refresh, refreshing } = useApi(() => meApi.notifications(), [], { cacheKey: 'notifications' });
   useEffect(() => {
     if (data?.some((n) => !n.readAt)) meApi.markRead().catch(() => {});
   }, [data]);
@@ -23,7 +24,7 @@ export default function NotificationsScreen({ navigation }) {
     else if (d.screen === 'Support') navigation.navigate('Support');
   };
   return (
-    <Screen title="Notifications" scroll={false} padded={false}>
+    <Screen title={t("Notifications")} scroll={false} padded={false}>
       {loading ? (
         <Loading />
       ) : error ? (
@@ -48,7 +49,7 @@ export default function NotificationsScreen({ navigation }) {
               </Row>
             </Card>
           )}
-          ListEmptyComponent={<Empty icon="notifications-off-outline" text="No notifications yet" />}
+          ListEmptyComponent={<Empty icon="notifications-off-outline" text={t("No notifications yet")} />}
         />
       )}
     </Screen>

@@ -7,22 +7,23 @@ import { tripApi } from '../../api';
 import { useApi } from '../../hooks/useApi';
 import { colors, font, space } from '../../theme';
 import { dateLabel, rupees, timeLabel } from '../../utils/format';
+import { t } from '../../i18n';
 
 const TABS = [
   ['upcoming', 'Upcoming'],
   ['past', 'Past'],
 ];
 
-export function TripCard({ t, onPress, right }) {
+export function TripCard({ trip, onPress, right }) {
   return (
     <Card style={{ marginBottom: 12 }} onPress={onPress}>
       <Row style={{ justifyContent: 'space-between' }}>
         <Row gap={6}>
-          <Badge tone={t.tripType === 'return' ? 'blue' : 'gray'} text={t.tripType === 'return' ? 'Return trip' : 'Trip'} />
-          <Badge status={t.status} />
-          {t.status === 'scheduled' && !t.bookingOpen && <Badge tone="gray" text="Bookings paused" />}
+          <Badge tone={trip.tripType === 'return' ? 'blue' : 'gray'} text={trip.tripType === 'return' ? t("Return trip") : t("Trip")} />
+          <Badge status={trip.status} />
+          {trip.status === 'scheduled' && !trip.bookingOpen && <Badge tone="gray" text={t("Bookings paused")} />}
         </Row>
-        {t.pendingRequests > 0 && <Badge tone="amber" text={`${t.pendingRequests} new request${t.pendingRequests > 1 ? 's' : ''}`} />}
+        {trip.pendingRequests > 0 && <Badge tone="amber" text={trip.pendingRequests > 1 ? t("{0} new requests", [trip.pendingRequests]) : t("1 new request")} />}
       </Row>
       <Row style={{ marginTop: 10, alignItems: 'flex-start' }}>
         <View style={{ alignItems: 'center', paddingTop: 4 }}>
@@ -31,20 +32,19 @@ export function TripCard({ t, onPress, right }) {
           <Ionicons name="location" size={14} color={colors.primary} />
         </View>
         <View style={{ flex: 1, gap: 10 }}>
-          <Text style={font.h3}>{t.originName}</Text>
-          <Text style={font.h3}>{t.destinationName}</Text>
+          <Text style={font.h3}>{trip.originName}</Text>
+          <Text style={font.h3}>{trip.destinationName}</Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
-          <Text style={font.h3}>{timeLabel(t.departureAt)}</Text>
-          <Text style={font.small}>{dateLabel(t.departureAt)}</Text>
+          <Text style={font.h3}>{timeLabel(trip.departureAt)}</Text>
+          <Text style={font.small}>{dateLabel(trip.departureAt)}</Text>
         </View>
       </Row>
-      {t.stops?.length > 2 && <Text style={[font.small, { marginTop: 6 }]}>via {t.stops.slice(1, -1).map((x) => x.placeName).join(', ')}</Text>}
+      {trip.stops?.length > 2 && <Text style={[font.small, { marginTop: 6 }]}>{t("via")}{" "}{trip.stops.slice(1, -1).map((x) => x.placeName).join(', ')}</Text>}
       <Row style={{ marginTop: 10, justifyContent: 'space-between' }}>
         <Text style={font.sub}>
-          <Ionicons name="people" size={14} /> {t.bookedSeats}/{t.totalSeats} seats booked
-        </Text>
-        <Text style={[font.body, { fontWeight: '700' }]}>{rupees(t.pricePerSeat)}/seat</Text>
+          <Ionicons name="people" size={14} /> {trip.bookedSeats}/{trip.totalSeats}{" "}{t("seats booked")}</Text>
+        <Text style={[font.body, { fontWeight: '700' }]}>{rupees(trip.pricePerSeat)}{t("/seat")}</Text>
       </Row>
       {right}
     </Card>
@@ -54,19 +54,21 @@ export function TripCard({ t, onPress, right }) {
 export default function TripsScreen({ navigation, route }) {
   const [tab, setTab] = useState(route.params?.tab || 'upcoming');
   const pickReturn = route.params?.pickReturn;
-  const { data, error, loading, reload, refresh, refreshing } = useApi(() => tripApi.list({ when: tab, limit: 50 }), [tab]);
+  const { data, error, loading, reload, refresh, refreshing } = useApi(() => tripApi.list({ when: tab, limit: 50 }), [tab], { cacheKey: `trips:${tab}` });
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
-      <Header title="My trips" back={false} right={<Button small title="New trip" icon="add" onPress={() => navigation.navigate('TripForm', { tripType: 'start' })} />} />
+      <Header title={t("My trips")} back={false} right={<Button small title={t("New trip")} icon="add" onPress={() => navigation.navigate('TripForm', { tripType: 'start' })} />} />
       <Row style={{ paddingHorizontal: space.lg, marginBottom: 8 }}>
         {TABS.map(([v, l]) => (
-          <Button key={v} small title={l} variant={tab === v ? 'primary' : 'secondary'} onPress={() => (setTab(v), navigation.setParams({ pickReturn: false }))} style={{ flex: 1 }} />
+          <Button key={v} small title={t(l)} variant={tab === v ? 'primary' : 'secondary'} onPress={() => (setTab(v), navigation.setParams({ pickReturn: false }))} style={{ flex: 1 }} />
         ))}
       </Row>
       {pickReturn && (
         <View style={{ paddingHorizontal: space.lg }}>
-          <Notice tone="blue" icon="swap-horizontal" title="Create a return trip" text="Choose the trip you are returning from, then tap “Create return trip”. Or create a new trip and choose “Return trip”." />
+          <Notice tone="blue" icon="swap-horizontal" title={t("Create a return trip")} text={t(
+            "Choose the trip you are returning from, then tap “Create return trip”. Or create a new trip and choose “Return trip”."
+          )} />
         </View>
       )}
       {loading ? (
@@ -76,17 +78,17 @@ export default function TripsScreen({ navigation, route }) {
       ) : (
         <FlatList
           data={data}
-          keyExtractor={(t) => String(t.id)}
+          keyExtractor={(trip) => String(trip.id)}
           contentContainerStyle={{ padding: space.lg, paddingTop: 4 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[colors.primary]} />}
           renderItem={({ item }) => (
             <TripCard
-              t={item}
+              trip={item}
               onPress={() => navigation.navigate('TripDetail', { id: item.id })}
-              right={pickReturn && item.tripType === 'start' ? <Button small style={{ marginTop: 10 }} icon="swap-horizontal" title="Create return trip" onPress={() => navigation.navigate('TripForm', { returnOf: item })} /> : null}
+              right={pickReturn && item.tripType === 'start' ? <Button small style={{ marginTop: 10 }} icon="swap-horizontal" title={t("Create return trip")} onPress={() => navigation.navigate('TripForm', { returnOf: item })} /> : null}
             />
           )}
-          ListEmptyComponent={<Empty icon="map-outline" text={tab === 'upcoming' ? 'No upcoming trips. Create a trip so passengers can book seats.' : 'No past trips yet.'} action={tab === 'upcoming' && <Button small title="Create trip" onPress={() => navigation.navigate('TripForm', { tripType: 'start' })} />} />}
+          ListEmptyComponent={<Empty icon="map-outline" text={tab === 'upcoming' ? t("No upcoming trips. Create a trip so passengers can book seats.") : t("No past trips yet.")} action={tab === 'upcoming' && <Button small title={t("Create trip")} onPress={() => navigation.navigate('TripForm', { tripType: 'start' })} />} />}
         />
       )}
     </SafeAreaView>

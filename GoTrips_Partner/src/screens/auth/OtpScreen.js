@@ -5,6 +5,7 @@ import { authApi } from '../../api';
 import { errorMessage } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { colors, font, radius } from '../../theme';
+import { t } from '../../i18n';
 
 export default function OtpScreen({ route }) {
   const { phone, info } = route.params;
@@ -18,8 +19,8 @@ export default function OtpScreen({ route }) {
 
   useEffect(() => {
     if (wait <= 0) return undefined;
-    const t = setTimeout(() => setWait(wait - 1), 1000);
-    return () => clearTimeout(t);
+    const v = setTimeout(() => setWait(wait - 1), 1000);
+    return () => clearTimeout(v);
   }, [wait]);
 
   const verify = async (code = otp) => {
@@ -47,10 +48,10 @@ export default function OtpScreen({ route }) {
   };
 
   return (
-    <Screen title="" footer={<Button title="Verify & continue" onPress={() => verify()} loading={busy} disabled={otp.length !== 6} />}>
-      <Text style={font.h1}>Enter the code</Text>
-      <Text style={[font.sub, { marginTop: 6, marginBottom: 24 }]}>Sent by SMS to +91 {phone}</Text>
-      {devOtp ? <Notice tone="blue" title="Test mode" text={`Your code is ${devOtp}`} /> : null}
+    <Screen title="" footer={<Button title={t("Verify & continue")} onPress={() => verify()} loading={busy} disabled={otp.length !== 6} />}>
+      <Text style={font.h1}>{t("Enter the code")}</Text>
+      <Text style={[font.sub, { marginTop: 6, marginBottom: 24 }]}>{t("Sent by SMS to +91")}{" "}{phone}</Text>
+      {devOtp ? <Notice tone="blue" title={t("Test mode")} text={t("Your code is {0}", [devOtp])} /> : null}
       <Pressable onPress={() => input.current?.focus()} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
         {Array.from({ length: 6 }).map((_, i) => (
           <View key={i} style={{ width: 48, height: 56, borderRadius: radius.md, borderWidth: 1.5, borderColor: otp.length === i ? colors.primary : error ? colors.primaryDark : colors.border, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' }}>
@@ -61,8 +62,8 @@ export default function OtpScreen({ route }) {
       <TextInput
         ref={input}
         value={otp}
-        onChangeText={(t) => {
-          const v = t.replace(/\D/g, '').slice(0, 6);
+        onChangeText={(txt) => {
+          const v = txt.replace(/\D/g, '').slice(0, 6);
           setOtp(v);
           if (v.length === 6) verify(v);
         }}
@@ -72,11 +73,11 @@ export default function OtpScreen({ route }) {
         autoFocus
         maxLength={6}
         style={{ position: 'absolute', opacity: 0, height: 1, width: 1 }}
-        accessibilityLabel="OTP code"
+        accessibilityLabel={t("OTP code")}
       />
       {error ? <Text style={{ color: colors.primaryDark, marginBottom: 12 }}>{error}</Text> : null}
       <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 8 }}>
-        {wait > 0 ? <Text style={font.sub}>Resend code in {wait}s</Text> : <Button title="Resend code" variant="ghost" small onPress={resend} />}
+        {wait > 0 ? <Text style={font.sub}>{t("Resend code in")}{" "}{wait}s</Text> : <Button title={t("Resend code")} variant="ghost" small onPress={resend} />}
       </View>
     </Screen>
   );

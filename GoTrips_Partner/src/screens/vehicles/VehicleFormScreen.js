@@ -8,6 +8,7 @@ import { useCaps } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { font } from '../../theme';
 import { VEHICLE_LABELS } from '../../utils/format';
+import { t } from '../../i18n';
 
 const CLASSES = Object.entries(VEHICLE_LABELS).map(([value, label]) => ({ value, label }));
 const PASSENGER = ['hatchback', 'sedan', 'suv', 'muv', 'van', 'mini_bus', 'bus', 'auto', 'bike'];
@@ -60,7 +61,7 @@ export default function VehicleFormScreen({ navigation, route }) {
   ].filter(Boolean);
 
   const save = async () => {
-    if (problems.length) return toast(`Please add: ${problems.join(', ')}`, 'error');
+    if (problems.length) return toast(t("Please add: {0}", [problems.join(', ')]), 'error');
     setBusy(true);
     const body = {
       vehicleClass: f.vehicleClass,
@@ -85,10 +86,10 @@ export default function VehicleFormScreen({ navigation, route }) {
     try {
       const r = v ? await vehicleApi.update(v.id, body) : await vehicleApi.create(body);
       if (v) {
-        toast(r.meta?.resubmitted ? 'Saved. Sent for verification again.' : 'Vehicle updated', 'success');
+        toast(r.meta?.resubmitted ? t("Saved. Sent for verification again.") : t("Vehicle updated"), 'success');
         navigation.goBack();
       } else {
-        toast('Vehicle added. Now add photos and documents.', 'success');
+        toast(t("Vehicle added. Now add photos and documents."), 'success');
         navigation.replace('VehicleDetail', { id: r.data.id, justAdded: true });
       }
     } catch (e) {
@@ -99,42 +100,46 @@ export default function VehicleFormScreen({ navigation, route }) {
   };
 
   return (
-    <Screen title={v ? 'Edit vehicle' : 'Add vehicle'} footer={<Button title={v ? 'Save changes' : 'Save & continue'} onPress={save} loading={busy} />}>
-      {!v && <Notice tone="blue" icon="shield-checkmark" text="After you add photos and documents, our team verifies the vehicle (usually within 24 hours). Then customers can see it." />}
-      {v?.verificationStatus === 'approved' && <Notice text="Changing registration number, type, make, model or year sends the vehicle for verification again." />}
-      <Section title="Vehicle" icon="car">
-        <Select label="Vehicle type" required value={f.vehicleClass} onChange={set('vehicleClass')} options={CLASSES} />
+    <Screen title={v ? t("Edit vehicle") : t("Add vehicle")} footer={<Button title={v ? t("Save changes") : t("Save & continue")} onPress={save} loading={busy} />}>
+      {!v && <Notice tone="blue" icon="shield-checkmark" text={t(
+        "After you add photos and documents, our team verifies the vehicle (usually within 24 hours). Then customers can see it."
+      )} />}
+      {v?.verificationStatus === 'approved' && <Notice text={t(
+        "Changing registration number, type, make, model or year sends the vehicle for verification again."
+      )} />}
+      <Section title={t("Vehicle")} icon="car">
+        <Select label={t("Vehicle type")} required value={f.vehicleClass} onChange={set('vehicleClass')} options={CLASSES} />
         <Row>
-          <Input style={{ flex: 1 }} label="Make" required value={f.make} onChangeText={set('make')} placeholder="e.g. Toyota" />
-          <Input style={{ flex: 1 }} label="Model" required value={f.model} onChangeText={set('model')} placeholder="e.g. Innova" />
+          <Input style={{ flex: 1 }} label={t("Make")} required value={f.make} onChangeText={set('make')} placeholder={t("e.g. Toyota")} />
+          <Input style={{ flex: 1 }} label={t("Model")} required value={f.model} onChangeText={set('model')} placeholder={t("e.g. Innova")} />
         </Row>
-        <Input label="Registration number" required value={f.registrationNumber} onChangeText={(t) => set('registrationNumber')(t.toUpperCase())} placeholder="AS 01 AB 1234" autoCapitalize="characters" />
+        <Input label={t("Registration number")} required value={f.registrationNumber} onChangeText={(v) => set('registrationNumber')(v.toUpperCase())} placeholder={t("AS 01 AB 1234")} autoCapitalize="characters" />
         <Row>
-          <Input style={{ flex: 1 }} label="Year" value={f.year} onChangeText={(t) => set('year')(t.replace(/\D/g, '').slice(0, 4))} keyboardType="number-pad" placeholder="2021" />
-          <Input style={{ flex: 1 }} label="Colour" value={f.color} onChangeText={set('color')} placeholder="White" />
+          <Input style={{ flex: 1 }} label={t("Year")} value={f.year} onChangeText={(v) => set('year')(v.replace(/\D/g, '').slice(0, 4))} keyboardType="number-pad" placeholder="2021" />
+          <Input style={{ flex: 1 }} label={t("Colour")} value={f.color} onChangeText={set('color')} placeholder={t("White")} />
         </Row>
-        {(passenger || f.forTrips) && <Stepper label="Passenger seats" sub="Excluding driver" value={f.seats} onChange={set('seats')} min={1} max={60} />}
-        {!passenger && f.vehicleClass && <Input label="Load capacity (kg)" value={f.loadCapacityKg} onChangeText={(t) => set('loadCapacityKg')(t.replace(/\D/g, ''))} keyboardType="number-pad" />}
-        <Chips label="Fuel" options={FUEL} value={f.fuelType} onChange={set('fuelType')} />
-        <ToggleRow title="Air conditioned (AC)" value={f.hasAc} onChange={set('hasAc')} />
-        <Chips label="Extras" multiple options={FEATURES} value={f.features} onChange={set('features')} />
-        <Input label="Description (optional)" value={f.description} onChangeText={set('description')} multiline placeholder="Anything customers should know" />
+        {(passenger || f.forTrips) && <Stepper label={t("Passenger seats")} sub={t("Excluding driver")} value={f.seats} onChange={set('seats')} min={1} max={60} />}
+        {!passenger && f.vehicleClass && <Input label={t("Load capacity (kg)")} value={f.loadCapacityKg} onChangeText={(v) => set('loadCapacityKg')(v.replace(/\D/g, ''))} keyboardType="number-pad" />}
+        <Chips label={t("Fuel")} options={FUEL} value={f.fuelType} onChange={set('fuelType')} />
+        <ToggleRow title={t("Air conditioned (AC)")} value={f.hasAc} onChange={set('hasAc')} />
+        <Chips label={t("Extras")} multiple options={FEATURES} value={f.features} onChange={set('features')} />
+        <Input label={t("Description (optional)")} value={f.description} onChangeText={set('description')} multiline placeholder={t("Anything customers should know")} />
       </Section>
 
-      <Section title="How will you use it?" icon="options">
-        {caps.trips && <ToggleRow title="Trips with passengers" sub="Create start & return trips with this vehicle" value={f.forTrips} onChange={set('forTrips')} />}
-        {caps.rentals && <ToggleRow title="Rent it out" sub="Show in the rental marketplace" value={f.forRental} onChange={set('forRental')} />}
-        {caps.goods && <ToggleRow title="Goods transport" sub="Carry goods for customers" value={f.forGoods} onChange={set('forGoods')} />}
+      <Section title={t("How will you use it?")} icon="options">
+        {caps.trips && <ToggleRow title={t("Trips with passengers")} sub={t("Create start & return trips with this vehicle")} value={f.forTrips} onChange={set('forTrips')} />}
+        {caps.rentals && <ToggleRow title={t("Rent it out")} sub={t("Show in the rental marketplace")} value={f.forRental} onChange={set('forRental')} />}
+        {caps.goods && <ToggleRow title={t("Goods transport")} sub={t("Carry goods for customers")} value={f.forGoods} onChange={set('forGoods')} />}
       </Section>
 
       {f.forRental && (
-        <Section title="Rental details" icon="key">
+        <Section title={t("Rental details")} icon="key">
           <Row>
-            <Input style={{ flex: 1 }} label="Rent per day" prefix="₹" value={f.rentalPricePerDay} onChangeText={(t) => set('rentalPricePerDay')(t.replace(/\D/g, ''))} keyboardType="number-pad" />
-            <Input style={{ flex: 1 }} label="Rent per hour" prefix="₹" value={f.rentalPricePerHour} onChangeText={(t) => set('rentalPricePerHour')(t.replace(/\D/g, ''))} keyboardType="number-pad" />
+            <Input style={{ flex: 1 }} label={t("Rent per day")} prefix="₹" value={f.rentalPricePerDay} onChangeText={(v) => set('rentalPricePerDay')(v.replace(/\D/g, ''))} keyboardType="number-pad" />
+            <Input style={{ flex: 1 }} label={t("Rent per hour")} prefix="₹" value={f.rentalPricePerHour} onChangeText={(v) => set('rentalPricePerHour')(v.replace(/\D/g, ''))} keyboardType="number-pad" />
           </Row>
           <Chips
-            label="Driver"
+            label={t("Driver")}
             options={[
               { value: 'self_drive', label: 'Self drive' },
               { value: 'with_driver', label: 'With driver' },
@@ -143,12 +148,14 @@ export default function VehicleFormScreen({ navigation, route }) {
             value={f.rentalDriverOption}
             onChange={set('rentalDriverOption')}
           />
-          <Input label="Security deposit (optional)" prefix="₹" value={f.securityDeposit} onChangeText={(t) => set('securityDeposit')(t.replace(/\D/g, ''))} keyboardType="number-pad" />
-          <DistrictSelect label="Available in district" required value={f.rentalDistrict} onChange={set('rentalDistrict')} />
-          <Input label="City / area" value={f.rentalCity} onChangeText={set('rentalCity')} placeholder="e.g. Guwahati" />
-          <Input label="Pickup address (optional)" value={f.rentalAddress} onChangeText={set('rentalAddress')} placeholder="e.g. Near Ganeshguri flyover" />
-          <Input label="Rental terms (optional)" value={f.rentalTerms} onChangeText={set('rentalTerms')} multiline placeholder="e.g. ID proof needed, fuel not included" />
-          <Text style={font.small}>Tip: open the vehicle after saving and tap “Use my current location” to show it on the map.</Text>
+          <Input label={t("Security deposit (optional)")} prefix="₹" value={f.securityDeposit} onChangeText={(v) => set('securityDeposit')(v.replace(/\D/g, ''))} keyboardType="number-pad" />
+          <DistrictSelect label={t("Available in district")} required value={f.rentalDistrict} onChange={set('rentalDistrict')} />
+          <Input label={t("City / area")} value={f.rentalCity} onChangeText={set('rentalCity')} placeholder={t("e.g. Guwahati")} />
+          <Input label={t("Pickup address (optional)")} value={f.rentalAddress} onChangeText={set('rentalAddress')} placeholder={t("e.g. Near Ganeshguri flyover")} />
+          <Input label={t("Rental terms (optional)")} value={f.rentalTerms} onChangeText={set('rentalTerms')} multiline placeholder={t("e.g. ID proof needed, fuel not included")} />
+          <Text style={font.small}>{t(
+            "Tip: open the vehicle after saving and tap “Use my current location” to show it on the map."
+          )}</Text>
         </Section>
       )}
     </Screen>

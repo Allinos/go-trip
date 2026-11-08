@@ -2,6 +2,7 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../constants';
+import { getLang, t } from '../i18n';
 
 const ACCESS = 'gt_user_access';
 const REFRESH = 'gt_user_refresh';
@@ -33,6 +34,7 @@ export const tokens = {
 const http = axios.create({ baseURL: API_BASE_URL, timeout: 20000 });
 http.interceptors.request.use((c) => {
   if (accessToken) c.headers.Authorization = `Bearer ${accessToken}`;
+  c.headers['Accept-Language'] = getLang();
   return c;
 });
 
@@ -63,16 +65,16 @@ http.interceptors.response.use(
 
 export function errorMessage(e) {
   if (e?.response?.data?.error?.message) return e.response.data.error.message;
-  if (e?.message === 'Network Error') return 'No internet connection. Please try again.';
-  return e?.message || 'Something went wrong';
+  if (e?.message === 'Network Error') return t('No internet connection. Please try again.');
+  return e?.message || t('Something went wrong');
 }
 export const errorCode = (e) => e?.response?.data?.error?.code;
 
 const APP = 'user';
 
 export const authAPI = {
-  sendOtp: (phone) => http.post('/auth/otp/send', { phone, app: APP }),
-  verifyOtp: (phone, otp, deviceInfo) => http.post('/auth/otp/verify', { phone, otp, app: APP, deviceInfo }),
+  sendOtp: (phone) => http.post('/auth/otp/send', { phone, app: APP, language: getLang() }),
+  verifyOtp: (phone, otp, deviceInfo) => http.post('/auth/otp/verify', { phone, otp, app: APP, deviceInfo, language: getLang() }),
   me: () => http.get('/auth/me'),
   logout: (refreshToken, pushToken) => http.post('/auth/logout', { refreshToken, pushToken }),
 };

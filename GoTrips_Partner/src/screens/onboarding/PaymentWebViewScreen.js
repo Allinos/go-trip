@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { paymentApi } from '../../api';
 import { errorMessage } from '../../api/client';
 import { colors } from '../../theme';
+import { t } from '../../i18n';
 
 /** Hosts the server's Razorpay Checkout page and verifies the result on the server. */
 export default function PaymentWebViewScreen({ navigation, route }) {
@@ -41,7 +42,7 @@ export default function PaymentWebViewScreen({ navigation, route }) {
   };
 
   const close = () =>
-    Alert.alert('Cancel payment?', 'If you already paid, choose "I have paid".', [
+    Alert.alert(t("Cancel payment?"), t("If you already paid, choose \"I have paid\"."), [
       { text: 'Continue paying', style: 'cancel' },
       { text: 'I have paid', onPress: () => finish({ status: 'processing', paymentId: order.paymentId }) },
       { text: 'Cancel', style: 'destructive', onPress: () => finish({ status: 'cancelled', message: 'Payment was cancelled.' }) },
@@ -49,7 +50,7 @@ export default function PaymentWebViewScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={s.screen}>
-      <Header title="Secure payment" onBack={close} />
+      <Header title={t("Secure payment")} onBack={close} />
       <WebView
         source={{ uri: order.checkoutUrl }}
         onMessage={onMessage}
@@ -62,7 +63,7 @@ export default function PaymentWebViewScreen({ navigation, route }) {
         // UPI apps (GPay, PhonePe, Paytm) open through upi:// / intent:// links: hand those to the OS.
         onShouldStartLoadWithRequest={(req) => {
           if (/^https?:/i.test(req.url) || req.url === 'about:blank') return true;
-          Linking.openURL(req.url).catch(() => Alert.alert('App not found', 'Please choose another payment method.'));
+          Linking.openURL(req.url).catch(() => Alert.alert(t("App not found"), t("Please choose another payment method.")));
           return false;
         }}
       />

@@ -3,6 +3,9 @@ import { Alert, Platform } from 'react-native';
 import * as Device from 'expo-device';
 import { authApi, catalogApi } from '../api';
 import { clearTokens, getRefreshToken, loadTokens, saveTokens, setSessionExpiredHandler } from '../api/client';
+import { clearCache, readCache, setCacheScope, writeCache } from '../api/cache';
+import { onLangChange } from '../i18n';
+import { t } from '../i18n';
 
 /**
  * Session state machine:
@@ -20,17 +23,23 @@ export function AuthProvider({ children }) {
   const [catalog, setCatalog] = useState({ config: null, districts: [] });
 
   const applyMe = useCallback((data) => {
+    setCacheScope(data.user?.id);
     setUser(data.user);
     setOnboarding(data.onboarding);
     setStatus(data.onboarding?.completed ? 'ready' : 'onboarding');
   }, []);
 
   const loadCatalog = useCallback(async () => {
+    // Show the saved copy immediately (fast start, works offline), then refresh.
+    const cached = await readCache('catalog');
+    if (cached) setCatalog(cached.data);
     try {
       const [config, districts] = await Promise.all([catalogApi.config(), catalogApi.districts()]);
-      setCatalog({ config: config.data, districts: districts.data });
+      const fresh = { config: config.data, districts: districts.data };
+      setCatalog(fresh);
+      writeCache('catalog', fresh);
     } catch {
-      /* retried on next refresh */
+      /* keep cached copy; retried on next refresh */
     }
   }, []);
 
@@ -48,11 +57,23 @@ export function AuthProvider({ children }) {
       /* ignore */
     }
     await clearTokens();
+    await clearCache();
+    setCacheScope(null);
     setUser(null);
     setOnboarding(null);
     setStatus('loggedOut');
-    if (typeof message === 'string') Alert.alert('Signed out', message);
+    if (typeof message === 'string') Alert.alert(t("Signed out"), message);
   }, []);
+
+  // Server-provided text (partner types, step labels) is localised: reload it when the language changes.
+  useEffect(
+    () =>
+      onLangChange(() => {
+        loadCatalog();
+        refresh().catch(() => {});
+      }),
+    [loadCatalog, refresh]
+  );
 
   useEffect(() => {
     setSessionExpiredHandler((msg) => logout(msg));

@@ -7,18 +7,19 @@ import useFetch from '../hooks/useFetch';
 import { userAPI } from '../services/api';
 import { COLORS, SPACING, TYPOGRAPHY } from '../constants';
 import { ago } from '../utils/format';
+import { t } from '../i18n';
 
 const ICON = { booking_accepted: 'check-circle', booking_rejected: 'cancel', booking_cancelled: 'cancel', trip_started: 'directions-car', support_reply: 'support-agent' };
 
 export default function Notifications() {
   const router = useRouter();
-  const { data, error, loading, refreshing, reload, refresh } = useFetch(() => userAPI.notifications());
+  const { data, error, loading, refreshing, reload, refresh } = useFetch(() => userAPI.notifications(), [], { cacheKey: 'notifications' });
   useEffect(() => {
     if (data?.some((n) => !n.readAt)) userAPI.markRead().catch(() => {});
   }, [data]);
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.surface }}>
-      <Header title="Notifications" />
+      <Header title={t("Notifications")} />
       {loading ? (
         <Loading />
       ) : error ? (
@@ -41,7 +42,7 @@ export default function Notifications() {
               </Row>
             </Card>
           )}
-          ListEmptyComponent={<Empty icon="notifications-none" text="No notifications yet" />}
+          ListEmptyComponent={<Empty icon="notifications-none" text={t("No notifications yet")} />}
         />
       )}
     </View>

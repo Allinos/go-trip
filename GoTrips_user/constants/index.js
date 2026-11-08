@@ -1,6 +1,7 @@
 // App Constants and Configuration
 
 import Constants from 'expo-constants';
+import { t } from '../i18n';
 
 // EXPO_PUBLIC_API_URL (.env) → app.json extra.apiUrl → Android emulator default
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.apiUrl || 'http://10.0.2.2:3000/api/v1';
@@ -82,7 +83,7 @@ export const SERVICES = [
   { id: 'goods', label: 'Goods', icon: 'truck', route: '/goods', feature: 'goodsOrders' },
 ];
 
-export const VEHICLE_LABELS = {
+const VEHICLE_RAW = {
   hatchback: 'Hatchback', sedan: 'Sedan', suv: 'SUV', muv: 'MUV', van: 'Van', mini_bus: 'Mini bus', bus: 'Bus', auto: 'Auto', bike: 'Bike',
   pickup: 'Pickup', tempo: 'Tempo', mini_truck: 'Mini truck', truck: 'Truck', trailer: 'Trailer', other: 'Other',
 };
@@ -95,3 +96,6 @@ export const BOOKING_STATUS = {
   completed: { label: 'Completed', color: '#2563EB', bg: '#EFF6FF' },
   expired: { label: 'Expired', color: '#6B7280', bg: '#F3F4F6' },
 };
+
+// Vehicle names follow the current language.
+export const VEHICLE_LABELS = new Proxy(VEHICLE_RAW, { get: (o, k) => (typeof o[k] === 'string' ? t(o[k]) : o[k]) });

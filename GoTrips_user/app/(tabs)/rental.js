@@ -10,6 +10,7 @@ import useAuthStore from '../../store/authStore';
 import useFetch from '../../hooks/useFetch';
 import { rentalAPI } from '../../services/api';
 import { COLORS, SPACING, TYPOGRAPHY } from '../../constants';
+import { t } from '../../i18n';
 
 const CLASSES = [
   ['', 'All'], ['hatchback', 'Hatchback'], ['sedan', 'Sedan'], ['suv', 'SUV'], ['muv', 'MUV'], ['van', 'Van'], ['mini_bus', 'Mini bus'], ['bike', 'Bike'], ['pickup', 'Pickup'],
@@ -26,7 +27,7 @@ export default function RentalScreen() {
   const [pickDistrict, setPickDistrict] = useState(false);
   const [locating, setLocating] = useState(false);
   const params = { district: near ? undefined : district || undefined, lat: near?.lat, lng: near?.lng, radiusKm: near ? 40 : undefined, vehicleClass: vehicleClass || undefined, driverOption: driverOption || undefined, availableOnly: availableOnly || undefined, limit: 30 };
-  const { data, error, loading, refreshing, reload, refresh } = useFetch(() => rentalAPI.search(params), [JSON.stringify(params)]);
+  const { data, error, loading, refreshing, reload, refresh } = useFetch(() => rentalAPI.search(params), [JSON.stringify(params)], { cacheKey: `rentals:${JSON.stringify(params)}` });
 
   const useMyLocation = async () => {
     setLocating(true);
@@ -43,22 +44,22 @@ export default function RentalScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: COLORS.surface }}>
       <View style={{ padding: SPACING.md, paddingBottom: 4 }}>
-        <Text style={TYPOGRAPHY.h2}>Rent a vehicle</Text>
+        <Text style={TYPOGRAPHY.h2}>{t("Rent a vehicle")}</Text>
         <Row style={{ marginTop: 10 }}>
           <Pressable onPress={() => setPickDistrict(true)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 12, padding: 12, backgroundColor: '#fff' }}>
             <MaterialIcons name="place" size={20} color={COLORS.primary} />
-            <Text style={{ flex: 1, color: near || district ? COLORS.text.primary : COLORS.text.tertiary }}>{near ? 'Near me' : district || 'Choose area / district'}</Text>
+            <Text style={{ flex: 1, color: near || district ? COLORS.text.primary : COLORS.text.tertiary }}>{near ? t("Near me") : district || t("Choose area / district")}</Text>
             <MaterialIcons name="expand-more" size={20} color={COLORS.text.secondary} />
           </Pressable>
-          <Pressable onPress={useMyLocation} style={{ borderWidth: 1.5, borderColor: COLORS.primaryLight, borderRadius: 12, padding: 12, backgroundColor: near ? COLORS.primaryLight : '#fff' }} accessibilityLabel="Use my location">
+          <Pressable onPress={useMyLocation} style={{ borderWidth: 1.5, borderColor: COLORS.primaryLight, borderRadius: 12, padding: 12, backgroundColor: near ? COLORS.primaryLight : '#fff' }} accessibilityLabel={t("Use my location")}>
             <MaterialIcons name={locating ? 'hourglass-empty' : 'my-location'} size={20} color={COLORS.primary} />
           </Pressable>
         </Row>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingHorizontal: SPACING.md, paddingVertical: 8 }}>
-        <Chip label="Available now" active={availableOnly} onPress={() => setAvailableOnly(!availableOnly)} />
-        <Chip label="Self drive" active={driverOption === 'self_drive'} onPress={() => setDriverOption(driverOption === 'self_drive' ? '' : 'self_drive')} />
-        <Chip label="With driver" active={driverOption === 'with_driver'} onPress={() => setDriverOption(driverOption === 'with_driver' ? '' : 'with_driver')} />
+        <Chip label={t("Available now")} active={availableOnly} onPress={() => setAvailableOnly(!availableOnly)} />
+        <Chip label={t("Self drive")} active={driverOption === 'self_drive'} onPress={() => setDriverOption(driverOption === 'self_drive' ? '' : 'self_drive')} />
+        <Chip label={t("With driver")} active={driverOption === 'with_driver'} onPress={() => setDriverOption(driverOption === 'with_driver' ? '' : 'with_driver')} />
         {CLASSES.map(([v, l]) => (
           <Chip key={v || 'all'} label={l} active={vehicleClass === v} onPress={() => setVehicleClass(v)} />
         ))}
@@ -74,7 +75,7 @@ export default function RentalScreen() {
           contentContainerStyle={{ padding: SPACING.md }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[COLORS.primary]} />}
           renderItem={({ item }) => <VehicleCard vehicle={item} onPress={() => router.push(`/rental/${item.id}`)} />}
-          ListEmptyComponent={<Empty icon="car-rental" text={district || near ? 'No rental vehicles found here yet. Try another area.' : 'Choose an area to see vehicles for rent.'} />}
+          ListEmptyComponent={<Empty icon="car-rental" text={district || near ? t("No rental vehicles found here yet. Try another area.") : t("Choose an area to see vehicles for rent.")} />}
         />
       )}
       <Modal visible={pickDistrict} animationType="slide" onRequestClose={() => setPickDistrict(false)}>
@@ -83,14 +84,14 @@ export default function RentalScreen() {
             <Pressable onPress={() => setPickDistrict(false)} hitSlop={10}>
               <MaterialIcons name="close" size={24} />
             </Pressable>
-            <Text style={TYPOGRAPHY.h4}>Choose district</Text>
+            <Text style={TYPOGRAPHY.h4}>{t("Choose district")}</Text>
           </Row>
           <FlatList
             data={[{ name: '' }, ...districts]}
             keyExtractor={(d) => d.name || 'all'}
             renderItem={({ item }) => (
               <Pressable onPress={() => (setDistrict(item.name), setNear(null), setPickDistrict(false))} style={{ padding: SPACING.md, borderBottomWidth: 1, borderBottomColor: COLORS.divider }}>
-                <Text style={[TYPOGRAPHY.body, item.name === district && { color: COLORS.primary, fontWeight: '700' }]}>{item.name || 'All districts'}</Text>
+                <Text style={[TYPOGRAPHY.body, item.name === district && { color: COLORS.primary, fontWeight: '700' }]}>{item.name || t("All districts")}</Text>
               </Pressable>
             )}
           />

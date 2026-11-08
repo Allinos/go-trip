@@ -9,6 +9,7 @@ import { LocationProvider } from '../context/LocationContext';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { Button, Loading } from '../components/ui';
 import { navRef } from './ref';
+import { useLanguage } from '../context/LanguageContext';
 import { colors, font } from '../theme';
 
 import WelcomeScreen from '../screens/auth/WelcomeScreen';
@@ -41,6 +42,7 @@ import NotificationsScreen from '../screens/account/NotificationsScreen';
 import SupportScreen from '../screens/account/SupportScreen';
 import LocationShareScreen from '../screens/account/LocationShareScreen';
 import GoodsOrdersScreen from '../screens/goods/GoodsOrdersScreen';
+import { t } from '../i18n';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -53,12 +55,12 @@ function Tabs() {
   const icon = (name) => ({ color, size, focused }) => <Ionicons name={focused ? name : `${name}-outline`} size={size} color={color} />;
   return (
     <Tab.Navigator screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.faint, tabBarLabelStyle: { fontSize: 12, fontWeight: '600' }, tabBarStyle: { height: 62, paddingTop: 6 } }}>
-      <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarIcon: icon('home') }} />
-      {caps.trips && <Tab.Screen name="Trips" component={TripsScreen} options={{ tabBarIcon: icon('map') }} />}
-      {caps.trips && <Tab.Screen name="Bookings" component={BookingsScreen} options={{ tabBarIcon: icon('people') }} />}
-      {caps.vehicles && <Tab.Screen name="Vehicles" component={VehiclesScreen} options={{ tabBarIcon: icon('car') }} />}
-      {caps.driver && <Tab.Screen name="Profile" component={DriverProfileScreen} options={{ tabBarIcon: icon('person-circle'), title: 'My profile' }} />}
-      <Tab.Screen name="Account" component={AccountScreen} options={{ tabBarIcon: icon('settings') }} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ title: t('Home'), tabBarIcon: icon('home') }} />
+      {caps.trips && <Tab.Screen name="Trips" component={TripsScreen} options={{ title: t('Trips'), tabBarIcon: icon('map') }} />}
+      {caps.trips && <Tab.Screen name="Bookings" component={BookingsScreen} options={{ title: t('Bookings'), tabBarIcon: icon('people') }} />}
+      {caps.vehicles && <Tab.Screen name="Vehicles" component={VehiclesScreen} options={{ title: t('Vehicles'), tabBarIcon: icon('car') }} />}
+      {caps.driver && <Tab.Screen name="Profile" component={DriverProfileScreen} options={{ tabBarIcon: icon('person-circle'), title: t('My profile') }} />}
+      <Tab.Screen name="Account" component={AccountScreen} options={{ title: t('Account'), tabBarIcon: icon('settings') }} />
     </Tab.Navigator>
   );
 }
@@ -124,22 +126,23 @@ function Offline() {
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12, backgroundColor: colors.bg }}>
       <Ionicons name="cloud-offline-outline" size={56} color={colors.faint} />
-      <Text style={font.h2}>Can't reach GoTrip</Text>
-      <Text style={[font.sub, { textAlign: 'center' }]}>Please check your internet connection.</Text>
-      <Button title="Try again" onPress={retry} />
-      <Button title="Log out" variant="ghost" onPress={() => logout()} />
+      <Text style={font.h2}>{t("Can't reach GoTrip")}</Text>
+      <Text style={[font.sub, { textAlign: 'center' }]}>{t("Please check your internet connection.")}</Text>
+      <Button title={t("Try again")} onPress={retry} />
+      <Button title={t("Log out")} variant="ghost" onPress={() => logout()} />
     </View>
   );
 }
 
 export default function RootNavigator() {
   const { status } = useAuth();
+  const [lang] = useLanguage();
   if (status === 'loading') return <Loading full />;
   if (status === 'offline') return <Offline />;
   return (
     // key: each phase gets a fresh navigation state (screens with the same name, e.g. "Documents",
     // exist in both onboarding and the main app and must not be carried over).
-    <NavigationContainer key={status} ref={navRef} theme={theme}>
+    <NavigationContainer key={`${status}-${lang}`} ref={navRef} theme={theme}>
       {status === 'loggedOut' ? <AuthStack /> : status === 'onboarding' ? <OnboardingStack /> : <MainStack />}
     </NavigationContainer>
   );

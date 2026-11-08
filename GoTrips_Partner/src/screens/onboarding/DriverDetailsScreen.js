@@ -10,6 +10,8 @@ import { useAuth, useCatalog } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useAdvance, progressSteps } from './flow';
 import { colors, font } from '../../theme';
+import { t } from '../../i18n';
+import CachedImage from '../../components/CachedImage';
 
 const LICENSE_TYPES = ['LMV', 'MCWG', 'TRANS', 'HMV', 'HGMV', 'HPMV'].map((v) => ({ value: v, label: v }));
 const VEHICLE_TYPES = [
@@ -89,7 +91,7 @@ export default function DriverDetailsScreen({ navigation, route }) {
   };
 
   const save = async () => {
-    if (missing.length) return toast(`Please add: ${missing.join(', ')}`, 'error');
+    if (missing.length) return toast(t("Please add: {0}", [missing.join(', ')]), 'error');
     const min = f.expectedPayMin ? Number(f.expectedPayMin) : null;
     const max = f.expectedPayMax ? Number(f.expectedPayMax) : null;
     setBusy(true);
@@ -108,7 +110,7 @@ export default function DriverDetailsScreen({ navigation, route }) {
       });
       if (editing) {
         setOnboardingState(r.data.onboarding);
-        toast('Profile saved', 'success');
+        toast(t("Profile saved"), 'success');
         navigation.goBack();
       } else advance(r.data.onboarding);
     } catch (e) {
@@ -120,24 +122,26 @@ export default function DriverDetailsScreen({ navigation, route }) {
 
   return (
     <Screen
-      title={editing ? 'Edit marketplace profile' : 'Partner registration'}
+      title={editing ? t("Edit marketplace profile") : t("Partner registration")}
       back={!!editing}
-      right={!editing && <Button title="Log out" variant="ghost" small onPress={logout} />}
-      footer={<Button title={editing ? 'Save profile' : 'Continue'} onPress={save} loading={busy} />}
+      right={!editing && <Button title={t("Log out")} variant="ghost" small onPress={logout} />}
+      footer={<Button title={editing ? t("Save profile") : t("Continue")} onPress={save} loading={busy} />}
     >
       {!editing && <ProgressSteps steps={progressSteps(onboarding)} current="details" />}
       {!editing && (
         <>
-          <Text style={[font.h1, { marginTop: 8 }]}>Your driver profile</Text>
-          <Text style={[font.sub, { marginTop: 6, marginBottom: 16 }]}>Customers see this on the marketplace before calling you. A complete profile gets more calls.</Text>
+          <Text style={[font.h1, { marginTop: 8 }]}>{t("Your driver profile")}</Text>
+          <Text style={[font.sub, { marginTop: 6, marginBottom: 16 }]}>{t(
+            "Customers see this on the marketplace before calling you. A complete profile gets more calls."
+          )}</Text>
         </>
       )}
 
-      <Section title="About you" icon="person-circle">
+      <Section title={t("About you")} icon="person-circle">
         <Row style={{ marginBottom: 16 }} gap={14}>
-          <Pressable onPress={pickPhoto} accessibilityLabel="Change profile photo">
+          <Pressable onPress={pickPhoto} accessibilityLabel={t("Change profile photo")}>
             {user?.photoUrl ? (
-              <Image source={{ uri: user.photoUrl }} style={{ width: 76, height: 76, borderRadius: 38 }} />
+              <CachedImage uri={user.photoUrl} style={{ width: 76, height: 76, borderRadius: 38 }} />
             ) : (
               <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
                 <Ionicons name="camera" size={28} color={colors.primary} />
@@ -146,60 +150,60 @@ export default function DriverDetailsScreen({ navigation, route }) {
           </Pressable>
           <View style={{ flex: 1 }}>
             <Text style={font.h3}>{user?.fullName}</Text>
-            <Button title={photoBusy ? 'Uploading…' : user?.photoUrl ? 'Change photo' : 'Add your photo'} small variant="secondary" onPress={pickPhoto} disabled={photoBusy} style={{ alignSelf: 'flex-start', marginTop: 6 }} />
+            <Button title={photoBusy ? t("Uploading…") : user?.photoUrl ? t("Change photo") : t("Add your photo")} small variant="secondary" onPress={pickPhoto} disabled={photoBusy} style={{ alignSelf: 'flex-start', marginTop: 6 }} />
           </View>
         </Row>
-        <Input label="Headline" value={f.headline} onChangeText={set('headline')} placeholder="e.g. Safe outstation driver, 8 years" maxLength={120} />
-        <Input label="About you" value={f.bio} onChangeText={set('bio')} placeholder="Tell customers about your driving, routes you know, etc." multiline maxLength={1000} />
-        <Chips label="Languages you speak" multiple options={LANGS} value={f.languages} onChange={set('languages')} />
+        <Input label={t("Headline")} value={f.headline} onChangeText={set('headline')} placeholder={t("e.g. Safe outstation driver, 8 years")} maxLength={120} />
+        <Input label={t("About you")} value={f.bio} onChangeText={set('bio')} placeholder={t("Tell customers about your driving, routes you know, etc.")} multiline maxLength={1000} />
+        <Chips label={t("Languages you speak")} multiple options={LANGS} value={f.languages} onChange={set('languages')} />
       </Section>
 
-      <Section title="Experience" icon="ribbon">
-        <ToggleRow title="I have driving experience" sub="Worked as a driver before" value={f.hasPriorExperience} onChange={set('hasPriorExperience')} />
+      <Section title={t("Experience")} icon="ribbon">
+        <ToggleRow title={t("I have driving experience")} sub={t("Worked as a driver before")} value={f.hasPriorExperience} onChange={set('hasPriorExperience')} />
         {f.hasPriorExperience && (
           <>
-            <Stepper label="Years of experience" value={f.experienceYears} onChange={set('experienceYears')} min={1} max={50} />
-            <Input label="Where have you worked?" value={f.experienceDetails} onChangeText={set('experienceDetails')} placeholder="e.g. 5 years with ABC Travels, Guwahati" multiline />
+            <Stepper label={t("Years of experience")} value={f.experienceYears} onChange={set('experienceYears')} min={1} max={50} />
+            <Input label={t("Where have you worked?")} value={f.experienceDetails} onChangeText={set('experienceDetails')} placeholder={t("e.g. 5 years with ABC Travels, Guwahati")} multiline />
           </>
         )}
       </Section>
 
-      <Section title="Driving licence" icon="card">
-        <Input label="Licence number" required value={f.licenseNumber} onChangeText={set('licenseNumber')} placeholder="AS01 20150012345" autoCapitalize="characters" />
-        <Chips label="Licence class" multiple options={LICENSE_TYPES} value={f.licenseTypes} onChange={set('licenseTypes')} hint="LMV = car/jeep, TRANS = commercial, HMV/HGMV = bus/truck" />
-        <DateField label="Licence valid till" value={f.licenseExpiry} onChange={set('licenseExpiry')} minimumDate={new Date()} />
+      <Section title={t("Driving licence")} icon="card">
+        <Input label={t("Licence number")} required value={f.licenseNumber} onChangeText={set('licenseNumber')} placeholder={t("AS01 20150012345")} autoCapitalize="characters" />
+        <Chips label={t("Licence class")} multiple options={LICENSE_TYPES} value={f.licenseTypes} onChange={set('licenseTypes')} hint={t("LMV = car/jeep, TRANS = commercial, HMV/HGMV = bus/truck")} />
+        <DateField label={t("Licence valid till")} value={f.licenseExpiry} onChange={set('licenseExpiry')} minimumDate={new Date()} />
       </Section>
 
-      <Section title="What you drive" icon="car">
-        <Chips label="Vehicles you can drive" required multiple options={VEHICLE_TYPES} value={f.vehicleTypes} onChange={set('vehicleTypes')} />
-        <ToggleRow title="Can drive automatic cars" value={f.canDriveAutomatic} onChange={set('canDriveAutomatic')} />
-        <ToggleRow title="I have my own vehicle" value={f.hasOwnVehicle} onChange={set('hasOwnVehicle')} />
+      <Section title={t("What you drive")} icon="car">
+        <Chips label={t("Vehicles you can drive")} required multiple options={VEHICLE_TYPES} value={f.vehicleTypes} onChange={set('vehicleTypes')} />
+        <ToggleRow title={t("Can drive automatic cars")} value={f.canDriveAutomatic} onChange={set('canDriveAutomatic')} />
+        <ToggleRow title={t("I have my own vehicle")} value={f.hasOwnVehicle} onChange={set('hasOwnVehicle')} />
       </Section>
 
-      <Section title="Work you want" icon="briefcase">
-        <Chips label="Type of work" multiple options={WORK_TYPES} value={f.workTypes} onChange={set('workTypes')} />
-        <Chips label="Availability" options={AVAIL} value={f.availability} onChange={set('availability')} />
-        <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 6 }}>Expected pay (₹)</Text>
+      <Section title={t("Work you want")} icon="briefcase">
+        <Chips label={t("Type of work")} multiple options={WORK_TYPES} value={f.workTypes} onChange={set('workTypes')} />
+        <Chips label={t("Availability")} options={AVAIL} value={f.availability} onChange={set('availability')} />
+        <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 6 }}>{t("Expected pay (₹)")}</Text>
         <Row>
-          <Input style={{ flex: 1 }} placeholder="From" value={f.expectedPayMin} onChangeText={(t) => set('expectedPayMin')(t.replace(/\D/g, ''))} keyboardType="number-pad" />
-          <Input style={{ flex: 1 }} placeholder="To" value={f.expectedPayMax} onChangeText={(t) => set('expectedPayMax')(t.replace(/\D/g, ''))} keyboardType="number-pad" />
+          <Input style={{ flex: 1 }} placeholder={t("From")} value={f.expectedPayMin} onChangeText={(v) => set('expectedPayMin')(v.replace(/\D/g, ''))} keyboardType="number-pad" />
+          <Input style={{ flex: 1 }} placeholder={t("To")} value={f.expectedPayMax} onChangeText={(v) => set('expectedPayMax')(v.replace(/\D/g, ''))} keyboardType="number-pad" />
         </Row>
         <Chips options={PAY_UNIT} value={f.payUnit} onChange={set('payUnit')} />
-        <Input label="Education (optional)" value={f.education} onChangeText={set('education')} placeholder="e.g. 10th pass" />
+        <Input label={t("Education (optional)")} value={f.education} onChangeText={set('education')} placeholder={t("e.g. 10th pass")} />
       </Section>
 
-      <Section title="Location" icon="location">
+      <Section title={t("Location")} icon="location">
         <DistrictSelect required value={f.district} onChange={set('district')} />
-        <Input label="City / town" value={f.city} onChangeText={set('city')} placeholder="e.g. Guwahati" />
+        <Input label={t("City / town")} value={f.city} onChangeText={set('city')} placeholder={t("e.g. Guwahati")} />
         <Chips
-          label="Other districts you can work in"
+          label={t("Other districts you can work in")}
           multiple
           options={(districts || []).filter((d) => d.name !== f.district).slice(0, 40).map((d) => ({ value: d.name, label: d.name }))}
           value={f.serviceAreas}
           onChange={set('serviceAreas')}
         />
       </Section>
-      {missing.length > 0 && <Notice text={`Still needed: ${missing.join(', ')}`} />}
+      {missing.length > 0 && <Notice text={t("Still needed: {0}", [missing.join(', ')])} />}
     </Screen>
   );
 }

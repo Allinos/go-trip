@@ -9,6 +9,7 @@ import { useToast } from '../../context/ToastContext';
 import { useAdvance, progressSteps } from './flow';
 import { colors, font, radius, space } from '../../theme';
 import { paise } from '../../utils/format';
+import { t } from '../../i18n';
 
 const ICONS = { driver: 'person', taxi: 'car', rental: 'key', commercial: 'bus', steering: 'person', car: 'car', key: 'key', truck: 'bus' };
 
@@ -41,10 +42,10 @@ export default function CategoryScreen({ navigation }) {
   }
 
   return (
-    <Screen title="Partner registration" back={false} right={<Button title="Log out" variant="ghost" small onPress={logout} />} footer={<Button title="Continue" onPress={save} loading={busy} disabled={!selected} />}>
+    <Screen title={t("Partner registration")} back={false} right={<Button title={t("Log out")} variant="ghost" small onPress={logout} />} footer={<Button title={t("Continue")} onPress={save} loading={busy} disabled={!selected} />}>
       <ProgressSteps steps={progressSteps(onboarding)} current="category" />
-      <Text style={[font.h1, { marginTop: 8 }]}>How will you work with GoTrip?</Text>
-      <Text style={[font.sub, { marginTop: 6, marginBottom: 20 }]}>Choose the option that best describes you.</Text>
+      <Text style={[font.h1, { marginTop: 8 }]}>{t("How will you work with GoTrip?")}</Text>
+      <Text style={[font.sub, { marginTop: 6, marginBottom: 20 }]}>{t("Choose the option that best describes you.")}</Text>
       {config.categories.map((c) => {
         const on = selected === c.code;
         return (
@@ -57,7 +58,10 @@ export default function CategoryScreen({ navigation }) {
               <Text style={[font.sub, { marginTop: 2 }]}>{c.description}</Text>
               <Text style={[font.small, { marginTop: 6 }]}>{capText(c)}</Text>
               <Text style={{ marginTop: 6, fontWeight: '700', color: c.registrationFee ? colors.text : colors.green }}>
-                {c.registrationFee ? `Registration fee ${paise(c.registrationFee)}${c.feeValidityDays ? ` / ${c.feeValidityDays === 365 ? 'year' : `${c.feeValidityDays} days`}` : ''}` : 'Free to join'}
+                {c.registrationFee ? t("Registration fee {0}{1}", [
+                  paise(c.registrationFee),
+                  c.feeValidityDays ? ` / ${c.feeValidityDays === 365 ? 'year' : `${c.feeValidityDays} days`}` : ''
+                ]) : t("Free to join")}
               </Text>
             </View>
             {on && <Ionicons name="checkmark-circle" size={24} color={colors.primary} />}

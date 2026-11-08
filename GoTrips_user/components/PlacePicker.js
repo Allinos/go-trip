@@ -5,6 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { catalogAPI, userAPI } from '../services/api';
 import useAuthStore from '../store/authStore';
 import { COLORS, SPACING, TYPOGRAPHY } from '../constants';
+import { t } from '../i18n';
 
 const POPULAR = ['Kamrup Metropolitan', 'Nagaon', 'Jorhat', 'Sonitpur', 'Dibrugarh', 'Cachar'];
 
@@ -27,8 +28,8 @@ export default function PlacePicker({ visible, title, onClose, onSelect }) {
 
   useEffect(() => {
     if (q.trim().length < 2) return setResults([]);
-    const t = setTimeout(() => catalogAPI.searchPlaces(q.trim()).then((r) => setResults(r.data)).catch(() => setResults([])), 250);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => catalogAPI.searchPlaces(q.trim()).then((r) => setResults(r.data)).catch(() => setResults([])), 250);
+    return () => clearTimeout(timer);
   }, [q]);
 
   const pick = (place) => {
@@ -42,12 +43,12 @@ export default function PlacePicker({ visible, title, onClose, onSelect }) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: SPACING.md }}>
-          <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close">
+          <Pressable onPress={onClose} hitSlop={10} accessibilityLabel={t("Close")}>
             <MaterialIcons name="arrow-back" size={24} color={COLORS.text.primary} />
           </Pressable>
-          <TextInput autoFocus value={q} onChangeText={setQ} placeholder={title || 'Search town or place'} placeholderTextColor={COLORS.text.tertiary} style={{ flex: 1, fontSize: 17, borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: COLORS.text.primary }} />
+          <TextInput autoFocus value={q} onChangeText={setQ} placeholder={title || t("Search town or place")} placeholderTextColor={COLORS.text.tertiary} style={{ flex: 1, fontSize: 17, borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: COLORS.text.primary }} />
         </View>
-        {q.trim().length < 2 && <Text style={[TYPOGRAPHY.captionBold, { color: COLORS.text.tertiary, paddingHorizontal: SPACING.md, marginTop: 8 }]}>{saved.length ? 'SAVED & POPULAR' : 'POPULAR'}</Text>}
+        {q.trim().length < 2 && <Text style={[TYPOGRAPHY.captionBold, { color: COLORS.text.tertiary, paddingHorizontal: SPACING.md, marginTop: 8 }]}>{saved.length ? t("SAVED & POPULAR") : t("POPULAR")}</Text>}
         <FlatList
           data={data}
           keyboardShouldPersistTaps="handled"
@@ -56,7 +57,7 @@ export default function PlacePicker({ visible, title, onClose, onSelect }) {
             <Pressable onPress={() => pick({ name: item.name, district: item.district, lat: item.lat, lng: item.lng })} style={({ pressed }) => [{ flexDirection: 'row', gap: 12, alignItems: 'center', padding: SPACING.md, borderBottomWidth: 1, borderBottomColor: COLORS.divider }, pressed && { backgroundColor: COLORS.primaryLight }]}>
               <MaterialIcons name={{ free: 'search', saved: 'bookmark', popular: 'trending-up', district: 'map', place: 'place' }[item.type]} size={22} color={COLORS.primary} />
               <View style={{ flex: 1 }}>
-                <Text style={TYPOGRAPHY.body}>{item.type === 'free' ? `Use “${item.name}”` : item.name}</Text>
+                <Text style={TYPOGRAPHY.body}>{item.type === 'free' ? t("Use “{0}”", [item.name]) : item.name}</Text>
                 {(item.sub || item.district) && item.type !== 'district' ? <Text style={[TYPOGRAPHY.small, { color: COLORS.text.secondary }]}>{item.sub || item.district}</Text> : null}
               </View>
             </Pressable>

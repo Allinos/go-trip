@@ -6,6 +6,7 @@ import { useLocationShare } from '../context/LocationContext';
 import { useToast } from '../context/ToastContext';
 import { colors, font } from '../theme';
 import { ago, timeLabel } from '../utils/format';
+import { t } from '../i18n';
 
 /** Start/stop sharing live location. Optional tripId ties the share to a trip. */
 export default function LocationShareCard({ tripId, compact }) {
@@ -19,13 +20,13 @@ export default function LocationShareCard({ tripId, compact }) {
     try {
       if (isSharing) {
         await stop();
-        toast('Location sharing stopped');
+        toast(t("Location sharing stopped"));
       } else {
         await start({ hours, tripId });
-        toast('Sharing your live location', 'success');
+        toast(t("Sharing your live location"), 'success');
       }
     } catch (e) {
-      toast(e.message || 'Could not share location', 'error');
+      toast(e.message || t("Could not share location"), 'error');
     } finally {
       setBusy(false);
     }
@@ -38,19 +39,27 @@ export default function LocationShareCard({ tripId, compact }) {
           <Ionicons name={isSharing ? 'navigate' : 'navigate-outline'} size={22} color={isSharing ? colors.green : colors.primary} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={font.h3}>{isSharing ? 'Sharing live location' : 'Share live location'}</Text>
+          <Text style={font.h3}>{isSharing ? t("Sharing live location") : t("Share live location")}</Text>
           <Text style={font.small}>
             {isSharing
-              ? `Passengers with confirmed bookings can see you on Google Maps. Updated ${share?.updatedAt ? ago(share.updatedAt) : 'just now'} · stops at ${timeLabel(share?.expiresAt)}`
-              : 'Let your confirmed passengers see where you are. Keep GoTrip open while driving.'}
+              ? t(
+              "Passengers with confirmed bookings can see you on Google Maps. Updated {0} · stops at {1}",
+              [
+                share?.updatedAt ? ago(share.updatedAt) : 'just now',
+                timeLabel(share?.expiresAt)
+              ]
+            )
+              : t(
+              "Let your confirmed passengers see where you are. Keep GoTrip open while driving."
+            )}
           </Text>
         </View>
       </Row>
-      {!isSharing && !compact && <Chips options={[1, 2, 4, 8].map((h) => ({ value: h, label: `${h} hour${h > 1 ? 's' : ''}` }))} value={hours} onChange={setHours} />}
+      {!isSharing && !compact && <Chips options={[1, 2, 4, 8].map((h) => ({ value: h, label: h > 1 ? t('{0} hours', [h]) : t('{0} hour', [h]) }))} value={hours} onChange={setHours} />}
       {error && !isSharing ? <Text style={{ color: colors.primaryDark, marginBottom: 8 }}>{error}</Text> : null}
       <Row>
-        <Button style={{ flex: 1 }} small title={isSharing ? 'Stop sharing' : 'Start sharing'} variant={isSharing ? 'danger' : 'success'} icon={isSharing ? 'stop-circle' : 'play-circle'} onPress={toggle} loading={busy} />
-        {isSharing && share?.lat != null && <Button small variant="secondary" title="View" icon="map" onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${share.lat},${share.lng}`)} />}
+        <Button style={{ flex: 1 }} small title={isSharing ? t("Stop sharing") : t("Start sharing")} variant={isSharing ? 'danger' : 'success'} icon={isSharing ? 'stop-circle' : 'play-circle'} onPress={toggle} loading={busy} />
+        {isSharing && share?.lat != null && <Button small variant="secondary" title={t("View")} icon="map" onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${share.lat},${share.lng}`)} />}
       </Row>
     </Card>
   );

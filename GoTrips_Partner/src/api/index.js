@@ -1,10 +1,11 @@
 import { get, post, put, patch, del, upload } from './client';
+import { getLang } from '../i18n';
 
 const APP = 'partner';
 
 export const authApi = {
-  sendOtp: (phone) => post('/auth/otp/send', { phone, app: APP }),
-  verifyOtp: (phone, otp, deviceInfo) => post('/auth/otp/verify', { phone, otp, app: APP, deviceInfo }),
+  sendOtp: (phone) => post('/auth/otp/send', { phone, app: APP, language: getLang() }),
+  verifyOtp: (phone, otp, deviceInfo) => post('/auth/otp/verify', { phone, otp, app: APP, deviceInfo, language: getLang() }),
   me: () => get('/auth/me'),
   logout: (refreshToken, pushToken) => post('/auth/logout', { refreshToken, pushToken }),
 };

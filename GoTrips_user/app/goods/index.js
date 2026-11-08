@@ -7,6 +7,7 @@ import useFetch from '../../hooks/useFetch';
 import { errorMessage, goodsAPI } from '../../services/api';
 import { COLORS, SPACING, TYPOGRAPHY } from '../../constants';
 import { dateLabel, rupees } from '../../utils/format';
+import { t } from '../../i18n';
 
 /** Goods transport orders. Only reachable when the admin enables the feature (hidden otherwise). */
 export default function Goods() {
@@ -19,44 +20,46 @@ export default function Goods() {
   if (!enabled)
     return (
       <View style={{ flex: 1 }}>
-        <Header title="Goods transport" />
-        <Empty icon="local-shipping" text="Goods transport is coming soon." />
+        <Header title={t("Goods transport")} />
+        <Empty icon="local-shipping" text={t("Goods transport is coming soon.")} />
       </View>
     );
   const submit = async () => {
     setBusy(true);
     try {
       await goodsAPI.create({ ...f, weightKg: f.weightKg ? Number(f.weightKg) : null, budget: f.budget ? Number(f.budget) : null, pickupDate: new Date(Date.now() + 86400_000).toISOString(), description: f.description || null });
-      Alert.alert('Posted', 'Truck owners near you can now see your order and call you.');
+      Alert.alert(t("Posted"), t("Truck owners near you can now see your order and call you."));
       setF({ pickupName: '', dropName: '', goodsType: '', weightKg: '', budget: '', description: '' });
       list.reload();
     } catch (e) {
-      Alert.alert('Error', errorMessage(e));
+      Alert.alert(t("Error"), errorMessage(e));
     } finally {
       setBusy(false);
     }
   };
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.surface }}>
-      <Header title="Goods transport" />
+      <Header title={t("Goods transport")} />
       <ScrollView contentContainerStyle={{ padding: SPACING.md }}>
-        <Notice text="Post what you need moved. Verified truck & tempo owners will call you to agree the price." />
-        <Input label="Pickup" value={f.pickupName} onFocus={() => setPick('pickupName')} onChangeText={(v) => setF({ ...f, pickupName: v })} />
-        <Input label="Drop" value={f.dropName} onFocus={() => setPick('dropName')} onChangeText={(v) => setF({ ...f, dropName: v })} />
-        <Input label="What goods?" value={f.goodsType} onChangeText={(v) => setF({ ...f, goodsType: v })} placeholder="e.g. Furniture, rice bags" />
-        <Input label="Approx. weight (kg)" value={f.weightKg} onChangeText={(v) => setF({ ...f, weightKg: v.replace(/\D/g, '') })} keyboardType="number-pad" />
-        <Input label="Budget (optional)" prefix="₹" value={f.budget} onChangeText={(v) => setF({ ...f, budget: v.replace(/\D/g, '') })} keyboardType="number-pad" />
-        <Button title="Post order" onPress={submit} loading={busy} disabled={!f.pickupName || !f.dropName || !f.goodsType} />
-        <Text style={[TYPOGRAPHY.h4, { marginVertical: SPACING.md }]}>My orders</Text>
+        <Notice text={t(
+          "Post what you need moved. Verified truck & tempo owners will call you to agree the price."
+        )} />
+        <Input label={t("Pickup")} value={f.pickupName} onFocus={() => setPick('pickupName')} onChangeText={(v) => setF({ ...f, pickupName: v })} />
+        <Input label={t("Drop")} value={f.dropName} onFocus={() => setPick('dropName')} onChangeText={(v) => setF({ ...f, dropName: v })} />
+        <Input label={t("What goods?")} value={f.goodsType} onChangeText={(v) => setF({ ...f, goodsType: v })} placeholder={t("e.g. Furniture, rice bags")} />
+        <Input label={t("Approx. weight (kg)")} value={f.weightKg} onChangeText={(v) => setF({ ...f, weightKg: v.replace(/\D/g, '') })} keyboardType="number-pad" />
+        <Input label={t("Budget (optional)")} prefix="₹" value={f.budget} onChangeText={(v) => setF({ ...f, budget: v.replace(/\D/g, '') })} keyboardType="number-pad" />
+        <Button title={t("Post order")} onPress={submit} loading={busy} disabled={!f.pickupName || !f.dropName || !f.goodsType} />
+        <Text style={[TYPOGRAPHY.h4, { marginVertical: SPACING.md }]}>{t("My orders")}</Text>
         {(list.data || []).map((o) => (
           <Card key={o.id} style={{ marginBottom: 8 }}>
             <Text style={TYPOGRAPHY.bodyBold}>
-              {o.pickupName} → {o.dropName}
+              {o.pickupName}{" → "}{o.dropName}
             </Text>
-            <KV label="Goods" value={o.goodsType} />
-            <KV label="Date" value={dateLabel(o.pickupDate)} />
-            {o.budget ? <KV label="Budget" value={rupees(o.budget)} /> : null}
-            <KV label="Status" value={o.status} />
+            <KV label={t("Goods")} value={o.goodsType} />
+            <KV label={t("Date")} value={dateLabel(o.pickupDate)} />
+            {o.budget ? <KV label={t("Budget")} value={rupees(o.budget)} /> : null}
+            <KV label={t("Status")} value={o.status} />
           </Card>
         ))}
       </ScrollView>

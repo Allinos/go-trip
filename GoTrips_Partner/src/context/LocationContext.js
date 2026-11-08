@@ -3,6 +3,7 @@ import { AppState, Linking, Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { partnerApi } from '../api';
 import { errorMessage } from '../api/client';
+import { t } from '../i18n';
 
 /**
  * Low-cost live location: while sharing, the phone sends its position every ~30 s / 50 m

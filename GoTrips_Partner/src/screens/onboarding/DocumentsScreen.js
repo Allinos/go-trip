@@ -8,12 +8,13 @@ import { useAuth } from '../../context/AuthContext';
 import { useAdvance, progressSteps } from './flow';
 import { colors, font } from '../../theme';
 import { fullDate } from '../../utils/format';
+import { t } from '../../i18n';
 
 /** List of required documents with status. Used in onboarding and from Account → My documents. */
 export default function DocumentsScreen({ navigation, route }) {
   const inOnboarding = !route.params?.edit;
   const { onboarding, logout } = useAuth();
-  const { data, error, loading, reload, refresh, refreshing } = useApi(() => partnerApi.documents());
+  const { data, error, loading, reload, refresh, refreshing } = useApi(() => partnerApi.documents(), [], { cacheKey: 'documents' });
   const advance = useAdvance(navigation);
 
   if (loading) return <Loading full />;
@@ -24,22 +25,24 @@ export default function DocumentsScreen({ navigation, route }) {
 
   return (
     <Screen
-      title={inOnboarding ? 'Partner registration' : 'My documents'}
+      title={inOnboarding ? t("Partner registration") : t("My documents")}
       back={!inOnboarding}
-      right={inOnboarding && <Button title="Log out" variant="ghost" small onPress={logout} />}
+      right={inOnboarding && <Button title={t("Log out")} variant="ghost" small onPress={logout} />}
       refreshing={refreshing}
       onRefresh={refresh}
-      footer={inOnboarding ? <Button title={missing.length ? `Upload ${missing.length} more document${missing.length > 1 ? 's' : ''}` : 'Continue'} disabled={missing.length > 0} onPress={next} /> : null}
+      footer={inOnboarding ? <Button title={missing.length ? missing.length > 1 ? t("Upload {0} more documents", [missing.length]) : t("Upload 1 more document") : t("Continue")} disabled={missing.length > 0} onPress={next} /> : null}
     >
       {inOnboarding && <ProgressSteps steps={progressSteps(onboarding)} current="documents" />}
       {inOnboarding && (
         <>
-          <Text style={[font.h1, { marginTop: 8 }]}>Upload your documents</Text>
-          <Text style={[font.sub, { marginTop: 6, marginBottom: 16 }]}>Take clear photos. Our team checks them to keep GoTrip safe. Your documents are private and never shown to customers.</Text>
+          <Text style={[font.h1, { marginTop: 8 }]}>{t("Upload your documents")}</Text>
+          <Text style={[font.sub, { marginTop: 6, marginBottom: 16 }]}>{t(
+            "Take clear photos. Our team checks them to keep GoTrip safe. Your documents are private and never shown to customers."
+          )}</Text>
         </>
       )}
-      {!inOnboarding && onboarding?.verificationStatus === 'rejected' && <Notice tone="red" title="Some documents were rejected" text={onboarding.rejectionReason} />}
-      {!inOnboarding && onboarding?.verificationStatus === 'pending' && <Notice tone="blue" icon="time" title="Under review" text="We are checking your documents. You will get a notification." />}
+      {!inOnboarding && onboarding?.verificationStatus === 'rejected' && <Notice tone="red" title={t("Some documents were rejected")} text={onboarding.rejectionReason} />}
+      {!inOnboarding && onboarding?.verificationStatus === 'pending' && <Notice tone="blue" icon="time" title={t("Under review")} text={t("We are checking your documents. You will get a notification.")} />}
       {error && <ErrorView message={error} onRetry={reload} />}
       {items.map(({ requirement: r, document: d }) => (
         <Card key={r.docType} style={{ marginBottom: 12 }} onPress={() => navigation.navigate('DocumentUpload', { requirement: r, document: d, scope: 'partner' })}>
@@ -50,11 +53,14 @@ export default function DocumentsScreen({ navigation, route }) {
             <View style={{ flex: 1 }}>
               <Text style={font.h3}>
                 {r.label}
-                {!r.isRequired && <Text style={font.small}> (optional)</Text>}
+                {!r.isRequired && <Text style={font.small}>{" "}{t("(optional)")}</Text>}
               </Text>
-              <Text style={font.small}>{d ? (d.status === 'rejected' ? `Rejected: ${d.rejectionReason || 'please re-upload'}` : `Uploaded${d.expiryDate ? ` · valid till ${fullDate(d.expiryDate)}` : ''}`) : r.hint || 'Tap to upload'}</Text>
+              <Text style={font.small}>{d ? (d.status === 'rejected' ? t("Rejected: {0}", [d.rejectionReason || 'please re-upload']) : t(
+                "Uploaded{0}",
+                [d.expiryDate ? ` · valid till ${fullDate(d.expiryDate)}` : '']
+              )) : r.hint || t("Tap to upload")}</Text>
             </View>
-            {d ? <Badge status={d.status} text={d.status === 'pending' ? 'In review' : undefined} /> : <Ionicons name="chevron-forward" size={18} color={colors.faint} />}
+            {d ? <Badge status={d.status} text={d.status === 'pending' ? t("In review") : undefined} /> : <Ionicons name="chevron-forward" size={18} color={colors.faint} />}
           </Row>
         </Card>
       ))}

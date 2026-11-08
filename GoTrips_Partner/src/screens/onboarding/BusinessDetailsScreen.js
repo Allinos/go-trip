@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useAdvance, progressSteps } from './flow';
 import { font } from '../../theme';
+import { t } from '../../i18n';
 
 /** Business / contact details. Used in onboarding and later from Account → Business details. */
 export default function BusinessDetailsScreen({ navigation, route }) {
@@ -36,7 +37,7 @@ export default function BusinessDetailsScreen({ navigation, route }) {
       const st = (await partnerApi.onboarding()).data;
       if (editing) {
         setOnboardingState(st);
-        toast('Saved', 'success');
+        toast(t("Saved"), 'success');
         navigation.goBack();
       } else advance(st);
     } catch (e) {
@@ -47,21 +48,21 @@ export default function BusinessDetailsScreen({ navigation, route }) {
   };
 
   return (
-    <Screen title={editing ? 'Business details' : 'Partner registration'} back={!!editing} right={!editing && <Button title="Log out" variant="ghost" small onPress={logout} />} footer={<Button title={editing ? 'Save' : 'Continue'} onPress={save} loading={busy} disabled={!valid} />}>
+    <Screen title={editing ? t("Business details") : t("Partner registration")} back={!!editing} right={!editing && <Button title={t("Log out")} variant="ghost" small onPress={logout} />} footer={<Button title={editing ? t("Save") : t("Continue")} onPress={save} loading={busy} disabled={!valid} />}>
       {!editing && <ProgressSteps steps={progressSteps(onboarding)} current="details" />}
       {!editing && (
         <>
-          <Text style={[font.h1, { marginTop: 8 }]}>Where do you work?</Text>
-          <Text style={[font.sub, { marginTop: 6, marginBottom: 20 }]}>Customers search by location, so choose your main area.</Text>
+          <Text style={[font.h1, { marginTop: 8 }]}>{t("Where do you work?")}</Text>
+          <Text style={[font.sub, { marginTop: 6, marginBottom: 20 }]}>{t("Customers search by location, so choose your main area.")}</Text>
         </>
       )}
-      <Input label="Business / fleet name (optional)" value={f.businessName} onChangeText={set('businessName')} placeholder="e.g. Hills Car Rentals" />
+      <Input label={t("Business / fleet name (optional)")} value={f.businessName} onChangeText={set('businessName')} placeholder={t("e.g. Hills Car Rentals")} />
       <DistrictSelect required value={f.district} onChange={set('district')} />
-      <Input label="City / town" required value={f.city} onChangeText={set('city')} placeholder="e.g. Nagaon" />
-      <Input label="Address (optional)" value={f.address} onChangeText={set('address')} placeholder="Office / parking address" />
-      <Input label="PIN code (optional)" value={f.pincode} onChangeText={(t) => set('pincode')(t.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" maxLength={6} />
-      <Input label="WhatsApp number (optional)" prefix="+91" value={f.whatsappPhone} onChangeText={(t) => set('whatsappPhone')(t.replace(/\D/g, '').slice(-10))} keyboardType="phone-pad" hint="If different from your login number" />
-      <Input label="Alternate phone (optional)" prefix="+91" value={f.alternatePhone} onChangeText={(t) => set('alternatePhone')(t.replace(/\D/g, '').slice(-10))} keyboardType="phone-pad" />
+      <Input label={t("City / town")} required value={f.city} onChangeText={set('city')} placeholder={t("e.g. Nagaon")} />
+      <Input label={t("Address (optional)")} value={f.address} onChangeText={set('address')} placeholder={t("Office / parking address")} />
+      <Input label={t("PIN code (optional)")} value={f.pincode} onChangeText={(v) => set('pincode')(v.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" maxLength={6} />
+      <Input label={t("WhatsApp number (optional)")} prefix="+91" value={f.whatsappPhone} onChangeText={(v) => set('whatsappPhone')(v.replace(/\D/g, '').slice(-10))} keyboardType="phone-pad" hint={t("If different from your login number")} />
+      <Input label={t("Alternate phone (optional)")} prefix="+91" value={f.alternatePhone} onChangeText={(v) => set('alternatePhone')(v.replace(/\D/g, '').slice(-10))} keyboardType="phone-pad" />
     </Screen>
   );
 }

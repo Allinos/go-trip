@@ -9,6 +9,7 @@ import { useToast } from '../../context/ToastContext';
 import { useAdvance, progressSteps } from './flow';
 import { colors, font } from '../../theme';
 import { fullDate, paise } from '../../utils/format';
+import { t } from '../../i18n';
 
 const BENEFITS = ['Your profile listed on the GoTrip driver marketplace', 'Customers call you directly — no commission on your work', 'Verified badge after document check', 'Profile views and call statistics'];
 
@@ -31,7 +32,7 @@ export default function PaymentScreen({ navigation, route }) {
   const done = useCallback(
     (state) => {
       clearInterval(poll.current);
-      toast('Payment successful 🎉', 'success');
+      toast(t("Payment successful 🎉"), 'success');
       if (renew) {
         setOnboardingState(state);
         navigation.goBack();
@@ -56,8 +57,8 @@ export default function PaymentScreen({ navigation, route }) {
         if (r.data.status === 'paid') done(r.data.onboarding);
         else if (r.data.status === 'failed') {
           setPending(null);
-          setMessage(r.data.payment.failureReason || 'Payment failed. You can try again.');
-        } else if (!quiet) setMessage('Payment is still being confirmed. This can take a minute.');
+          setMessage(r.data.payment.failureReason || t("Payment failed. You can try again."));
+        } else if (!quiet) setMessage(t("Payment is still being confirmed. This can take a minute."));
       } catch (e) {
         if (!quiet) toast(errorMessage(e), 'error');
       }
@@ -93,43 +94,50 @@ export default function PaymentScreen({ navigation, route }) {
 
   return (
     <Screen
-      title={renew ? 'Renew listing' : 'Partner registration'}
+      title={renew ? t("Renew listing") : t("Partner registration")}
       back={!!renew}
-      right={!renew && <Button title="Log out" variant="ghost" small onPress={logout} />}
+      right={!renew && <Button title={t("Log out")} variant="ghost" small onPress={logout} />}
       footer={
         <View style={{ gap: 8 }}>
-          <Button title={`Pay ${paise(amount)} securely`} icon="lock-closed" onPress={pay} loading={busy} />
-          {pending && <Button title="I have paid — check status" variant="secondary" onPress={() => check()} />}
+          <Button title={t("Pay {0} securely", [paise(amount)])} icon="lock-closed" onPress={pay} loading={busy} />
+          {pending && <Button title={t("I have paid — check status")} variant="secondary" onPress={() => check()} />}
         </View>
       }
     >
       {!renew && <ProgressSteps steps={progressSteps(onboarding)} current="payment" />}
-      <Text style={[font.h1, { marginTop: 8 }]}>{renew ? 'Renew your listing' : 'Activate your listing'}</Text>
+      <Text style={[font.h1, { marginTop: 8 }]}>{renew ? t("Renew your listing") : t("Activate your listing")}</Text>
       <Text style={[font.sub, { marginTop: 6, marginBottom: 16 }]}>
-        {step?.expired ? 'Your listing has expired. Renew to appear on the marketplace again.' : 'One registration fee. Your registration is saved, so you can pay now or come back later.'}
+        {step?.expired ? t("Your listing has expired. Renew to appear on the marketplace again.") : t(
+          "One registration fee. Your registration is saved, so you can pay now or come back later."
+        )}
       </Text>
       {message && <Notice tone="red" icon="alert-circle" text={message} />}
-      {pending && <Notice tone="blue" icon="time" title="Confirming payment…" text="If money was deducted, it will be confirmed automatically. You can safely wait here." />}
+      {pending && <Notice tone="blue" icon="time" title={t("Confirming payment…")} text={t(
+        "If money was deducted, it will be confirmed automatically. You can safely wait here."
+      )} />}
       <Card style={{ marginBottom: 16 }}>
         <Row style={{ justifyContent: 'space-between' }}>
-          <Text style={font.h3}>{onboarding?.category?.name} registration</Text>
+          <Text style={font.h3}>{onboarding?.category?.name}{" "}{t("registration")}</Text>
           <Text style={[font.h1, { color: colors.primary }]}>{paise(amount)}</Text>
         </Row>
         <Text style={[font.small, { marginTop: 4 }]}>
-          {step?.validityDays ? `Valid for ${step.validityDays === 365 ? '1 year' : `${step.validityDays} days`}` : 'One-time fee'}
-          {onboarding?.listing?.expiresAt ? ` · current listing ends ${fullDate(onboarding.listing.expiresAt)}` : ''}
+          {step?.validityDays ? t(
+            "Valid for {0}",
+            [step.validityDays === 365 ? t('1 year') : t('{0} days', [step.validityDays])]
+          ) : t("One-time fee")}
+          {onboarding?.listing?.expiresAt ? t(" · current listing ends {0}", [fullDate(onboarding.listing.expiresAt)]) : ''}
         </Text>
         <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 12 }} />
         {BENEFITS.map((b) => (
           <Row key={b} style={{ marginBottom: 8, alignItems: 'flex-start' }}>
             <Ionicons name="checkmark-circle" size={18} color={colors.green} />
-            <Text style={[font.body, { flex: 1 }]}>{b}</Text>
+            <Text style={[font.body, { flex: 1 }]}>{t(b)}</Text>
           </Row>
         ))}
       </Card>
       <Row style={{ justifyContent: 'center' }}>
         <Ionicons name="shield-checkmark" size={16} color={colors.sub} />
-        <Text style={font.small}>Secured by Razorpay · UPI, cards, net banking</Text>
+        <Text style={font.small}>{t("Secured by Razorpay · UPI, cards, net banking")}</Text>
       </Row>
     </Screen>
   );

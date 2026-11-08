@@ -7,6 +7,7 @@ import { errorMessage } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { font } from '../../theme';
+import { t } from '../../i18n';
 
 /** Upload one document (partner or vehicle scope). */
 export default function DocumentUploadScreen({ navigation, route }) {
@@ -30,7 +31,7 @@ export default function DocumentUploadScreen({ navigation, route }) {
         const res = await partnerApi.uploadDocument(r.docType, front, back, fields);
         setOnboardingState(res.data.onboarding);
       }
-      toast('Document uploaded', 'success');
+      toast(t("Document uploaded"), 'success');
       navigation.goBack();
     } catch (e) {
       toast(errorMessage(e), 'error');
@@ -40,13 +41,13 @@ export default function DocumentUploadScreen({ navigation, route }) {
   };
 
   return (
-    <Screen title={r.label} footer={<Button title="Upload" icon="cloud-upload" onPress={save} loading={busy} disabled={!ready} />}>
-      {d?.status === 'rejected' && <Notice tone="red" title="Please upload again" text={d.rejectionReason} />}
-      <Text style={[font.sub, { marginBottom: 16 }]}>{r.hint || 'Place the document on a flat surface and make sure all text is readable.'}</Text>
-      <ImageField label={r.requiresBack ? 'Front side' : 'Photo of document'} required value={front} url={d?.frontUrl} onChange={setFront} />
-      {r.requiresBack && <ImageField label="Back side" required value={back} url={d?.backUrl} onChange={setBack} />}
-      {r.requiresNumber && <Input label={`${r.label} number`} required value={number} onChangeText={setNumber} autoCapitalize="characters" />}
-      {r.requiresExpiry && <DateField label="Valid till (expiry date)" required value={expiry} onChange={setExpiry} minimumDate={new Date()} />}
+    <Screen title={r.label} footer={<Button title={t("Upload")} icon="cloud-upload" onPress={save} loading={busy} disabled={!ready} />}>
+      {d?.status === 'rejected' && <Notice tone="red" title={t("Please upload again")} text={d.rejectionReason} />}
+      <Text style={[font.sub, { marginBottom: 16 }]}>{r.hint || t("Place the document on a flat surface and make sure all text is readable.")}</Text>
+      <ImageField label={r.requiresBack ? t("Front side") : t("Photo of document")} required value={front} url={d?.frontUrl} onChange={setFront} />
+      {r.requiresBack && <ImageField label={t("Back side")} required value={back} url={d?.backUrl} onChange={setBack} />}
+      {r.requiresNumber && <Input label={t("{0} number", [r.label])} required value={number} onChangeText={setNumber} autoCapitalize="characters" />}
+      {r.requiresExpiry && <DateField label={t("Valid till (expiry date)")} required value={expiry} onChange={setExpiry} minimumDate={new Date()} />}
     </Screen>
   );
 }

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import Constants from 'expo-constants';
 import { secure } from './storage';
+import { getLang, t } from '../i18n';
 
 /**
  * API base URL: EXPO_PUBLIC_API_URL (.env) → app.json extra.apiUrl → Android emulator default.
@@ -34,6 +35,7 @@ export const http = axios.create({ baseURL: API_URL, timeout: 20000, headers: { 
 
 http.interceptors.request.use((config) => {
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+  config.headers['Accept-Language'] = getLang(); // server replies (errors, labels) in the chosen language
   return config;
 });
 
@@ -72,9 +74,9 @@ http.interceptors.response.use(
 /** Human-friendly message from any API / network error. */
 export function errorMessage(e) {
   if (e?.response?.data?.error?.message) return e.response.data.error.message;
-  if (e?.code === 'ECONNABORTED') return 'The server is taking too long. Please try again.';
-  if (e?.message === 'Network Error') return 'No internet connection. Please check and try again.';
-  return e?.message || 'Something went wrong';
+  if (e?.code === 'ECONNABORTED') return t('The server is taking too long. Please try again.');
+  if (e?.message === 'Network Error') return t('No internet connection. Please check and try again.');
+  return e?.message || t('Something went wrong');
 }
 export const errorCode = (e) => e?.response?.data?.error?.code;
 

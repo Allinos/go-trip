@@ -4,6 +4,7 @@ import { Button, Input, Screen } from '../../components/ui';
 import { authApi } from '../../api';
 import { errorMessage } from '../../api/client';
 import { font } from '../../theme';
+import { t } from '../../i18n';
 
 export default function PhoneScreen({ navigation }) {
   const [phone, setPhone] = useState('');
@@ -25,14 +26,14 @@ export default function PhoneScreen({ navigation }) {
   };
 
   return (
-    <Screen title="" footer={<Button title="Send OTP" onPress={send} loading={busy} disabled={!valid} />}>
-      <Text style={font.h1}>Enter your mobile number</Text>
-      <Text style={[font.sub, { marginTop: 6, marginBottom: 24 }]}>We will send a 6-digit code by SMS to verify it's you.</Text>
+    <Screen title="" footer={<Button title={t("Send OTP")} onPress={send} loading={busy} disabled={!valid} />}>
+      <Text style={font.h1}>{t("Enter your mobile number")}</Text>
+      <Text style={[font.sub, { marginTop: 6, marginBottom: 24 }]}>{t("We will send a 6-digit code by SMS to verify it's you.")}</Text>
       <Input
-        label="Mobile number"
+        label={t("Mobile number")}
         prefix="+91"
         value={phone}
-        onChangeText={(t) => setPhone(t.replace(/\D/g, '').slice(-10))}
+        onChangeText={(v) => setPhone(v.replace(/\D/g, '').slice(-10))}
         keyboardType="phone-pad"
         maxLength={10}
         placeholder="98765 43210"
@@ -42,7 +43,7 @@ export default function PhoneScreen({ navigation }) {
         autoComplete="tel"
         onSubmitEditing={() => valid && send()}
       />
-      <Text style={font.small}>By continuing you agree to the GoTrip Partner terms and privacy policy.</Text>
+      <Text style={font.small}>{t("By continuing you agree to the GoTrip Partner terms and privacy policy.")}</Text>
     </Screen>
   );
 }
