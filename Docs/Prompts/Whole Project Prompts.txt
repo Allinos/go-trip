@@ -1,0 +1,40 @@
+Apps Overview (Clean Separation)
+
+
+🚕 User App (Expo – React Native)
+
+Core features:
+// Tabs : Home(Profile), Bookings, Settings 
+Phone OTP login
+A Home Screen Where I have - search (pickup & drop) 
+View nearby rides / vehicles
+Seat booking (with capacity check)
+// Live driver location
+Ride or Booking history 
+Notifications (Firebase NS)
+
+
+
+
+🚗 Driver App (Expo – React Native)
+
+Core features:
+OTP login + KYC upload
+Add vehicle(s)
+Create ride / availability
+Set route, time, capacity, price
+Live location sharing
+Accept / reject bookings
+Earnings dashboard
+
+👉 Driver app is write-heavy, user app is read-heavy.
+
+🖥 Admin Panel (Web)
+
+Core features:
+Approve drivers & vehicles
+View users / drivers
+Rides & booking monitoring
+Revenue & analytics
+Block / suspend users
+Manual issue resolution

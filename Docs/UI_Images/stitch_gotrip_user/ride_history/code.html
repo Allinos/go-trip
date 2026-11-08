@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Ride History - RideFlow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ea2a33",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#211111",
+                        "success": "#22c55e",
+                        "error": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .ios-blur {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#181111] dark:text-white min-h-screen">
+<!-- Sticky Header -->
+<header class="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 ios-blur border-b border-[#e5dcdc] dark:border-[#3d2a2a]">
+<div class="flex items-center justify-between px-4 py-3">
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<span class="material-symbols-outlined text-[#181111] dark:text-white">arrow_back_ios_new</span>
+</button>
+<h1 class="text-lg font-bold tracking-tight">Ride History</h1>
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<span class="material-symbols-outlined text-[#181111] dark:text-white">search</span>
+</button>
+</div>
+<!-- Tabbed Navigation -->
+<div class="flex px-4 overflow-x-auto hide-scrollbar">
+<button class="flex-1 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                Upcoming
+            </button>
+<button class="flex-1 py-3 text-sm font-bold border-b-2 border-primary text-primary whitespace-nowrap">
+                Completed
+            </button>
+<button class="flex-1 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                Cancelled
+            </button>
+</div>
+</header>
+<main class="p-4 space-y-4 max-w-md mx-auto">
+<!-- Ride Card 1: Completed -->
+<div class="bg-white dark:bg-[#2d1a1a] rounded-xl overflow-hidden shadow-sm border border-[#e5dcdc] dark:border-[#3d2a2a] relative">
+<!-- RedBus Accent Line -->
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Modern white hybrid sedan for city transport" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD51x6T3M0C-vGSZZg2O14HI5xhsZdUD4aciX1TuRuUAnKg6EWM0MlG26gKxEBNq__dJtMniN5lQVNRgawW7qf2Vvu0UIu9ZTgKDRr-wQV33VnlLp6xuF0FQxKlaNldj94tWEuAQ5zjq5OsHirPWtKhJXFMro19bvqy4nQsBaPWUitHfwCflTiAasa2iFfTu1UhXJ42DEU523Z0viZVakmBdZUNRjIWPRjQZmcza946Q2ZM4RHHV_UCIQxC9_OqkI3gut0uaN1Wz80I"/>
+</div>
+<div>
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400">Oct 24, 10:30 AM</p>
+<h3 class="text-base font-bold">Toyota Prius • John Doe</h3>
+</div>
+</div>
+<div class="text-right">
+<p class="text-lg font-bold text-primary">$24.50</p>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-success/10 text-success uppercase tracking-wider">
+                            Completed
+                        </span>
+</div>
+</div>
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-gray-400 text-sm">location_on</span>
+<p class="text-xs text-gray-600 dark:text-gray-300 truncate">123 Market St → 456 Broadway Ave</p>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 h-9 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm font-semibold flex items-center justify-center gap-1 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+<span class="material-symbols-outlined text-sm">receipt_long</span>
+                        Receipt
+                    </button>
+<button class="flex-1 h-9 rounded-lg bg-primary text-white text-sm font-semibold flex items-center justify-center gap-1 hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined text-sm">star</span>
+                        Rate Trip
+                    </button>
+</div>
+</div>
+</div>
+<!-- Ride Card 2: Completed -->
+<div class="bg-white dark:bg-[#2d1a1a] rounded-xl overflow-hidden shadow-sm border border-[#e5dcdc] dark:border-[#3d2a2a] relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Front view of a black SUV" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzKREUMDt0g0vYNoxL3Y0CkrFhnGhcSWv4KTGImNKoYaGNQ-fIhCEyspUigsxJMgb0qj4DyuXDLekrMqzUBSimYFTrB1sAQ07Up3WqObj9AA6jj5S9XDUv8XBKNVBOGsDK2ezsVOTz0ANEwVGYRS5V6VMXmOmuxdYbv93NgUZ8e-k7kWba-iJ4KkJJgrD8ForGzSqX1zcli58MIhh9HvWNaWx_WV2KdHEXD8q3htxrHzJdqTYjAXkRSZg1udGwlV94KE6Ehr9ld5DM"/>
+</div>
+<div>
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400">Oct 22, 02:15 PM</p>
+<h3 class="text-base font-bold">Honda Civic • Sarah S.</h3>
+</div>
+</div>
+<div class="text-right">
+<p class="text-lg font-bold text-primary">$18.20</p>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-success/10 text-success uppercase tracking-wider">
+                            Completed
+                        </span>
+</div>
+</div>
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-gray-400 text-sm">location_on</span>
+<p class="text-xs text-gray-600 dark:text-gray-300 truncate">Central Station → Hilton Hotel</p>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 h-9 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm font-semibold flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-sm">receipt_long</span>
+                        Receipt
+                    </button>
+<button class="flex-1 h-9 rounded-lg bg-primary/10 text-primary text-sm font-semibold flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-sm">history</span>
+                        Rebook
+                    </button>
+</div>
+</div>
+</div>
+<!-- Ride Card 3: Cancelled -->
+<div class="bg-white dark:bg-[#2d1a1a] rounded-xl overflow-hidden shadow-sm border border-[#e5dcdc] dark:border-[#3d2a2a] opacity-80">
+<div class="p-4">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden grayscale">
+<img class="w-full h-full object-cover" data-alt="Modern electric vehicle in urban setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyEX9TerbMEAVFMNlQWg0PVsiE8Jo5FPxBqPQTRYdW9MzneL1HOF_YaxKVtLzQFdN9cKpbyFp4OLHpksj0SwL7N0ouUE-nBVE2XyOCgJuxi84y-Sf9in9qTtQldOedaA38JxdfK9kFeUor91glGXvYUbhCYj_58f0o48HovMSZMZu70DPJ8bO48OwgrHDlXyr4t7lQCfcMMS44e-o7X1JhJp5gvTpI_9Aj12Naa_E9CVXOpPJ7xvt0J1lkfD3Gh2cn0RBizMaQ5IfV"/>
+</div>
+<div>
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400">Oct 20, 09:00 AM</p>
+<h3 class="text-base font-bold">Tesla Model 3 • Mike R.</h3>
+</div>
+</div>
+<div class="text-right">
+<p class="text-lg font-bold text-gray-400">$0.00</p>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-error/10 text-error uppercase tracking-wider">
+                            Cancelled
+                        </span>
+</div>
+</div>
+<p class="text-xs text-gray-500 dark:text-gray-400 mb-4 italic">Cancellation fee waived.</p>
+<div class="flex gap-2">
+<button class="w-full h-9 rounded-lg bg-primary text-white text-sm font-semibold flex items-center justify-center gap-1 hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined text-sm">refresh</span>
+                        Book Again
+                    </button>
+</div>
+</div>
+</div>
+<!-- Date Header -->
+<div class="pt-2 pb-1">
+<p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Older Rides</p>
+</div>
+<!-- Ride Card 4: Older Completed -->
+<div class="bg-white dark:bg-[#2d1a1a] rounded-xl overflow-hidden shadow-sm border border-[#e5dcdc] dark:border-[#3d2a2a] relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+<span class="material-symbols-outlined text-gray-400">directions_car</span>
+</div>
+<div>
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400">Oct 15, 08:45 PM</p>
+<h3 class="text-base font-bold">UberX • Samantha</h3>
+</div>
+</div>
+<div class="text-right">
+<p class="text-lg font-bold text-primary">$32.10</p>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-success/10 text-success uppercase tracking-wider">
+                            Completed
+                        </span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="w-full h-9 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm font-semibold">View Details</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#211111] border-t border-[#e5dcdc] dark:border-[#3d2a2a] ios-blur z-50">
+<div class="flex justify-around items-center h-16 max-w-md mx-auto">
+<a class="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined font-variation-fill">history</span>
+<span class="text-[10px] font-bold">History</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="text-[10px] font-medium">Wallet</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</a>
+</div>
+<!-- Safe area indicator for modern phones -->
+<div class="h-5 bg-white dark:bg-[#211111]"></div>
+</nav>
+<div class="h-24"></div> <!-- Spacer for fixed nav -->
+</body></html>

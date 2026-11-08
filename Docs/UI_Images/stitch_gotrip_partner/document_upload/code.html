@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RideFlow Partner - Document Verification</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "primary": "#f55e5b",
+                "background-light": "#f8f6f5",
+                "background-dark": "#221010",
+              },
+              fontFamily: {
+                "display": ["Inter"]
+              },
+              borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+            },
+          },
+        }
+      </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#1c0d0d] antialiased">
+<!-- Main Container -->
+<div class="relative flex h-auto min-h-screen w-full flex-col max-w-md mx-auto bg-background-light shadow-xl">
+<!-- Top App Bar -->
+<div class="flex items-center bg-background-light p-4 pb-2 justify-between sticky top-0 z-10 border-b border-primary/10">
+<div class="text-[#1c0d0d] flex size-12 shrink-0 items-center cursor-pointer">
+<span class="material-symbols-outlined">arrow_back</span>
+</div>
+<h2 class="text-[#1c0d0d] text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-12">Document Verification</h2>
+</div>
+<!-- Progress Section -->
+<div class="flex flex-col gap-3 p-4 bg-white/50">
+<div class="flex gap-6 justify-between items-center">
+<p class="text-[#1c0d0d] text-base font-semibold leading-normal">Onboarding Progress</p>
+<p class="text-primary text-sm font-bold leading-normal">1 of 3 Complete</p>
+</div>
+<div class="rounded-full bg-primary/10 h-2 w-full overflow-hidden">
+<div class="h-full rounded-full bg-primary" style="width: 33.33%;"></div>
+</div>
+<p class="text-primary/80 text-sm font-medium leading-normal flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">bolt</span>
+                Almost there! Complete these to start earning.
+            </p>
+</div>
+<!-- Verification Status Banner (MD3 Card Style) -->
+<div class="p-4">
+<div class="flex flex-col gap-4 rounded-xl border border-primary/20 bg-white p-5 shadow-sm">
+<div class="flex items-start gap-4">
+<div class="p-2 bg-primary/10 rounded-lg">
+<span class="material-symbols-outlined text-primary">schedule</span>
+</div>
+<div class="flex flex-col gap-1">
+<p class="text-[#1c0d0d] text-base font-bold leading-tight">Status: Pending Review</p>
+<p class="text-[#1c0d0d]/60 text-sm font-normal leading-relaxed">
+                            Our team usually reviews documents within 24 hours. You'll be notified once verified.
+                        </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Document List Section -->
+<div class="px-4 py-2">
+<h3 class="text-[#1c0d0d] text-md font-bold uppercase tracking-wider text-xs opacity-50 mb-4">Required Documents</h3>
+<div class="flex flex-col gap-4">
+<!-- Card 1: Driving License (Status: Uploaded) -->
+<div class="flex flex-col gap-4 bg-white rounded-xl p-4 border border-primary/10 shadow-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center rounded-lg bg-primary/5 text-primary shrink-0 size-12">
+<span class="material-symbols-outlined">badge</span>
+</div>
+<div class="flex flex-col">
+<p class="text-[#1c0d0d] text-base font-bold">Driving License</p>
+<p class="text-[#1c0d0d]/50 text-xs">Valid permanent license (Front &amp; Back)</p>
+</div>
+</div>
+<div class="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded text-xs font-bold">
+<span class="material-symbols-outlined text-xs">check_circle</span>
+                            Uploaded
+                        </div>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary/5 text-primary text-sm font-semibold border border-primary/10">
+<span class="material-symbols-outlined text-sm">visibility</span> View
+                        </button>
+<button class="flex-1 flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary/5 text-primary text-sm font-semibold border border-primary/10">
+<span class="material-symbols-outlined text-sm">edit</span> Replace
+                        </button>
+</div>
+</div>
+<!-- Card 2: Vehicle RC (Status: Not Uploaded) -->
+<div class="flex items-center gap-4 bg-white rounded-xl p-4 border border-primary/10 shadow-sm justify-between">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center rounded-lg bg-primary/5 text-primary shrink-0 size-12">
+<span class="material-symbols-outlined">car_repair</span>
+</div>
+<div class="flex flex-col">
+<p class="text-[#1c0d0d] text-base font-bold">Vehicle RC</p>
+<p class="text-[#1c0d0d]/50 text-xs">Registration Certificate of the vehicle</p>
+</div>
+</div>
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center rounded-lg h-9 px-4 bg-primary text-white text-sm font-bold shadow-sm active:scale-95 transition-transform">
+                        Upload
+                    </button>
+</div>
+<!-- Card 3: Insurance (Status: Not Uploaded) -->
+<div class="flex items-center gap-4 bg-white rounded-xl p-4 border border-primary/10 shadow-sm justify-between">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center rounded-lg bg-primary/5 text-primary shrink-0 size-12">
+<span class="material-symbols-outlined">shield</span>
+</div>
+<div class="flex flex-col">
+<p class="text-[#1c0d0d] text-base font-bold">Insurance</p>
+<p class="text-[#1c0d0d]/50 text-xs">Active 3rd party or comprehensive</p>
+</div>
+</div>
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center rounded-lg h-9 px-4 bg-primary text-white text-sm font-bold shadow-sm active:scale-95 transition-transform">
+                        Upload
+                    </button>
+</div>
+</div>
+</div>
+<!-- Support Section -->
+<div class="p-6 text-center">
+<p class="text-[#1c0d0d]/60 text-sm font-medium">Having trouble uploading?</p>
+<button class="mt-1 text-primary text-sm font-bold underline underline-offset-4">Contact Support</button>
+</div>
+<!-- Sticky Bottom Action -->
+<div class="mt-auto p-4 bg-white border-t border-primary/10">
+<button class="w-full bg-primary/30 text-white cursor-not-allowed rounded-xl h-14 text-base font-bold flex items-center justify-center gap-2">
+                Submit for Verification
+            </button>
+<p class="text-center text-[10px] text-[#1c0d0d]/40 mt-3 px-4">
+                By submitting, you agree to RideFlow's Partner Terms of Service and Privacy Policy.
+            </p>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RideFlow Partner - Select Type</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f55e5b",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#221010",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-selection {
+            border: 2px solid #f55e5b !important;
+            background-color: rgba(245, 94, 91, 0.05) !important;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#1c0d0d] dark:text-white antialiased min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full max-w-md mx-auto flex-col bg-white dark:bg-[#1a0c0c] shadow-xl overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="flex flex-col w-full sticky top-0 bg-white/80 dark:bg-[#1a0c0c]/80 backdrop-blur-md z-10">
+<div class="flex items-center p-4 justify-between">
+<button aria-label="Go back" class="text-[#1c0d0d] dark:text-white p-2 rounded-full hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h2 class="text-lg font-bold flex-1 text-center pr-10">Partner Registration</h2>
+</div>
+<!-- Progress Tracker -->
+<div class="flex flex-col gap-2 px-6 pb-4">
+<div class="flex justify-between items-center">
+<p class="text-sm font-medium opacity-80">Step 2: Partner Type</p>
+<p class="text-xs font-normal opacity-60">2 of 5</p>
+</div>
+<div class="h-1.5 w-full bg-primary/20 rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full transition-all duration-500" style="width: 40%;"></div>
+</div>
+</div>
+</header>
+<main class="flex-1 px-6 pt-6 pb-24">
+<!-- Header Section -->
+<div class="mb-8">
+<h1 class="text-2xl font-bold leading-tight mb-2">How will you earn with RideFlow?</h1>
+<p class="text-sm text-gray-600 dark:text-gray-400">Select the option that best describes your service.</p>
+</div>
+<!-- Selection Cards Container -->
+<div class="flex flex-col gap-4">
+<!-- Option 1: Taxi Driver -->
+<button class="flex items-center text-left p-5 rounded-xl border-2 border-transparent bg-white dark:bg-[#2d1a1a] shadow-sm hover:shadow-md transition-all active:scale-[0.98] group relative ring-1 ring-gray-100 dark:ring-gray-800">
+<div class="flex-shrink-0 w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center text-primary mr-4 group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-3xl">local_taxi</span>
+</div>
+<div class="flex-1">
+<h3 class="text-lg font-bold leading-tight mb-1">Taxi Driver</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400 leading-snug">Drive passengers in your car. Earn on your own schedule.</p>
+</div>
+<div class="ml-2">
+<span class="material-symbols-outlined text-primary opacity-0 group-[.active-selection]:opacity-100">check_circle</span>
+</div>
+</button>
+<!-- Option 2: Bike Rider (Selected Example State) -->
+<button class="flex items-center text-left p-5 rounded-xl border-2 border-primary bg-primary/5 dark:bg-[#2d1a1a] shadow-md transition-all active:scale-[0.98] group relative ring-1 ring-primary/20">
+<div class="flex-shrink-0 w-14 h-14 rounded-lg bg-primary flex items-center justify-center text-white mr-4">
+<span class="material-symbols-outlined text-3xl">two_wheeler</span>
+</div>
+<div class="flex-1">
+<h3 class="text-lg font-bold leading-tight mb-1">Bike Rider</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400 leading-snug">Quick deliveries and fast rides. Perfect for city traffic.</p>
+</div>
+<div class="ml-2">
+<span class="material-symbols-outlined text-primary">check_circle</span>
+</div>
+</button>
+<!-- Option 3: Vehicle Owner -->
+<button class="flex items-center text-left p-5 rounded-xl border-2 border-transparent bg-white dark:bg-[#2d1a1a] shadow-sm hover:shadow-md transition-all active:scale-[0.98] group relative ring-1 ring-gray-100 dark:ring-gray-800">
+<div class="flex-shrink-0 w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center text-primary mr-4 group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-3xl">key</span>
+</div>
+<div class="flex-1">
+<h3 class="text-lg font-bold leading-tight mb-1">Vehicle Owner</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400 leading-snug">Rent out your vehicle fleet. Manage multiple assets easily.</p>
+</div>
+<div class="ml-2">
+<span class="material-symbols-outlined text-primary opacity-0 group-[.active-selection]:opacity-100">check_circle</span>
+</div>
+</button>
+</div>
+<!-- Help Link -->
+<div class="mt-8 text-center">
+<a class="text-sm font-medium text-primary hover:underline flex items-center justify-center gap-1" href="#">
+<span class="material-symbols-outlined text-sm">help</span>
+                    Need help choosing?
+                </a>
+</div>
+</main>
+<!-- Footer Action -->
+<footer class="fixed bottom-0 w-full max-w-md bg-white dark:bg-[#1a0c0c] p-4 border-t border-gray-100 dark:border-gray-800 flex flex-col gap-3">
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-[0.99]">
+                Continue
+            </button>
+<p class="text-[10px] text-center text-gray-400 uppercase tracking-widest font-semibold">
+                Driver Safety First • RideFlow
+            </p>
+</footer>
+<!-- Bottom Safe Area Spacer -->
+<div class="h-8 bg-white dark:bg-[#1a0c0c]"></div>
+</div>
+</body></html>

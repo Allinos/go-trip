@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f55e5b",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#221010",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<title>RideFlow Partner Dashboard</title>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900">
+<div class="relative flex h-auto min-h-screen w-full max-w-md mx-auto flex-col bg-background-light group/design-root overflow-x-hidden shadow-2xl">
+<!-- Header Bar -->
+<div class="flex items-center bg-white px-4 py-3 justify-between border-b border-primary/10">
+<div class="flex size-10 shrink-0 items-center overflow-hidden rounded-full border border-primary/20">
+<img class="w-full h-full object-cover" data-alt="Professional driver profile avatar smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBFM2P77Q7g2zjNhlNDODkcMDZwZoRPp8q8OlnI5uU6lDbeF300he6k8ID-7cZr5yAFFLiyER1gWPBAQviGE6DSdUGcKhFOZCV9HcWl4xjjT39ggUgZNV9R40x3nE-YMCcMI83EOW3yOXYH07HcEotSVDvi6Dtx01Q8x7O_HooR4WMko3CqhpTgjA5NVN7EAfe2jrLFyfcvCD9T1j6YZkAs9aNnABi0u3rZ9uu-A_EOWeAU4H1EeEVmiSqZtCbaokWchho4fN48q30"/>
+</div>
+<h2 class="text-slate-900 text-lg font-bold leading-tight tracking-tight flex-1 px-3 text-center">RideFlow Partner</h2>
+<div class="flex w-10 items-center justify-end relative">
+<button class="flex items-center justify-center rounded-full h-10 w-10 hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-slate-700">notifications</span>
+</button>
+<!-- Notification Badge -->
+<div class="absolute top-2 right-2 h-2.5 w-2.5 bg-primary border-2 border-white rounded-full"></div>
+</div>
+</div>
+<!-- Online/Offline Status Toggle Section -->
+<div class="p-4">
+<div class="flex flex-col items-center justify-between gap-4 rounded-xl border border-primary/20 bg-white p-5 shadow-sm">
+<div class="flex flex-col items-center gap-1">
+<p class="text-slate-900 text-base font-bold leading-tight">Current Status</p>
+<p class="text-primary font-semibold text-sm">Offline</p>
+</div>
+<label class="relative flex h-[36px] w-[64px] cursor-pointer items-center rounded-full border-2 border-primary/20 bg-primary/5 p-1 has-[:checked]:bg-primary transition-all duration-300">
+<input class="invisible absolute peer" type="checkbox"/>
+<div class="h-6 w-6 rounded-full bg-white shadow-lg transition-transform duration-300 peer-checked:translate-x-7"></div>
+</label>
+<p class="text-slate-500 text-xs font-medium text-center">Toggle to start receiving ride requests</p>
+</div>
+</div>
+<!-- Summary Grid: Today's Stats -->
+<div class="px-4 py-2">
+<h3 class="text-slate-900 text-base font-bold mb-4 px-1">Today's Summary</h3>
+<div class="grid grid-cols-2 gap-4">
+<!-- Earnings -->
+<div class="flex flex-col gap-2 rounded-xl p-4 bg-white border border-primary/10 shadow-sm col-span-2">
+<div class="flex items-center justify-between">
+<p class="text-slate-500 text-sm font-medium">Today's Earnings</p>
+<span class="material-symbols-outlined text-green-600 text-lg">payments</span>
+</div>
+<div class="flex items-end gap-2">
+<p class="text-slate-900 tracking-tight text-3xl font-bold leading-none">$142.50</p>
+<p class="text-green-600 text-xs font-bold mb-1">+12% vs yesterday</p>
+</div>
+</div>
+<!-- Active Rides -->
+<div class="flex flex-col gap-2 rounded-xl p-4 bg-white border border-primary/10 shadow-sm">
+<div class="flex items-center justify-between">
+<p class="text-slate-500 text-xs font-medium uppercase tracking-wider">Active</p>
+<div class="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+</div>
+<p class="text-slate-900 tracking-tight text-2xl font-bold">3</p>
+<p class="text-slate-400 text-[10px] font-medium">Ongoing trips</p>
+</div>
+<!-- Bookings -->
+<div class="flex flex-col gap-2 rounded-xl p-4 bg-white border border-primary/10 shadow-sm">
+<div class="flex items-center justify-between">
+<p class="text-slate-500 text-xs font-medium uppercase tracking-wider">Booked</p>
+<span class="material-symbols-outlined text-slate-400 text-sm">calendar_month</span>
+</div>
+<p class="text-slate-900 tracking-tight text-2xl font-bold">12</p>
+<p class="text-slate-400 text-[10px] font-medium">Scheduled today</p>
+</div>
+</div>
+</div>
+<!-- Quick Actions -->
+<div class="p-4 space-y-3">
+<h3 class="text-slate-900 text-base font-bold px-1">Quick Actions</h3>
+<button class="flex w-full items-center justify-between gap-3 bg-primary text-white p-4 rounded-xl shadow-md hover:bg-primary/90 transition-all active:scale-[0.98]">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="font-bold">Create New Ride</span>
+</div>
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+<button class="flex w-full items-center justify-between gap-3 bg-white border-2 border-primary/20 text-slate-800 p-4 rounded-xl hover:border-primary/40 transition-all active:scale-[0.98]">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">event_list</span>
+<span class="font-bold">View All Bookings</span>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</button>
+</div>
+<!-- Recent Activity Feed (Mini) -->
+<div class="px-4 pb-24">
+<div class="flex items-center justify-between mb-3 px-1">
+<h3 class="text-slate-900 text-base font-bold">Recent Activity</h3>
+<button class="text-primary text-xs font-bold uppercase tracking-wide">View All</button>
+</div>
+<div class="space-y-3">
+<!-- Activity Item 1 -->
+<div class="flex items-center gap-3 p-3 bg-white/60 rounded-lg border border-primary/5">
+<div class="size-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-green-600 text-lg">check_circle</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-slate-900 text-sm font-bold truncate">Completed trip #7284</p>
+<p class="text-slate-500 text-xs">Finished 12 mins ago • $24.40</p>
+</div>
+</div>
+<!-- Activity Item 2 -->
+<div class="flex items-center gap-3 p-3 bg-white/60 rounded-lg border border-primary/5">
+<div class="size-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-blue-600 text-lg">schedule</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-slate-900 text-sm font-bold truncate">New Booking: 6:00 PM</p>
+<p class="text-slate-500 text-xs">Airport Terminal 2 • 3.2 miles</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<div class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md flex gap-2 border-t border-primary/10 bg-white px-4 pb-4 pt-2 z-50">
+<a class="flex flex-1 flex-col items-center justify-end gap-1 rounded-full text-primary" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">home</span>
+</div>
+<p class="text-xs font-bold leading-normal tracking-[0.015em]">Home</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined">calendar_today</span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Schedule</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Wallet</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined">person</span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Account</p>
+</a>
+</div>
+</div>
+</body></html>

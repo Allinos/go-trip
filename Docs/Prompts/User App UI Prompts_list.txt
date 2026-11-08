@@ -1,0 +1,131 @@
+Design a modern, scalable Android mobile application UI for a Taxi & Vehicle Rental Passenger App.
+
+The app should be clean, minimal, and easy to use for first-time users.
+Use a light theme with high contrast, rounded cards, smooth shadows, and intuitive icons.
+
+Follow Material Design 3 guidelines.
+App Name (Placeholder):
+RideFlow
+
+Color & Style:
+Primary Color: Red (RedBus-style tone)
+Secondary Color: White
+Accent Color: Dark Gray / Black
+Success Color: Green
+Error Color: Red (darker shade)
+Background: White with light gray sections
+Fonts: Inter / Roboto
+Card-based UI with clear separators
+Flat, clean design with subtle elevation
+
+
+I Want Tabs : Home, Bookings, Rent, Settings
+Screens to Design:
+
+1. Splash Screen
+App logo centered
+Minimal tagline: “Book rides. Travel smart.”
+
+2. Onboarding Screens (3 slides)
+Slide 1: Book rides near your location
+Slide 2: Real-time driver tracking
+Slide 3: Safe, affordable & verified drivers
+Skip & Next buttons
+
+3. Login & Signup
+Phone number login with OTP
+Country code selector
+Terms & Privacy checkbox
+
+4. Home Screen(RedBus-style)
+On top In need Ride categories like [redbus]:
+Taxi
+Bike Ride
+Rental Car
+Commercial Vehicle
+“Where are you going?” 
+Vehicle type filter
+Top red header with location selector
+Pickup and drop input cards and also exchange icon between 2 cards
+Date & time selector: today , tomorrow, date picker
+Large red “Search Rides” button
+
+
+5. Available Rides List
+White card list layout
+Vehicle type & number
+Driver/vehicle name on left
+Price & seats on right
+Rating badges
+Red “Book” button
+
+6. Ride Details Screen
+Driver details
+Vehicle details
+Pickup & drop route preview
+Fare breakdown
+Bold red “Confirm Booking” button
+ 
+
+7. Ride History
+List of past rides
+Status (Completed / Cancelled)
+Date, price, driver
+
+8. Rent Vehicle Screen
+Vehicle photo
+Vehicle type & model
+Number plate
+Rental price (per day / hour)
+Rating & reviews count
+
+8.1. On selecting a vehicle, open a Vehicle Details screen with:
+Image gallery of the vehicle
+Full vehicle details
+Owner / service provider info (name, location)
+Reviews & ratings section
+Clear Book Now button
+
+
+9. Profile Screen
+User photo
+Name & phone number
+Saved locations
+Ride history
+Support
+Logout
+
+10. Help & Support
+FAQs
+Contact support
+Report issue
+
+
+UX Requirements:
+Large touch-friendly buttons
+Clear loading & success states
+Empty states with illustrations
+Smooth transitions and animations
+Output:
+High-fidelity UI mockups
+Consistent spacing & alignment
+Ready for Android development using Expo React Native
+
+
+==========Next Updates ===========
+
+
+8. Live Ride Tracking
+Live driver location indicator
+ETA
+Driver contact button (call/chat)
+Emergency SOS button
+
+
+9. Payment Screen
+Payment options:
+Cash
+UPI
+Wallet
+Fare summary
+Pay & confirm button

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+
+<html class="" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Create Ride - RideFlow Partner</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">tailwind.config = {darkMode: "class", theme: {extend: {colors: {primary: "#f55e5b", "background-light": "#f8f6f5", "background-dark": "#221010"}, fontFamily: {display: "Inter"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}}}};</script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Public Sans', sans-serif;
+        }
+        /* Custom scrollbar for dark mode */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #201212;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3d2323;
+            border-radius: 10px;
+        }
+        .input-focus-ring:focus-within {
+            border-color: #d33131;
+            box-shadow: 0 0 0 1px #d33131;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-primary/10 px-4 py-4 flex items-center gap-4">
+<button class="p-2 hover:bg-primary/10 rounded-full transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-900 dark:text-white">arrow_back</span>
+</button>
+<h1 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Create Ride</h1>
+</header>
+<!-- Main Content -->
+<main class="flex-1 max-w-2xl mx-auto w-full p-4 space-y-8 pb-32">
+<!-- Section: Vehicle Selection -->
+<section class="space-y-4">
+<div class="flex items-center gap-2 px-1">
+<span class="material-symbols-outlined text-primary text-xl">directions_car</span>
+<h2 class="text-sm font-semibold uppercase tracking-wider text-primary/80">Vehicle selection</h2>
+</div>
+<div class="relative group">
+<select class="w-full bg-primary/5 border border-primary/20 rounded-xl py-4 px-4 appearance-none focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-slate-900 dark:text-white">
+<option disabled="" selected="" value="">Select your registered vehicle</option>
+<option value="v1">Toyota Camry (KBT 452X)</option>
+<option value="v2">Tesla Model 3 (EV 9982)</option>
+</select>
+<div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+<span class="material-symbols-outlined text-primary/60">expand_more</span>
+</div>
+</div>
+</section>
+<!-- Section: Route Details -->
+<section class="space-y-4">
+<div class="flex items-center gap-2 px-1">
+<span class="material-symbols-outlined text-primary text-xl">route</span>
+<h2 class="text-sm font-semibold uppercase tracking-wider text-primary/80">Route Details</h2>
+</div>
+<div class="bg-primary/5 rounded-xl p-4 space-y-0 relative border border-primary/10">
+<!-- Pickup -->
+<div class="flex items-center gap-4 group">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-primary">radio_button_checked</span>
+<div class="w-0.5 h-12 bg-primary/20"></div>
+</div>
+<div class="flex-1 py-2">
+<label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Pickup location</label>
+<input class="w-full bg-transparent border-none p-0 focus:ring-0 text-slate-900 dark:text-white placeholder:text-slate-400" placeholder="Where are you starting?" type="text"/>
+</div>
+</div>
+<!-- Destination -->
+<div class="flex items-center gap-4 group">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-primary">location_on</span>
+</div>
+<div class="flex-1 py-2 border-t border-primary/10">
+<label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Drop location</label>
+<input class="w-full bg-transparent border-none p-0 focus:ring-0 text-slate-900 dark:text-white placeholder:text-slate-400" placeholder="Where are you going?" type="text"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Schedule -->
+<section class="grid grid-cols-2 gap-4">
+<div class="space-y-2">
+<label class="text-xs font-semibold uppercase tracking-wider text-primary/80 px-1 block">Date</label>
+<div class="relative bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary/60">calendar_today</span>
+<input class="bg-transparent border-none p-0 focus:ring-0 text-slate-900 dark:text-white w-full" type="date"/>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-semibold uppercase tracking-wider text-primary/80 px-1 block">Time</label>
+<div class="relative bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary/60">schedule</span>
+<input class="bg-transparent border-none p-0 focus:ring-0 text-slate-900 dark:text-white w-full" type="time"/>
+</div>
+</div>
+</section>
+<!-- Section: Capacity & Pricing -->
+<section class="space-y-6">
+<div class="flex items-center gap-2 px-1">
+<span class="material-symbols-outlined text-primary text-xl">payments</span>
+<h2 class="text-sm font-semibold uppercase tracking-wider text-primary/80">Pricing &amp; Capacity</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Available Seats -->
+<div class="bg-primary/5 rounded-xl p-4 border border-primary/10 flex items-center justify-between">
+<div>
+<p class="text-sm font-medium text-slate-900 dark:text-white">Available seats</p>
+<p class="text-xs text-slate-500">Excluding driver</p>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-8 h-8 rounded-full border border-primary/40 flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all">
+<span class="material-symbols-outlined text-lg">remove</span>
+</button>
+<span class="text-lg font-bold w-4 text-center">3</span>
+<button class="w-8 h-8 rounded-full border border-primary/40 flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all">
+<span class="material-symbols-outlined text-lg">add</span>
+</button>
+</div>
+</div>
+<!-- Price Per Seat -->
+<div class="bg-primary/5 rounded-xl p-4 border border-primary/10 flex items-center justify-between">
+<div>
+<p class="text-sm font-medium text-slate-900 dark:text-white">Price per seat</p>
+<p class="text-xs text-slate-500">Suggested: $12.00</p>
+</div>
+<div class="flex items-center gap-1 max-w-[100px]">
+<span class="text-primary font-bold text-lg">$</span>
+<input class="bg-transparent border-none p-0 focus:ring-0 text-slate-900 dark:text-white text-right text-lg font-bold w-full" placeholder="0.00" type="number"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Map Preview (Simplified) -->
+<section class="rounded-xl overflow-hidden relative h-48 border border-primary/20">
+<img alt="Route map visualization" class="w-full h-full object-cover opacity-60 dark:opacity-40" data-alt="Abstract dark city map with red route line" data-location="San Francisco" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwuXAG7Z_vVR4FTlcEfEt_Et82jMS-63_Ru2RmPNcaNA8mYjYsN-2JQp_PsBi0khEGcm4omHvk648qCzeui4tP_xNwqOvbieeFan1ctTXp4ZFBj64pL0PHprxpI5WbhAR-a8D9kF33-RTjEy2vPee6WoQAT8JXudpnPWRhYPzoblxFRQQPxFrnalv_n_J9D0Mza25WBuf3lnKZ2ZkNuXxdb6KRpNDiqxs5RAeVqifD6FWsul06-BrGyOjpGBuqyNH8W7Gn0AxCeag"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark/80 to-transparent"></div>
+<div class="absolute bottom-4 left-4 flex items-center gap-2 bg-background-dark/90 px-3 py-1.5 rounded-full border border-primary/20">
+<span class="material-symbols-outlined text-primary text-sm">explore</span>
+<span class="text-xs font-medium">Estimated route: 12.4 miles</span>
+</div>
+</section>
+</main>
+<!-- Sticky Footer CTA -->
+<footer class="fixed bottom-0 left-0 right-0 p-4 bg-background-light dark:bg-background-dark border-t border-primary/10 backdrop-blur-xl">
+<div class="max-w-2xl mx-auto flex flex-col gap-2">
+<div class="flex items-center justify-between px-2 mb-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-500 text-sm">info</span>
+<span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Estimated earnings</span>
+</div>
+<span class="text-xl font-bold text-primary">$36.00</span>
+</div>
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">publish</span>
+                Publish Ride
+            </button>
+</div>
+</footer>
+<!-- Bottom Navigation (Mobile) -->
+<nav class="fixed bottom-0 left-0 right-0 bg-background-dark border-t border-primary/10 md:hidden hidden">
+<div class="flex justify-around py-3">
+<a class="flex flex-col items-center gap-1 text-slate-500" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px]">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="text-[10px]">Create</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500" href="#">
+<span class="material-symbols-outlined">directions_car</span>
+<span class="text-[10px]">My Rides</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px]">Profile</span>
+</a>
+</div>
+</nav>
+</body></html>

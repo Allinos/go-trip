@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+
+<html class="" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RideFlow Partner - Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">tailwind.config = {darkMode: "class", theme: {extend: {colors: {primary: "#f55e5b", "background-light": "#f8f6f5", "background-dark": "#221010"}, fontFamily: {display: "Inter"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}}}};</script>
+<style>
+        body {
+            font-family: 'Public Sans', sans-serif;
+        }
+        .otp-input:focus {
+            border-color: #d33131;
+            box-shadow: 0 0 0 2px rgba(211, 49, 49, 0.2);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen flex flex-col">
+<!-- Top Navigation -->
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<div class="text-primary flex size-12 shrink-0 items-center cursor-pointer" data-icon="arrow_back">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">RideFlow Partner</h2>
+</div>
+<!-- Main Content Container -->
+<main class="flex-1 flex flex-col px-6 max-w-md mx-auto w-full">
+<!-- Branding Section -->
+<div class="mt-8 mb-10 text-center">
+<div class="inline-flex items-center justify-center p-4 bg-primary/10 rounded-full mb-6">
+<span class="material-symbols-outlined text-primary text-5xl">directions_car</span>
+</div>
+<h1 class="text-slate-900 dark:text-white tracking-tight text-3xl font-bold leading-tight mb-3">Drive with flow.</h1>
+<p class="text-slate-600 dark:text-slate-400 text-base font-normal leading-normal">Enter your mobile number to get started as a partner.</p>
+</div>
+<!-- Step 1: Phone Entry (Visible by default) -->
+<div class="space-y-6" id="phone-entry-step">
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-2">
+<label class="text-slate-700 dark:text-slate-300 text-sm font-medium">Mobile Number</label>
+<div class="flex gap-3">
+<!-- Country Selector -->
+<div class="relative w-32">
+<select class="w-full h-14 bg-slate-100 dark:bg-primary/5 border border-slate-200 dark:border-primary/20 rounded-xl px-4 appearance-none focus:ring-2 focus:ring-primary focus:border-transparent text-slate-900 dark:text-white font-medium">
+<option value="US">+1 US</option>
+<option value="UK">+44 UK</option>
+<option value="IN">+91 IN</option>
+<option value="CA">+1 CA</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-4 pointer-events-none text-slate-400">expand_more</span>
+</div>
+<!-- Phone Input -->
+<div class="flex-1">
+<input class="w-full h-14 bg-slate-100 dark:bg-primary/5 border border-slate-200 dark:border-primary/20 rounded-xl px-4 focus:ring-2 focus:ring-primary focus:border-transparent text-slate-900 dark:text-white font-medium text-lg placeholder:text-slate-400 dark:placeholder:text-slate-600" placeholder="000 000 0000" type="tel"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Primary Action -->
+<button class="w-full h-14 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
+<span>Get OTP</span>
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+<!-- Step 2: Verification (Visual Reference for UI) -->
+<div class="mt-12 space-y-8" id="otp-entry-step">
+<div class="space-y-2">
+<h3 class="text-slate-900 dark:text-white text-xl font-bold">Verify your number</h3>
+<p class="text-slate-600 dark:text-slate-400 text-sm">
+                    We've sent a 4-digit code to <span class="text-primary font-semibold">+1 555-0123</span>
+<button class="ml-1 text-primary underline text-xs font-bold">Edit</button>
+</p>
+</div>
+<!-- OTP Input Grid -->
+<div class="flex justify-between gap-4">
+<input class="otp-input w-16 h-16 text-center text-2xl font-bold bg-slate-100 dark:bg-primary/5 border-2 border-slate-200 dark:border-primary/20 rounded-xl focus:outline-none text-slate-900 dark:text-white" maxlength="1" type="text" value="4"/>
+<input class="otp-input w-16 h-16 text-center text-2xl font-bold bg-slate-100 dark:bg-primary/5 border-2 border-slate-200 dark:border-primary/20 rounded-xl focus:outline-none text-slate-900 dark:text-white" maxlength="1" type="text" value="8"/>
+<input autofocus="" class="otp-input w-16 h-16 text-center text-2xl font-bold bg-slate-100 dark:bg-primary/5 border-2 border-primary rounded-xl focus:outline-none text-slate-900 dark:text-white" maxlength="1" type="text"/>
+<input class="otp-input w-16 h-16 text-center text-2xl font-bold bg-slate-100 dark:bg-primary/5 border-2 border-slate-200 dark:border-primary/20 rounded-xl focus:outline-none text-slate-900 dark:text-white" maxlength="1" type="text"/>
+</div>
+<div class="flex flex-col items-center gap-6">
+<button class="w-full h-14 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition-all shadow-lg shadow-primary/20">
+                    Verify &amp; Proceed
+                </button>
+<div class="text-center">
+<p class="text-slate-600 dark:text-slate-400 text-sm mb-1">Didn't receive the code?</p>
+<button class="text-primary font-bold hover:underline flex items-center gap-1 justify-center">
+<span class="material-symbols-outlined text-sm">replay</span>
+                        Resend in 00:45
+                    </button>
+</div>
+</div>
+</div>
+<!-- Decorative Map Background/Overlay -->
+<div class="mt-auto pt-10 pb-6 opacity-30 pointer-events-none">
+<div class="h-32 w-full rounded-xl overflow-hidden grayscale contrast-125 dark:invert">
+<img class="w-full h-full object-cover" data-alt="Stylized city street map background pattern" data-location="New York City" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjQu2iZV0nGM5amYFllNdzojc8xwslnRWis2Gs6hiIJ7a4mJDOiwTBUYaWVpmH0hJKkBQzMnXqXTUQSKaTjspRP04POjNYVlD23FMTp6gHr8zF6a0RZkj_DF78mN7l2dTVeDBGXA_g5cnhdR00a7yiibKcppkIcANX22q8GyKvRBa5f79aRR05I669y4EWzedVvuqBS5b7o-JIIsfvbWrmjRK8Nzgm3DOeuJeYunaDl7oy0Mk1pMI9zS05_UoAYMcU5VzWITWz_sA"/>
+</div>
+</div>
+</main>
+<!-- Footer Security Message -->
+<footer class="p-6 text-center">
+<p class="text-xs text-slate-400 dark:text-slate-600 flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-xs">lock</span>
+            Your connection is encrypted and secure
+        </p>
+</footer>
+</body></html>

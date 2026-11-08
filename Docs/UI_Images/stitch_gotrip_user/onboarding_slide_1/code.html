@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RideFlow - Onboarding</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ea2a33",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#211111",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Top AppBar Style Header -->
+<div class="flex items-center justify-between p-6 pt-12">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-3xl font-bold" data-icon="directions_car">directions_car</span>
+<span class="text-xl font-bold tracking-tight text-slate-800 dark:text-white">RideFlow</span>
+</div>
+<button class="text-slate-500 dark:text-slate-400 font-medium hover:text-primary transition-colors">
+            Skip
+        </button>
+</div>
+<!-- Main Content Area -->
+<div class="flex-grow flex flex-col items-center justify-center px-6">
+<!-- Illustration Container -->
+<div class="w-full max-w-sm aspect-square relative mb-12 flex items-center justify-center">
+<!-- Background Decorative Circles -->
+<div class="absolute inset-0 bg-primary/5 rounded-full scale-90"></div>
+<div class="absolute inset-0 bg-primary/10 rounded-full scale-75"></div>
+<!-- Hero Illustration Image -->
+<div class="relative w-full h-full rounded-3xl overflow-hidden shadow-2xl shadow-primary/10 bg-white dark:bg-slate-800 flex items-center justify-center">
+<div class="w-full h-full bg-cover bg-center" data-alt="Map with taxi icons and location pins" data-location="Global" style="background-image: url('https://placeholder.pics/svg/300')">
+</div>
+<!-- Floating Card Detail -->
+<div class="absolute bottom-6 left-6 right-6 bg-white dark:bg-slate-700 p-4 rounded-xl shadow-lg flex items-center gap-4">
+<div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="near_me">near_me</span>
+</div>
+<div>
+<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Nearest Ride</p>
+<p class="text-sm font-bold">2 mins away</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Text Block -->
+<div class="text-center max-w-xs mx-auto">
+<h1 class="text-3xl font-bold text-slate-900 dark:text-white leading-tight mb-4">
+                Book rides near your location
+            </h1>
+<p class="text-slate-500 dark:text-slate-400 leading-relaxed">
+                Find the perfect ride or rental vehicle just a few taps away. We connect you with the closest options for maximum speed.
+            </p>
+</div>
+</div>
+<!-- Bottom Controls -->
+<div class="p-8 space-y-8">
+<!-- Progress Indicators -->
+<div class="flex items-center justify-center gap-2">
+<div class="h-2 w-8 rounded-full bg-primary transition-all"></div>
+<div class="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-700"></div>
+<div class="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-700"></div>
+</div>
+<!-- Action Button -->
+<div class="flex items-center justify-center">
+<button class="w-full max-w-sm bg-primary hover:bg-red-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/30 flex items-center justify-center gap-2 group transition-all">
+<span>Next</span>
+<span class="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<!-- Safe Area Spacer for iOS -->
+<div class="h-4"></div>
+</div>
+</body></html>

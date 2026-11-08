@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RideFlow Partner Earnings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f55e5b",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#221010",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col font-display">
+<!-- Top Navigation Header -->
+<header class="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-4 py-4 flex items-center justify-between border-b border-primary/10">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary overflow-hidden">
+<span class="material-symbols-outlined">account_circle</span>
+</div>
+<h1 class="text-xl font-bold tracking-tight">Earnings</h1>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg hover:bg-primary/5 text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto pb-32">
+<!-- Segmented Control Tabs -->
+<div class="px-4 py-6">
+<div class="flex h-12 items-center justify-center rounded-xl bg-primary/5 dark:bg-primary/10 p-1.5 shadow-sm">
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-primary has-[:checked]:shadow-md has-[:checked]:text-primary dark:has-[:checked]:text-white text-slate-500 dark:text-slate-400 text-sm font-semibold transition-all">
+<span>Today</span>
+<input checked="" class="hidden" name="timeframe" type="radio" value="Today"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-primary has-[:checked]:shadow-md has-[:checked]:text-primary dark:has-[:checked]:text-white text-slate-500 dark:text-slate-400 text-sm font-semibold transition-all">
+<span>Weekly</span>
+<input class="hidden" name="timeframe" type="radio" value="Weekly"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-primary has-[:checked]:shadow-md has-[:checked]:text-primary dark:has-[:checked]:text-white text-slate-500 dark:text-slate-400 text-sm font-semibold transition-all">
+<span>Monthly</span>
+<input class="hidden" name="timeframe" type="radio" value="Monthly"/>
+</label>
+</div>
+</div>
+<!-- Hero Earnings Card -->
+<div class="px-4 mb-6">
+<div class="bg-primary rounded-2xl p-6 text-white shadow-xl shadow-primary/20 relative overflow-hidden">
+<!-- Abstract pattern background -->
+<div class="absolute -right-10 -top-10 size-40 bg-white/10 rounded-full blur-3xl"></div>
+<p class="text-sm font-medium text-white/80 mb-1">Total Earnings</p>
+<h2 class="text-4xl font-extrabold tracking-tight mb-4">$1,240.50</h2>
+<div class="flex items-center gap-2 bg-white/20 w-fit px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+                    +12% from last week
+                </div>
+</div>
+</div>
+<!-- Quick Stats Grid -->
+<div class="px-4 grid grid-cols-2 gap-4 mb-8">
+<div class="bg-white dark:bg-white/5 p-4 rounded-xl border border-primary/10 shadow-sm">
+<div class="size-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary mb-3">
+<span class="material-symbols-outlined text-xl">directions_car</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Completed Rides</p>
+<p class="text-xl font-bold">42</p>
+</div>
+<div class="bg-white dark:bg-white/5 p-4 rounded-xl border border-primary/10 shadow-sm">
+<div class="size-8 bg-amber-500/10 rounded-lg flex items-center justify-center text-amber-600 mb-3">
+<span class="material-symbols-outlined text-xl">pending_actions</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Pending Payouts</p>
+<p class="text-xl font-bold">$150.00</p>
+</div>
+</div>
+<!-- Transaction History -->
+<div class="px-4">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold">Transaction History</h3>
+<button class="text-primary text-sm font-semibold">View All</button>
+</div>
+<div class="space-y-3">
+<!-- Transaction Item -->
+<div class="bg-white dark:bg-white/5 p-4 rounded-xl flex items-center justify-between border border-primary/5 hover:border-primary/20 transition-colors">
+<div class="flex items-center gap-4">
+<div class="size-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-500">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<div>
+<p class="font-bold text-sm">Ride #4582</p>
+<p class="text-xs text-slate-500">Oct 24, 2023 • 2:45 PM</p>
+</div>
+</div>
+<p class="font-bold text-green-600 dark:text-green-400">+$12.50</p>
+</div>
+<!-- Transaction Item -->
+<div class="bg-white dark:bg-white/5 p-4 rounded-xl flex items-center justify-between border border-primary/5 hover:border-primary/20 transition-colors">
+<div class="flex items-center gap-4">
+<div class="size-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-500">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<div>
+<p class="font-bold text-sm">Ride #4579</p>
+<p class="text-xs text-slate-500">Oct 24, 2023 • 1:20 PM</p>
+</div>
+</div>
+<p class="font-bold text-green-600 dark:text-green-400">+$18.75</p>
+</div>
+<!-- Transaction Item -->
+<div class="bg-white dark:bg-white/5 p-4 rounded-xl flex items-center justify-between border border-primary/5 hover:border-primary/20 transition-colors">
+<div class="flex items-center gap-4">
+<div class="size-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-500">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<div>
+<p class="font-bold text-sm">Ride #4571</p>
+<p class="text-xs text-slate-500">Oct 23, 2023 • 11:15 AM</p>
+</div>
+</div>
+<p class="font-bold text-green-600 dark:text-green-400">+$9.20</p>
+</div>
+<!-- Transaction Item -->
+<div class="bg-white dark:bg-white/5 p-4 rounded-xl flex items-center justify-between border border-primary/5 hover:border-primary/20 transition-colors">
+<div class="flex items-center gap-4">
+<div class="size-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-500">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<div>
+<p class="font-bold text-sm">Weekly Bonus</p>
+<p class="text-xs text-slate-500">Oct 22, 2023 • 12:00 AM</p>
+</div>
+</div>
+<p class="font-bold text-green-600 dark:text-green-400">+$50.00</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Action & Navigation -->
+<div class="fixed bottom-0 left-0 right-0 bg-background-light dark:bg-background-dark border-t border-primary/10 shadow-2xl">
+<!-- Floating Download Button (Sticky Footer Style) -->
+<div class="px-4 pt-4 pb-2">
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-primary/30 flex items-center justify-center gap-2 transition-transform active:scale-95">
+<span class="material-symbols-outlined">download</span>
+                Download Report
+            </button>
+</div>
+<!-- Main Nav Bar -->
+<nav class="flex h-16 w-full items-center justify-around px-4">
+<a class="flex flex-col items-center justify-center gap-0.5 text-slate-400" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-0.5 text-slate-400" href="#">
+<span class="material-symbols-outlined">steering_wheel_heat</span>
+<span class="text-[10px] font-medium">Rides</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-0.5 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">currency_rupee</span>
+<span class="text-[10px] font-bold">Earnings</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-0.5 text-slate-400" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</a>
+</nav>
+</div>
+</body></html>

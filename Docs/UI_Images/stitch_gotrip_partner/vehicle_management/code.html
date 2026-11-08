@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RideFlow Partner - Vehicle Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f55e5b",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#221010",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#1c0d0d] dark:text-white">
+<div class="relative flex min-h-screen w-full flex-col max-w-md mx-auto bg-white dark:bg-background-dark shadow-xl overflow-hidden">
+<!-- Header -->
+<header class="sticky top-0 z-10 flex items-center justify-between bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-4 py-4 border-b border-primary/10">
+<div class="flex items-center gap-3">
+<button class="flex h-10 w-10 items-center justify-center rounded-full hover:bg-primary/5 transition-colors">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<h1 class="text-xl font-bold tracking-tight">My Fleet</h1>
+</div>
+<div class="flex gap-1">
+<button class="flex h-10 w-10 items-center justify-center rounded-full hover:bg-primary/5 transition-colors">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="flex h-10 w-10 items-center justify-center rounded-full hover:bg-primary/5 transition-colors">
+<span class="material-symbols-outlined">tune</span>
+</button>
+</div>
+</header>
+<!-- Stats Overview -->
+<div class="px-4 py-4 grid grid-cols-2 gap-4">
+<div class="bg-primary/5 dark:bg-primary/10 p-4 rounded-xl border border-primary/10">
+<p class="text-xs font-medium text-primary/70 uppercase tracking-wider">Active Units</p>
+<p class="text-2xl font-bold mt-1">12</p>
+</div>
+<div class="bg-primary/5 dark:bg-primary/10 p-4 rounded-xl border border-primary/10">
+<p class="text-xs font-medium text-primary/70 uppercase tracking-wider">In Use</p>
+<p class="text-2xl font-bold mt-1">8</p>
+</div>
+</div>
+<!-- Vehicle List Container -->
+<main class="flex-1 overflow-y-auto px-4 pb-24">
+<h2 class="text-sm font-semibold text-primary/60 mb-4 px-1">Registered Vehicles</h2>
+<div class="space-y-4">
+<!-- Vehicle Card 1 -->
+<div class="group flex flex-col bg-white dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center gap-4">
+<div class="relative bg-zinc-100 dark:bg-zinc-800 aspect-square rounded-lg w-20 h-20 overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="Modern red compact sedan front view" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDHdB5CB1JkwXPOkWTsldKn1CG8BIkIuqSM-pI4iBxQsBQn8LPBQR4vXnNZEOm2GrZjeeLWKTQjyguZ-jBzbBcKiy7Ve9Z8Jj2YXHJS5oWkSBHHhU489W-Pnz4nsUDQ7Md2U-6CxB0ge9q3FJPmScN6DYsjub3Fl8XmzNENnBDlmtoTK9L1qCr8ApqjA-Ku64C1qNqRhuNOcNFsGr1Nw09wQWlXYoO5HQZTnzj44z6nNNDOGJnuprz4ivOuBpQta_THUASKDfr9aI"/>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<div class="flex justify-between items-start">
+<p class="text-base font-bold truncate">Toyota Camry 2023</p>
+<p class="text-primary font-bold text-sm">$45<span class="text-[10px] text-zinc-400 font-normal">/day</span></p>
+</div>
+<p class="text-zinc-500 dark:text-zinc-400 text-xs font-medium uppercase tracking-tighter">ABC-1234 • Sedan</p>
+<div class="mt-2 flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<div class="h-2 w-2 rounded-full bg-emerald-500"></div>
+<span class="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 uppercase">Available</span>
+</div>
+<label class="relative flex h-6 w-11 cursor-pointer items-center rounded-full bg-primary p-0.5 transition-colors">
+<div class="h-5 w-5 translate-x-5 rounded-full bg-white shadow-sm transition-transform"></div>
+<input checked="" class="sr-only" type="checkbox"/>
+</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Vehicle Card 2 -->
+<div class="group flex flex-col bg-white dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center gap-4">
+<div class="relative bg-zinc-100 dark:bg-zinc-800 aspect-square rounded-lg w-20 h-20 overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="Silver japanese sedan parked street side" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCPLw6qt1Ri--k8FNaBfsENbfvMvnYz4tHMv1_KmPsfaInokl76ZmHWjce6Ven3XjBO2oT2apXqL31pvU52aP74bcrNaFSuyoOA1n32E0k6bO6kYzw8uub7pb9CSBu9y8G2kuRXSGydQwGrSM-gZl86pGLj0pwcBfRs7MQISCbpiZCHhRDamIoD6xLZYO2iyDog74WdzgW5sFb0U_NeOghX3P1vtXq7xqTcDeXaf8xPFV_aVHnBoO0qtlhpCAUoeIzTkiAYIWxJeB0"/>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<div class="flex justify-between items-start">
+<p class="text-base font-bold truncate">Honda Civic 2022</p>
+<p class="text-primary font-bold text-sm">$40<span class="text-[10px] text-zinc-400 font-normal">/day</span></p>
+</div>
+<p class="text-zinc-500 dark:text-zinc-400 text-xs font-medium uppercase tracking-tighter">XYZ-5678 • Compact</p>
+<div class="mt-2 flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<div class="h-2 w-2 rounded-full bg-emerald-500"></div>
+<span class="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 uppercase">Available</span>
+</div>
+<label class="relative flex h-6 w-11 cursor-pointer items-center rounded-full bg-primary p-0.5 transition-colors">
+<div class="h-5 w-5 translate-x-5 rounded-full bg-white shadow-sm transition-transform"></div>
+<input checked="" class="sr-only" type="checkbox"/>
+</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Vehicle Card 3 (Inactive) -->
+<div class="group flex flex-col bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-100 dark:border-zinc-800 rounded-xl p-3 opacity-80">
+<div class="flex items-center gap-4">
+<div class="relative bg-zinc-100 dark:bg-zinc-800 aspect-square rounded-lg w-20 h-20 overflow-hidden shrink-0 grayscale">
+<img class="w-full h-full object-cover" data-alt="White modern electric SUV parked" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRSEgoocPl673HJ7iYtYYWPTKVKQTc2JJrbk4Lw2RT4TJjmbdE0DH-2khyU-vRXu_gRHp3mk4geUgbtBn7QIvZxEsZueahN8AHw0ubaXPQYIY1RyQyfSvZLGDTMfLmxJhFbHJojeLbbZjbKheU5Z54asv7BZZcQTmVoGHmb6Hz0pbMc3y_nzRlIJrwkDHeWngh4cc6QHutrtYc6cQ_oreRFtj-svTeUNI4Tio41IrdlSJKVCDnHtq9jjH5Ximd9JtqCnWBoCkIr00"/>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<div class="flex justify-between items-start">
+<p class="text-base font-bold truncate">Tesla Model 3</p>
+<p class="text-primary font-bold text-sm">$85<span class="text-[10px] text-zinc-400 font-normal">/day</span></p>
+</div>
+<p class="text-zinc-500 dark:text-zinc-400 text-xs font-medium uppercase tracking-tighter">EV-9900 • Electric</p>
+<div class="mt-2 flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<div class="h-2 w-2 rounded-full bg-zinc-400"></div>
+<span class="text-[11px] font-medium text-zinc-500 uppercase">Inactive</span>
+</div>
+<label class="relative flex h-6 w-11 cursor-pointer items-center rounded-full bg-zinc-300 dark:bg-zinc-700 p-0.5 transition-colors">
+<div class="h-5 w-5 translate-x-0 rounded-full bg-white shadow-sm transition-transform"></div>
+<input class="sr-only" type="checkbox"/>
+</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Vehicle Card 4 -->
+<div class="group flex flex-col bg-white dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center gap-4">
+<div class="relative bg-zinc-100 dark:bg-zinc-800 aspect-square rounded-lg w-20 h-20 overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="Black luxury SUV front side" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9Ky-lH3ev4EZ-7BkHAJwJaEM74xabplg-ZwT6_pRroupJ3SwBdgXuXXXi_TyvcU2ubj_UeWSs4TTTmrJq0A7cF3xQV29vwGkkogXKcZOafaIo0nggZ1n4AhNNE-QpKZq8kwApYq_6YYz7fp1aI1gpzTGreSQaGZhEaJ01nDlFAOlCWD3VE_LV43Hjp9JgFvNkB6dBcqhHMxh_9zQ2lY7nSc35En1bYCk-kbTgy1LEoRs56ORFP99WhZoahhmzUkw2MtrQzbi_gh8"/>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<div class="flex justify-between items-start">
+<p class="text-base font-bold truncate">Ford Explorer 2021</p>
+<p class="text-primary font-bold text-sm">$65<span class="text-[10px] text-zinc-400 font-normal">/day</span></p>
+</div>
+<p class="text-zinc-500 dark:text-zinc-400 text-xs font-medium uppercase tracking-tighter">SUV-4422 • 7-Seater</p>
+<div class="mt-2 flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<div class="h-2 w-2 rounded-full bg-emerald-500"></div>
+<span class="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 uppercase">Available</span>
+</div>
+<label class="relative flex h-6 w-11 cursor-pointer items-center rounded-full bg-primary p-0.5 transition-colors">
+<div class="h-5 w-5 translate-x-5 rounded-full bg-white shadow-sm transition-transform"></div>
+<input checked="" class="sr-only" type="checkbox"/>
+</label>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Action Button -->
+<button class="fixed bottom-24 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-2xl">add</span>
+</button>
+<!-- Bottom Navigation Bar (Modified from component list) -->
+<nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white dark:bg-background-dark border-t border-primary/10">
+<div class="flex items-center justify-around py-2 px-4">
+<a class="flex flex-col items-center gap-1 px-4 py-1 text-primary" href="#">
+<span class="material-symbols-outlined material-symbols-fill">car_rental</span>
+<p class="text-[10px] font-semibold uppercase tracking-widest">Fleet</p>
+</a>
+<a class="flex flex-col items-center gap-1 px-4 py-1 text-zinc-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+<p class="text-[10px] font-semibold uppercase tracking-widest">Stats</p>
+</a>
+<a class="flex flex-col items-center gap-1 px-4 py-1 text-zinc-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<p class="text-[10px] font-semibold uppercase tracking-widest">Bookings</p>
+</a>
+<a class="flex flex-col items-center gap-1 px-4 py-1 text-zinc-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<p class="text-[10px] font-semibold uppercase tracking-widest">Profile</p>
+</a>
+</div>
+<!-- iPhone Home Indicator area -->
+<div class="h-6 w-full flex justify-center items-end pb-2">
+<div class="h-1 w-32 bg-zinc-200 dark:bg-zinc-800 rounded-full"></div>
+</div>
+</nav>
+</div>
+</body></html>

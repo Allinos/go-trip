@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RideFlow Login &amp; Signup</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ea2a33",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#211111",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .ios-shadow {
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+        }
+        .otp-input:focus {
+            border-color: #ea2a33;
+            box-shadow: 0 0 0 1px #ea2a33;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen flex items-center justify-center font-display">
+<!-- Mobile Screen Wrapper (Phone Factor) -->
+<div class="relative w-full max-w-[430px] h-[932px] bg-white dark:bg-[#1a0f0f] overflow-hidden flex flex-col shadow-2xl md:rounded-[3rem] md:border-[8px] md:border-black">
+<!-- Status Bar Placeholder (iOS Style) -->
+<div class="flex justify-between items-center px-8 pt-12 pb-4">
+<span class="text-sm font-semibold dark:text-white">9:41</span>
+<div class="flex gap-1.5 items-center">
+<span class="material-symbols-outlined text-[18px] dark:text-white">signal_cellular_4_bar</span>
+<span class="material-symbols-outlined text-[18px] dark:text-white">wifi</span>
+<span class="material-symbols-outlined text-[18px] dark:text-white">battery_full</span>
+</div>
+</div>
+<!-- Top Navigation -->
+<div class="flex items-center px-4 py-2">
+<div class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-gray-800 dark:text-white">arrow_back_ios</span>
+</div>
+</div>
+<!-- Content Area -->
+<div class="flex-1 px-6 pt-4 flex flex-col">
+<!-- Brand Section -->
+<div class="mb-10">
+<div class="flex items-center gap-2 mb-2">
+<div class="bg-primary size-10 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[28px]">local_taxi</span>
+</div>
+<span class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">RideFlow</span>
+</div>
+<h1 class="text-3xl font-extrabold text-gray-900 dark:text-white mt-4">Welcome</h1>
+<p class="text-gray-500 dark:text-gray-400 mt-2 text-base">Enter your number to get moving.</p>
+</div>
+<!-- Login Form -->
+<div class="space-y-6">
+<!-- Phone Input Group -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-gray-700 dark:text-gray-300 ml-1">Mobile Number</label>
+<div class="flex gap-3">
+<div class="ios-shadow flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 px-4 py-4 rounded-xl cursor-pointer">
+<span class="text-base font-medium text-gray-900 dark:text-white">+91</span>
+<span class="material-symbols-outlined text-gray-400 text-sm">keyboard_arrow_down</span>
+</div>
+<div class="flex-1 ios-shadow bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl overflow-hidden focus-within:border-primary/50 transition-all">
+<input class="w-full px-4 py-4 border-none bg-transparent focus:ring-0 text-lg font-medium tracking-wide text-gray-900 dark:text-white placeholder:text-gray-400 placeholder:font-normal" placeholder="Enter phone number" type="tel"/>
+</div>
+</div>
+</div>
+<!-- OTP Section (Always visible for design purposes) -->
+<div class="flex flex-col gap-3 pt-2">
+<div class="flex justify-between items-center px-1">
+<label class="text-sm font-semibold text-gray-700 dark:text-gray-300">OTP Verification</label>
+<button class="text-sm font-medium text-primary hover:text-red-600">Resend code</button>
+</div>
+<div class="flex justify-between gap-3">
+<input class="otp-input w-full aspect-square text-center text-xl font-bold rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white focus:outline-none ios-shadow" maxlength="1" type="text" value="4"/>
+<input class="otp-input w-full aspect-square text-center text-xl font-bold rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white focus:outline-none ios-shadow" maxlength="1" type="text" value="2"/>
+<input class="otp-input w-full aspect-square text-center text-xl font-bold rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white focus:outline-none ios-shadow" maxlength="1" placeholder="•" type="text"/>
+<input class="otp-input w-full aspect-square text-center text-xl font-bold rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white focus:outline-none ios-shadow" maxlength="1" placeholder="•" type="text"/>
+</div>
+</div>
+<!-- Terms Checkbox -->
+<div class="flex items-start gap-3 pt-2">
+<div class="relative flex items-center mt-0.5">
+<input class="size-5 rounded border-gray-300 text-primary focus:ring-primary/20 cursor-pointer" id="terms" type="checkbox"/>
+</div>
+<label class="text-sm leading-snug text-gray-500 dark:text-gray-400" for="terms">
+                        By continuing, you agree to our <span class="text-primary font-medium">Terms of Service</span> and <span class="text-primary font-medium">Privacy Policy</span>.
+                    </label>
+</div>
+</div>
+<!-- Action Button Area -->
+<div class="mt-auto pb-10 space-y-6">
+<button class="w-full bg-primary hover:bg-red-600 active:scale-[0.98] text-white py-4 px-6 rounded-xl font-bold text-lg shadow-lg shadow-red-200 dark:shadow-none transition-all flex items-center justify-center gap-2">
+<span>Verify &amp; Login</span>
+<span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+<!-- Social Divider -->
+<div class="relative flex py-2 items-center">
+<div class="flex-grow border-t border-gray-200 dark:border-gray-800"></div>
+<span class="flex-shrink mx-4 text-xs font-semibold text-gray-400 uppercase tracking-widest">Or login with</span>
+<div class="flex-grow border-t border-gray-200 dark:border-gray-800"></div>
+</div>
+<!-- Social Buttons -->
+<div class="flex justify-center gap-6">
+<button class="size-14 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 ios-shadow border border-gray-100 dark:border-gray-700">
+<svg class="size-6" viewbox="0 0 24 24">
+<path d="M12.48 10.92v3.28h7.84c-.24 1.84-.909 3.292-2.09 4.313-1.091 1.02-2.727 2.01-6.15 2.01-5.545 0-10.14-4.512-10.14-10.05 0-5.538 4.595-10.05 10.14-10.05 3.03 0 5.25 1.2 6.84 2.76l2.31-2.31C18.57 1.2 15.84 0 12.48 0 6.545 0 1.5 5.045 1.5 11.025S6.545 22.05 12.48 22.05c3.545 0 6.315-1.185 8.415-3.4 2.16-2.16 2.82-5.175 2.82-7.53 0-.75-.06-1.44-.18-2.01H12.48z" fill="#4285F4"></path>
+</svg>
+</button>
+<button class="size-14 flex items-center justify-center rounded-full bg-black text-white ios-shadow">
+<svg class="size-6 fill-current" viewbox="0 0 24 24">
+<path d="M17.05 20.28c-.96 0-2.04-.6-3.23-.6-1.2 0-2.08.57-3.08.57-1.41 0-4.32-2.58-4.32-6.61 0-3.96 2.48-6.05 4.83-6.05 1.25 0 2.24.81 3.12.81s1.77-.81 3.27-.81c1.23 0 3.02.66 4.07 2.14-2.52 1.2-2.11 4.58.4 5.61-.83 2.08-1.92 4.13-4.11 4.13zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.15 2.23-1.66 4.07-3.74 4.25z"></path>
+</svg>
+</button>
+</div>
+</div>
+</div>
+<!-- Home Indicator (iOS Style) -->
+<div class="w-32 h-1.5 bg-black/20 dark:bg-white/20 rounded-full mx-auto mb-2"></div>
+</div>
+</body></html>

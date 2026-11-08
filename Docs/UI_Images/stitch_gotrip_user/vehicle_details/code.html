@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ea2a33",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#211111",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .ios-blur { backdrop-filter: blur(10px); background-color: rgba(255, 255, 255, 0.8); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100">
+<div class="relative flex min-h-screen flex-col max-w-[480px] mx-auto bg-white dark:bg-background-dark overflow-x-hidden pb-24">
+<!-- Top App Bar (Floating Overlay Style) -->
+<div class="fixed top-0 z-20 w-full max-w-[480px] flex items-center justify-between p-4 pointer-events-none">
+<button class="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-white/90 dark:bg-black/50 shadow-sm backdrop-blur-sm">
+<span class="material-symbols-outlined">arrow_back_ios_new</span>
+</button>
+<div class="flex gap-2 pointer-events-auto">
+<button class="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 dark:bg-black/50 shadow-sm backdrop-blur-sm">
+<span class="material-symbols-outlined">share</span>
+</button>
+<button class="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 dark:bg-black/50 shadow-sm backdrop-blur-sm">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+</div>
+</div>
+<!-- Image Gallery (Carousel) -->
+<div class="relative w-full aspect-[4/3] bg-gray-200 overflow-hidden">
+<div class="flex h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
+<div class="min-w-full h-full snap-start bg-cover bg-center" data-alt="Front view of a modern luxury car" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCznvItf6w3iVjSe4qVlzNsKEtLed7NdFfzZAdW94Q1WSp44i9JMg__kQAPYobL9Wx6irdc_YYjTdOQG8j-iz0jVWLMhP1VgIe1R9hDC-2KvHtawLlFY50RYes5dDzNdlg-_784NBrbkdAwEzdhJzi5tao1dDWX4ZF5maIq-ktJn96x2Tn1kMhB1kfd85aG9C75i7bdXfsnsInKqEyefJPTY7Ja5iPDRUR3VYkvgrm-iaj-hdqY2htYsE0JAw9Tr5pL3r9__ahyQs5v');"></div>
+<div class="min-w-full h-full snap-start bg-cover bg-center" data-alt="Interior dashboard and steering wheel of car" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB5s4u5sIVd64u66WxtIZMb7JOEXnBU0bYNYZ8JPnadRvLxA4iLozUerU47AyNmegVPbFv_d6KvBhmuIQL45f4QZQ1Lj6WRC71lbo32XJkCi6n_jNBUQtOiuQclUgprFpzetJX9uCBSvZXWjYK6EnhMAoZwQAtA3XZOllCF86UiX8UDg5LedstKZ2gFl7nn2CSpDe4WNEbJCUoz4s1Hy5svpdg5V-YzbzRoPRDwcbYC8DDc3PmrZFI51dGZ5uPXgPNQWd3NDK31YuGk');"></div>
+<div class="min-w-full h-full snap-start bg-cover bg-center" data-alt="Rear view and tail lights of the car" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCVQm0LuVzYNLPfCDpnymrHDjSxZE0AKOwBsVwgCldu-90YzLQ98RyozrzGCQ9Q0Zjy_d5aZm0rc2F4_tsxV5L1KLx56HuaZkJkVKBeEgwysgnAmQR0rizzF1nPEYcOgNApGQDXHUAcyrDCGRJzRVBfkCdZB5yasCa_ClYKpMc4yKRNoZJFnQgtaz5-eci4qNrvKukBs_Q4t2qF0nUYU8jjtZBoIo2Oz-SJ8AFnCtoTaDn0YU1uWBrSTS18DESzwbSK09ddRPf-rZ0M');"></div>
+</div>
+<div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+<div class="h-1.5 w-4 rounded-full bg-primary"></div>
+<div class="h-1.5 w-1.5 rounded-full bg-white/50"></div>
+<div class="h-1.5 w-1.5 rounded-full bg-white/50"></div>
+</div>
+</div>
+<!-- Vehicle Info Header -->
+<div class="px-5 pt-6 pb-4">
+<div class="flex justify-between items-start mb-2">
+<h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Tesla Model 3 Performance</h1>
+<div class="flex items-center gap-1 text-primary">
+<span class="text-lg font-bold">$85</span>
+<span class="text-xs text-gray-500 dark:text-gray-400 font-normal">/day</span>
+</div>
+</div>
+<div class="flex items-center gap-2 mb-4">
+<div class="flex items-center bg-yellow-400 text-white px-2 py-0.5 rounded text-xs font-bold">
+<span class="material-symbols-outlined text-[14px] mr-1">star</span>
+                    4.9
+                </div>
+<span class="text-sm text-gray-500 dark:text-gray-400">(128 Reviews) • San Francisco, CA</span>
+</div>
+<div class="flex gap-2 flex-wrap">
+<span class="px-3 py-1 bg-background-light dark:bg-white/10 rounded-full text-xs font-medium">Automatic</span>
+<span class="px-3 py-1 bg-background-light dark:bg-white/10 rounded-full text-xs font-medium">Electric</span>
+<span class="px-3 py-1 bg-background-light dark:bg-white/10 rounded-full text-xs font-medium">5 Seats</span>
+<span class="px-3 py-1 bg-background-light dark:bg-white/10 rounded-full text-xs font-medium">Full Self-Driving</span>
+</div>
+</div>
+<hr class="mx-5 border-gray-100 dark:border-white/5"/>
+<!-- Owner Card -->
+<div class="px-5 py-6">
+<h3 class="text-lg font-bold mb-4">Hosted by</h3>
+<div class="flex items-center justify-between bg-background-light/50 dark:bg-white/5 p-4 rounded-xl">
+<div class="flex items-center gap-3">
+<div class="relative h-12 w-12 rounded-full bg-gray-200 overflow-hidden ring-2 ring-white dark:ring-background-dark">
+<img alt="Owner Profile" class="h-full w-full object-cover" data-alt="Portrait of a friendly smiling car owner" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlmLvpIoRtRHM9ZNeuz9EiecZrI1VjhQkDbDflPJa0_04u7K59jJL6MKM9uzT_6RnhO_7UhLaLjnsbIPp6A4lxWmfKoNYvTYfkBryxcqT9-POC7k2hfaAcLYWFkXlwDe_RdWD-Vci64-u7_4YTn3BxKs1OXHN5VwxbOSdamML-4APtdVUYZ2uFhS_uics2c8yYh1T_wr1IxjKVpbnprhzgLJuX5xAbFkM2T61TidL9JArs_5emMynqx9pu3bcqvBCpO4OU7axzxIDT"/>
+<div class="absolute bottom-0 right-0 h-3.5 w-3.5 bg-green-500 border-2 border-white dark:border-background-dark rounded-full"></div>
+</div>
+<div>
+<div class="flex items-center gap-1">
+<p class="font-bold text-sm">Marcus Thompson</p>
+<span class="material-symbols-outlined text-blue-500 text-[16px]">verified</span>
+</div>
+<p class="text-xs text-gray-500 dark:text-gray-400">Owner since 2021 • Response rate: 98%</p>
+</div>
+</div>
+<button class="p-2 rounded-full border border-gray-200 dark:border-white/10">
+<span class="material-symbols-outlined text-gray-600 dark:text-gray-300">chat_bubble</span>
+</button>
+</div>
+</div>
+<!-- Vehicle Specs Grid -->
+<div class="px-5 py-4">
+<h3 class="text-lg font-bold mb-4">Vehicle Specifications</h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex items-center gap-3 p-3 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl">
+<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">bolt</span>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Range</p>
+<p class="text-sm font-bold">315 miles</p>
+</div>
+</div>
+<div class="flex items-center gap-3 p-3 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl">
+<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">speed</span>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Top Speed</p>
+<p class="text-sm font-bold">162 mph</p>
+</div>
+</div>
+<div class="flex items-center gap-3 p-3 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl">
+<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">settings_input_component</span>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Drivetrain</p>
+<p class="text-sm font-bold">Dual Motor AWD</p>
+</div>
+</div>
+<div class="flex items-center gap-3 p-3 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl">
+<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">calendar_today</span>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Year</p>
+<p class="text-sm font-bold">2023 Model</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Features -->
+<div class="px-5 py-6">
+<h3 class="text-lg font-bold mb-4">Features</h3>
+<div class="flex flex-wrap gap-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-green-500 text-[20px]">check_circle</span>
+<span class="text-sm">Heated Seats</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-green-500 text-[20px]">check_circle</span>
+<span class="text-sm">Panoramic Roof</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-green-500 text-[20px]">check_circle</span>
+<span class="text-sm">Premium Audio</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-green-500 text-[20px]">check_circle</span>
+<span class="text-sm">GPS Navigation</span>
+</div>
+</div>
+</div>
+<!-- Description -->
+<div class="px-5 py-4">
+<h3 class="text-lg font-bold mb-2">Description</h3>
+<p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                Experience the future of driving with this pristine 2023 Tesla Model 3 Performance. Perfect for business trips or weekend getaways. Includes Premium Connectivity for Netflix, YouTube, and Spotify while parked. Cleaned and sanitized before every trip.
+            </p>
+<button class="text-primary text-sm font-bold mt-2">Read more</button>
+</div>
+<!-- Reviews Section -->
+<div class="px-5 py-6">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold">Reviews (128)</h3>
+<button class="text-primary text-sm font-bold">See all</button>
+</div>
+<div class="space-y-6">
+<!-- Single Review -->
+<div class="border-b border-gray-100 dark:border-white/5 pb-6">
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center gap-2">
+<div class="h-8 w-8 rounded-full bg-gray-200 overflow-hidden">
+<img alt="Reviewer" class="h-full w-full object-cover" data-alt="Avatar of a male user reviewer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYPD0oaNcfWlY_rTFtVCIXLTJRccc1Q1Ow8pXCgzgfb_KJJFzLcIfY7HcNUJtWN9NtHs-oqIltXuB1CDGBSij4VVLCoa-dSAqxKnLjK7EIQVMZpnl2BHAjXbAlzGvE0_NrKLYcSOLCotTvpPkeMTXCr0gFrQvz9J6O4tZWYfSseIFWwuGoGKTcv93YY7fdo_d2E8XemFvPWd2uRQvJ5e3z49-687Y23OdRoMVAyHOj39aXrlnMeAZqIMBUiFMkWMWG2xMVzXfwcoMu"/>
+</div>
+<div>
+<p class="text-sm font-bold">James Wilson</p>
+<p class="text-[10px] text-gray-400 uppercase">Oct 2023</p>
+</div>
+</div>
+<div class="flex gap-0.5">
+<span class="material-symbols-outlined text-yellow-400 text-[16px] fill-[1]">star</span>
+<span class="material-symbols-outlined text-yellow-400 text-[16px] fill-[1]">star</span>
+<span class="material-symbols-outlined text-yellow-400 text-[16px] fill-[1]">star</span>
+<span class="material-symbols-outlined text-yellow-400 text-[16px] fill-[1]">star</span>
+<span class="material-symbols-outlined text-yellow-400 text-[16px] fill-[1]">star</span>
+</div>
+</div>
+<p class="text-sm text-gray-600 dark:text-gray-400">Fantastic car! Marcus was incredibly helpful with the handover. The Tesla was spotless and a joy to drive. Highly recommend.</p>
+</div>
+<!-- Single Review -->
+<div class="pb-6">
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center gap-2">
+<div class="h-8 w-8 rounded-full bg-gray-200 overflow-hidden">
+<img alt="Reviewer" class="h-full w-full object-cover" data-alt="Avatar of a female user reviewer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvvGZZSCWBX1M1pO4ZGCcPsbQECslzjzOZfeyGAp9eeVOjN5DPEHNkQRrIM1OmfCHvAHeuCAWRYxXpQ58f17XZXF5mKLvOQf7wmt6BTJlkxiBUoIG_QNo7mymLyRszrgnSBoUrG0mH4pNL6VqlpicFxwtXP22rr7psuRXRJzneTdVcaVLBXEPvvk5CEJTZ2R7Ftc_PPSXm7EyH7Ln4PdXRP2gGrHVuzLmskRG5ujogpwwjZHWl-2om2mSv-cIX77dS4qF1hEJuq8kd"/>
+</div>
+<div>
+<p class="text-sm font-bold">Elena Rodriguez</p>
+<p class="text-[10px] text-gray-400 uppercase">Sep 2023</p>
+</div>
+</div>
+<div class="flex gap-0.5">
+<span class="material-symbols-outlined text-yellow-400 text-[16px] fill-[1]">star</span>
+<span class="material-symbols-outlined text-yellow-400 text-[16px] fill-[1]">star</span>
+<span class="material-symbols-outlined text-yellow-400 text-[16px] fill-[1]">star</span>
+<span class="material-symbols-outlined text-yellow-400 text-[16px] fill-[1]">star</span>
+<span class="material-symbols-outlined text-yellow-400 text-[16px] fill-[1]">star</span>
+</div>
+</div>
+<p class="text-sm text-gray-600 dark:text-gray-400">Perfect rental experience. The battery was at 90% when I picked it up. Very smooth ride and great communication.</p>
+</div>
+</div>
+</div>
+<!-- Sticky Bottom Action Bar -->
+<div class="fixed bottom-0 z-30 w-full max-w-[480px] border-t border-gray-100 dark:border-white/10 ios-blur px-5 py-4 pb-8">
+<div class="flex items-center justify-between gap-4">
+<div class="flex flex-col">
+<p class="text-[10px] uppercase font-bold text-gray-400">Total for 3 days</p>
+<p class="text-xl font-bold text-gray-900 dark:text-white">$255.00</p>
+</div>
+<button class="flex-1 h-14 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/30 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+<span>Book Now</span>
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</body></html>

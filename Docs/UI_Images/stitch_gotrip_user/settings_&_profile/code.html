@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Settings &amp; Profile - RideFlow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ea2a33",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#211111",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100 antialiased">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden max-w-[480px] mx-auto shadow-2xl">
+<!-- Header / Top Bar -->
+<div class="flex items-center bg-white dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10 border-b border-gray-100 dark:border-gray-800">
+<div class="text-gray-800 dark:text-white flex size-12 shrink-0 items-center justify-start cursor-pointer">
+<span class="material-symbols-outlined">arrow_back_ios</span>
+</div>
+<h2 class="text-gray-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Profile &amp; Settings</h2>
+<div class="flex w-12 items-center justify-end">
+<button class="flex items-center justify-center rounded-full h-10 w-10 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<span class="material-symbols-outlined text-gray-800 dark:text-white">edit</span>
+</button>
+</div>
+</div>
+<!-- User Profile Section -->
+<div class="flex p-6 bg-white dark:bg-background-dark @container mb-2">
+<div class="flex w-full flex-col gap-6 items-center">
+<div class="flex gap-4 flex-col items-center">
+<div class="relative">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full min-h-28 w-28 border-4 border-primary/10" data-alt="Portrait of a smiling young man in a urban setting" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAGPXIX6QNhQMqlX16_H_TlksUH2gaK8_pxztkac_MEuR3y8hjay31WuRTthfc53NbcafR5u5FZxFvnDZAt506B9V3EHwHweZGwDrMQoskotujlRFseFWPsGSzxr_yUZB0CStcvuUoojq7c8MUop-yyw_RZ0S-J805tevQzfo2gpxaHVvzhT7kS6W0mYNB-6hxVwPfF6900xab4HfBJZeS7YanUM2tHHyJTfSG05-eJ9Fc2AGtwp91zJyyRQR9ylY5P3x8Di-nv5fpA");'>
+</div>
+<div class="absolute bottom-1 right-1 bg-primary text-white rounded-full p-1.5 border-2 border-white dark:border-background-dark">
+<span class="material-symbols-outlined text-[16px] leading-none block">verified</span>
+</div>
+</div>
+<div class="flex flex-col items-center justify-center">
+<p class="text-gray-900 dark:text-white text-[24px] font-bold leading-tight tracking-[-0.015em] text-center">Alex Thompson</p>
+<p class="text-gray-500 dark:text-gray-400 text-sm font-medium leading-normal text-center mt-0.5">+1 (555) 012-3456</p>
+<div class="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
+                            Gold Member
+                        </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Account Section -->
+<div class="bg-white dark:bg-background-dark mt-2">
+<h3 class="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest px-6 pb-2 pt-6">Account Settings</h3>
+<!-- Menu Item: Saved Locations -->
+<div class="flex items-center gap-4 bg-white dark:bg-background-dark px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors group">
+<div class="text-primary flex items-center justify-center rounded-xl bg-primary/10 shrink-0 size-11">
+<span class="material-symbols-outlined">home_pin</span>
+</div>
+<div class="flex-1">
+<p class="text-gray-900 dark:text-white text-base font-semibold leading-none">Saved Locations</p>
+<p class="text-gray-400 dark:text-gray-500 text-xs mt-1">Home, Work and other frequent spots</p>
+</div>
+<div class="shrink-0 text-gray-300 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</div>
+<div class="mx-6 border-b border-gray-100 dark:border-gray-800"></div>
+<!-- Menu Item: Ride History -->
+<div class="flex items-center gap-4 bg-white dark:bg-background-dark px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors group">
+<div class="text-primary flex items-center justify-center rounded-xl bg-primary/10 shrink-0 size-11">
+<span class="material-symbols-outlined">history</span>
+</div>
+<div class="flex-1">
+<p class="text-gray-900 dark:text-white text-base font-semibold leading-none">Ride History</p>
+<p class="text-gray-400 dark:text-gray-500 text-xs mt-1">View your past trips and receipts</p>
+</div>
+<div class="shrink-0 text-gray-300 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</div>
+<div class="mx-6 border-b border-gray-100 dark:border-gray-800"></div>
+<!-- Menu Item: Payments -->
+<div class="flex items-center gap-4 bg-white dark:bg-background-dark px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors group">
+<div class="text-primary flex items-center justify-center rounded-xl bg-primary/10 shrink-0 size-11">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+</div>
+<div class="flex-1">
+<p class="text-gray-900 dark:text-white text-base font-semibold leading-none">Payments</p>
+<p class="text-gray-400 dark:text-gray-500 text-xs mt-1">Manage cards and digital wallets</p>
+</div>
+<div class="shrink-0 text-gray-300 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- General Section -->
+<div class="bg-white dark:bg-background-dark mt-4">
+<h3 class="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest px-6 pb-2 pt-6">Support &amp; Info</h3>
+<!-- Menu Item: Help Center -->
+<div class="flex items-center gap-4 bg-white dark:bg-background-dark px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors group">
+<div class="text-primary flex items-center justify-center rounded-xl bg-primary/10 shrink-0 size-11">
+<span class="material-symbols-outlined">contact_support</span>
+</div>
+<div class="flex-1">
+<p class="text-gray-900 dark:text-white text-base font-semibold leading-none">Help Center</p>
+<p class="text-gray-400 dark:text-gray-500 text-xs mt-1">Get support and read FAQs</p>
+</div>
+<div class="shrink-0 text-gray-300 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</div>
+<div class="mx-6 border-b border-gray-100 dark:border-gray-800"></div>
+<!-- Menu Item: About -->
+<div class="flex items-center gap-4 bg-white dark:bg-background-dark px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors group">
+<div class="text-primary flex items-center justify-center rounded-xl bg-primary/10 shrink-0 size-11">
+<span class="material-symbols-outlined">info</span>
+</div>
+<div class="flex-1">
+<p class="text-gray-900 dark:text-white text-base font-semibold leading-none">About RideFlow</p>
+<p class="text-gray-400 dark:text-gray-500 text-xs mt-1">Version 4.12.0 (Build 942)</p>
+</div>
+<div class="shrink-0 text-gray-300 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- Logout Button Area -->
+<div class="px-6 py-10 bg-white dark:bg-background-dark">
+<button class="w-full flex items-center justify-center gap-2 rounded-xl py-4 bg-primary text-white font-bold transition-transform active:scale-95 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">logout</span>
+                Logout
+            </button>
+<p class="text-center text-gray-400 text-[10px] mt-6 font-medium uppercase tracking-[0.2em]">Designed with ❤️ in Seattle</p>
+</div>
+<!-- Bottom Navigation Spacer -->
+<div class="h-20 bg-white dark:bg-background-dark"></div>
+<!-- IOS Bottom Tab Bar -->
+<div class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 flex justify-around items-center pt-3 pb-6 px-4">
+<div class="flex flex-col items-center gap-1 text-gray-400">
+<span class="material-symbols-outlined">directions_car</span>
+<span class="text-[10px] font-medium">Rides</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-gray-400">
+<span class="material-symbols-outlined">confirmation_number</span>
+<span class="text-[10px] font-medium">Bookings</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-gray-400">
+<span class="material-symbols-outlined">notifications</span>
+<span class="text-[10px] font-medium">Alerts</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="text-[10px] font-bold">Profile</span>
+</div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,96 @@
+#!/bin/bash
+
+# Root folders
+mkdir -p app src assets scripts
+
+# -------------------------
+# Expo Router (app/)
+# -------------------------
+mkdir -p app/{\(auth\),\(tabs\),modal}
+
+touch app/_layout.js
+
+# Auth
+mkdir -p app/\(auth\)
+touch app/\(auth\)/{login.js,register.js,otp.js}
+
+# Tabs
+mkdir -p app/\(tabs\)/{ledger,billing,inventory,employees,reports,profile}
+touch app/\(tabs\)/_layout.js
+
+# Ledger
+touch app/\(tabs\)/ledger/{_layout.js,index.js,customers.js,suppliers.js,transactions.js}
+
+# Billing
+touch app/\(tabs\)/billing/{_layout.js,index.js,invoices.js,create-invoice.js}
+
+# Inventory
+touch app/\(tabs\)/inventory/{_layout.js,index.js,products.js,stock-history.js}
+
+# Employees
+touch app/\(tabs\)/employees/{_layout.js,index.js,roles.js,permissions.js}
+
+# Reports
+touch app/\(tabs\)/reports/{_layout.js,index.js,profit-loss.js,cashflow.js}
+
+# Profile
+touch app/\(tabs\)/profile/{_layout.js,index.js,settings.js,security.js}
+
+# Modals
+touch app/modal/{add-transaction.js,add-customer.js,add-product.js}
+
+# -------------------------
+# src/ (Feature-first)
+# -------------------------
+mkdir -p src/{features,components,api,data,store,hooks,theme,constants,utils,types,config}
+
+# Features
+for feature in ledger billing inventory employees reports auth
+do
+  mkdir -p src/features/$feature/{components,hooks}
+  touch src/features/$feature/{services.js,store.js,types.js}
+done
+
+# Shared components
+mkdir -p src/components/{ui,forms,lists,feedback}
+
+# API layer
+touch src/api/{client.js,endpoints.js,interceptors.js,errors.js}
+
+# Data layer (offline + sync)
+mkdir -p src/data/{database,repositories,sync}
+touch src/data/database/{schema.js,migrations.js,index.js}
+touch src/data/repositories/{ledger.repo.js,billing.repo.js,inventory.repo.js}
+touch src/data/sync/{sync-manager.js,background-tasks.js,conflict-resolver.js}
+
+# Global store
+touch src/store/{index.js,app.store.js,auth.store.js}
+
+# Hooks
+touch src/hooks/{useAuth.js,useNetwork.js,useSync.js}
+
+# Theme
+touch src/theme/{colors.js,spacing.js,typography.js,index.js}
+
+# Constants
+touch src/constants/{app.js,storage.js,roles.js,routes.js}
+
+# Utils
+touch src/utils/{currency.js,date.js,validators.js,logger.js}
+
+# Types
+touch src/types/{api.js,entities.js,navigation.js,common.js}
+
+# Config
+touch src/config/{env.js,feature-flags.js,app-config.js}
+
+# -------------------------
+# Assets & scripts
+# -------------------------
+mkdir -p assets/{fonts,images,icons}
+touch scripts/{generate-types.js,seed-db.js}
+
+# Root config files
+touch app.config.js babel.config.js tsconfig.json package.json README.md
+
+echo "✅ JS-based Expo Router fintech app structure created successfully"

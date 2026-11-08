@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RideFlow Partner - Ratings &amp; Reviews</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f55e5b",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#221010",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.unfilled {
+            font-variation-settings: 'FILL' 0;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-[#1c0d0d] dark:text-white antialiased">
+<!-- Main Container -->
+<div class="relative flex h-auto min-h-screen w-full flex-col max-w-md mx-auto shadow-2xl bg-white dark:bg-[#1a0c0c] overflow-x-hidden">
+<!-- Top Navigation -->
+<div class="flex items-center p-4 pb-2 justify-between sticky top-0 bg-white/80 dark:bg-[#1a0c0c]/80 backdrop-blur-md z-10 border-b border-primary/10">
+<div class="text-[#1c0d0d] dark:text-white flex size-12 shrink-0 items-center justify-start cursor-pointer">
+<span class="material-symbols-outlined">arrow_back</span>
+</div>
+<h2 class="text-[#1c0d0d] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Ratings &amp; Reviews</h2>
+<div class="size-12 flex items-center justify-end">
+<span class="material-symbols-outlined text-primary">info</span>
+</div>
+</div>
+<!-- Hero Rating Section -->
+<div class="flex flex-col items-center justify-center py-8 px-4 bg-gradient-to-b from-primary/5 to-transparent">
+<div class="relative flex items-center justify-center">
+<!-- Outer Progress Ring (Simulated with SVG) -->
+<svg class="w-32 h-32 transform -rotate-90">
+<circle class="text-primary/10" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-primary rounded-full" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" stroke-dasharray="364.4" stroke-dashoffset="36.4" stroke-width="8"></circle>
+</svg>
+<div class="absolute flex flex-col items-center">
+<span class="text-5xl font-black leading-none tracking-tighter text-[#1c0d0d] dark:text-white">4.8</span>
+<span class="text-xs font-bold text-primary uppercase tracking-widest mt-1">Excellent</span>
+</div>
+</div>
+<div class="flex gap-1 mt-6">
+<span class="material-symbols-outlined text-primary text-3xl">star</span>
+<span class="material-symbols-outlined text-primary text-3xl">star</span>
+<span class="material-symbols-outlined text-primary text-3xl">star</span>
+<span class="material-symbols-outlined text-primary text-3xl">star</span>
+<span class="material-symbols-outlined text-primary text-3xl unfilled">star_half</span>
+</div>
+<p class="mt-2 text-sm text-[#9b4c4b] dark:text-primary/70 font-medium">Based on 128 lifetime reviews</p>
+</div>
+<!-- Detailed Stats (Progress Bars) -->
+<div class="px-6 py-4 flex flex-col gap-3">
+<div class="grid grid-cols-[20px_1fr_40px] items-center gap-x-4">
+<span class="text-xs font-bold text-[#1c0d0d] dark:text-white">5</span>
+<div class="h-2 flex-1 rounded-full bg-primary/10 overflow-hidden">
+<div class="h-full bg-primary" style="width: 82%"></div>
+</div>
+<span class="text-xs text-right font-medium text-[#9b4c4b] dark:text-primary/60">82%</span>
+<span class="text-xs font-bold text-[#1c0d0d] dark:text-white">4</span>
+<div class="h-2 flex-1 rounded-full bg-primary/10 overflow-hidden">
+<div class="h-full bg-primary" style="width: 12%"></div>
+</div>
+<span class="text-xs text-right font-medium text-[#9b4c4b] dark:text-primary/60">12%</span>
+<span class="text-xs font-bold text-[#1c0d0d] dark:text-white">3</span>
+<div class="h-2 flex-1 rounded-full bg-primary/10 overflow-hidden">
+<div class="h-full bg-primary" style="width: 4%"></div>
+</div>
+<span class="text-xs text-right font-medium text-[#9b4c4b] dark:text-primary/60">4%</span>
+<span class="text-xs font-bold text-[#1c0d0d] dark:text-white">2</span>
+<div class="h-2 flex-1 rounded-full bg-primary/10 overflow-hidden">
+<div class="h-full bg-primary" style="width: 1%"></div>
+</div>
+<span class="text-xs text-right font-medium text-[#9b4c4b] dark:text-primary/60">1%</span>
+<span class="text-xs font-bold text-[#1c0d0d] dark:text-white">1</span>
+<div class="h-2 flex-1 rounded-full bg-primary/10 overflow-hidden">
+<div class="h-full bg-primary" style="width: 1%"></div>
+</div>
+<span class="text-xs text-right font-medium text-[#9b4c4b] dark:text-primary/60">1%</span>
+</div>
+</div>
+<!-- Performance Indicators -->
+<div class="px-4 py-6">
+<h3 class="text-[#1c0d0d] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] mb-4">Performance Indicators</h3>
+<div class="flex gap-4">
+<div class="flex-1 flex flex-col gap-1 rounded-xl p-4 bg-background-light dark:bg-primary/5 border border-primary/10">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-primary text-xl">check_circle</span>
+<p class="text-[#1c0d0d] dark:text-white/80 text-xs font-semibold uppercase tracking-wider">Acceptance</p>
+</div>
+<div class="flex items-baseline gap-2">
+<p class="text-[#1c0d0d] dark:text-white text-2xl font-black">98.4%</p>
+<span class="text-[#078807] text-xs font-bold flex items-center">
+<span class="material-symbols-outlined text-xs">arrow_upward</span>1%
+                        </span>
+</div>
+</div>
+<div class="flex-1 flex flex-col gap-1 rounded-xl p-4 bg-background-light dark:bg-primary/5 border border-primary/10">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-primary text-xl">cancel</span>
+<p class="text-[#1c0d0d] dark:text-white/80 text-xs font-semibold uppercase tracking-wider">Cancellation</p>
+</div>
+<div class="flex items-baseline gap-2">
+<p class="text-[#1c0d0d] dark:text-white text-2xl font-black">1.2%</p>
+<span class="text-primary text-xs font-bold flex items-center">
+<span class="material-symbols-outlined text-xs">arrow_downward</span>0.5%
+                        </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Passenger Feedback -->
+<div class="px-4 py-2 flex flex-col gap-4 mb-20">
+<div class="flex items-center justify-between">
+<h3 class="text-[#1c0d0d] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Passenger Feedback</h3>
+<button class="text-primary text-sm font-bold">View All</button>
+</div>
+<!-- Feedback Filter Chips -->
+<div class="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+<button class="px-4 py-1.5 bg-primary text-white rounded-full text-xs font-bold whitespace-nowrap">Latest</button>
+<button class="px-4 py-1.5 bg-background-light dark:bg-primary/10 text-[#9b4c4b] dark:text-primary rounded-full text-xs font-bold whitespace-nowrap">5 Stars</button>
+<button class="px-4 py-1.5 bg-background-light dark:bg-primary/10 text-[#9b4c4b] dark:text-primary rounded-full text-xs font-bold whitespace-nowrap">With Comments</button>
+</div>
+<!-- Feedback Cards -->
+<div class="flex flex-col gap-3">
+<!-- Card 1 -->
+<div class="flex flex-col gap-3 p-4 rounded-xl border border-primary/10 bg-white dark:bg-[#2a1414] shadow-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-black">JD</div>
+<div>
+<p class="text-sm font-bold text-[#1c0d0d] dark:text-white">John D.</p>
+<p class="text-[10px] text-[#9b4c4b] dark:text-primary/50 uppercase font-bold tracking-wider">Yesterday</p>
+</div>
+</div>
+<div class="flex gap-0.5">
+<span class="material-symbols-outlined text-primary text-base">star</span>
+<span class="material-symbols-outlined text-primary text-base">star</span>
+<span class="material-symbols-outlined text-primary text-base">star</span>
+<span class="material-symbols-outlined text-primary text-base">star</span>
+<span class="material-symbols-outlined text-primary text-base">star</span>
+</div>
+</div>
+<p class="text-sm text-[#1c0d0d] dark:text-white/90 leading-relaxed font-normal">
+                        Very smooth ride and clean car. John was professional and took the best route to avoid traffic. 10/10 service!
+                    </p>
+</div>
+<!-- Card 2 -->
+<div class="flex flex-col gap-3 p-4 rounded-xl border border-primary/10 bg-white dark:bg-[#2a1414] shadow-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-black">SW</div>
+<div>
+<p class="text-sm font-bold text-[#1c0d0d] dark:text-white">Sarah W.</p>
+<p class="text-[10px] text-[#9b4c4b] dark:text-primary/50 uppercase font-bold tracking-wider">2 days ago</p>
+</div>
+</div>
+<div class="flex gap-0.5">
+<span class="material-symbols-outlined text-primary text-base">star</span>
+<span class="material-symbols-outlined text-primary text-base">star</span>
+<span class="material-symbols-outlined text-primary text-base">star</span>
+<span class="material-symbols-outlined text-primary text-base">star</span>
+<span class="material-symbols-outlined text-primary text-base">star</span>
+</div>
+</div>
+<p class="text-sm text-[#1c0d0d] dark:text-white/90 leading-relaxed font-normal">
+                        Great music choice and arrived early! Super friendly driver. Made my commute much more pleasant.
+                    </p>
+</div>
+<!-- Card 3 -->
+<div class="flex flex-col gap-3 p-4 rounded-xl border border-primary/10 bg-white dark:bg-[#2a1414] shadow-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-black">MK</div>
+<div>
+<p class="text-sm font-bold text-[#1c0d0d] dark:text-white">Michael K.</p>
+<p class="text-[10px] text-[#9b4c4b] dark:text-primary/50 uppercase font-bold tracking-wider">Oct 24, 2023</p>
+</div>
+</div>
+<div class="flex gap-0.5">
+<span class="material-symbols-outlined text-primary text-base">star</span>
+<span class="material-symbols-outlined text-primary text-base">star</span>
+<span class="material-symbols-outlined text-primary text-base">star</span>
+<span class="material-symbols-outlined text-primary text-base">star</span>
+<span class="material-symbols-outlined text-primary text-base unfilled">star</span>
+</div>
+</div>
+<p class="text-sm text-[#1c0d0d] dark:text-white/90 leading-relaxed font-normal">
+                        Driving was a bit fast but we got there on time. Car was very comfortable.
+                    </p>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto flex gap-2 border-t border-primary/10 bg-white dark:bg-[#1a0c0c] px-4 pb-3 pt-2">
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-[#9b4c4b] dark:text-primary/60" href="#">
+<span class="material-symbols-outlined unfilled">home</span>
+<p class="text-xs font-bold leading-normal tracking-[0.015em]">Home</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-[#9b4c4b] dark:text-primary/60" href="#">
+<span class="material-symbols-outlined unfilled">account_balance_wallet</span>
+<p class="text-xs font-bold leading-normal tracking-[0.015em]">Earnings</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-[#1c0d0d] dark:text-white" href="#">
+<span class="material-symbols-outlined text-primary">star</span>
+<p class="text-xs font-bold leading-normal tracking-[0.015em]">Ratings</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-[#9b4c4b] dark:text-primary/60" href="#">
+<span class="material-symbols-outlined unfilled">person</span>
+<p class="text-xs font-bold leading-normal tracking-[0.015em]">Account</p>
+</a>
+</div>
+</div>
+</body></html>

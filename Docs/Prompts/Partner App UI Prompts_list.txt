@@ -1,0 +1,134 @@
+Design a modern, scalable Android mobile application UI for a Partner / Driver / Service Provider App for a Taxi & Vehicle Rental platform.
+
+The app should be simple, functional, and distraction-free, optimized for drivers and vehicle owners who need quick actions and clear information.
+
+The UI should visually align with the Passenger App (RideFlow) using a RedBus-inspired red & white theme, while remaining original.
+
+Follow Material Design 3 guidelines and optimize for Expo React Native development.
+
+App Name
+
+RideFlow Partner
+Color & Visual Style
+Primary Color: Red
+Secondary Color: White
+Accent Color: Dark Gray / Black
+Success Color: Green
+Warning Color: Orange
+Error Color: Dark Red
+Background: White with light gray sections
+Fonts: Inter / Roboto
+Card-based UI with subtle elevation
+Rounded corners (12–16px)
+
+
+
+
+Screens to Design:
+
+
+1.Splash Screen:
+App logo centered
+Tagline: “Drive. Earn. Grow.”
+
+
+
+2.Login & Verification:
+2.1. screen 1 :
+Phone number login with OTP
+2.2. screen 2 :
+Driver / Partner type selection:
+Taxi Driver
+Bike Rider
+Vehicle Owner (Rental)
+2.3. screen 3 :
+Document upload:
+Driving License
+Vehicle RC
+Insurance
+Verification status indicator (Pending / Approved / Rejected)
+
+
+3.Home Dashboard:
+Online / Offline toggle (top)
+Today’s summary cards:
+Active rides
+Bookings
+Earnings
+Quick actions:
+Create Ride
+View Bookings
+Notifications icon
+
+4.Create Ride / Listing:
+Vehicle selection
+Pickup location
+Drop location
+Date & time
+Available seats
+Price per seat
+Create / Publish ride button
+
+5.Ride Requests & Bookings:
+Incoming booking requests list
+Passenger name & seat count
+Ride date & time
+Accept / Reject buttons
+Seat availability auto-update
+
+6.Active Ride Screen:
+Ride status indicator
+Passenger list
+Start / End ride buttons
+Live location sharing status
+Navigation button
+
+7.Rent Vehicle Management:
+List of registered vehicles
+Add / edit vehicle:
+Photos
+Model
+Number plate
+Rental price
+Availability toggle (On / Off)
+
+
+8.Earnings Screen:
+Today / Weekly / Monthly earnings
+Completed rides count
+Pending payouts
+Transaction history
+Download report button
+
+
+9.Ratings & Reviews:
+Overall rating
+Passenger feedback list
+Performance indicators
+
+10.Profile & Settings:
+Driver / Partner profile
+Uploaded documents
+Bank / payout details
+Language preference
+Help & support
+FAQs
+Contact admin support
+Report ride or payment issue
+Logout
+
+
+
+UX REQUIREMENTS:
+Large touch-friendly buttons (driver-safe)
+Minimal steps for critical actions
+Clear status indicators
+Confirmation dialogs for important actions
+Offline state handling
+Smooth animations & transitions
+
+OUTPUT EXPECTATIONS:
+High-fidelity UI mockups
+Consistent spacing & typography
+Component-based layout
+Ready for Android development using Expo React Native
