@@ -1,23 +1,19 @@
-import React from "react";
-import { ThemeProvider } from "./src/context/ThemeContext";
-// import SplashScreen from "./src/screens/SplashScreen";
-
-import AppNavigator from "./src/navigation/AppNavigator";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { ToastProvider } from "context/ToastContext";
+import React from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AuthProvider } from './src/context/AuthContext';
+import { ToastProvider } from './src/context/ToastContext';
+import RootNavigator from './src/navigation/RootNavigator';
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <SafeAreaProvider>
-        <ToastProvider>
-          <AppNavigator />
-        </ToastProvider>
-      </SafeAreaProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <StatusBar style="dark" />
+          <RootNavigator />
+        </AuthProvider>
+      </ToastProvider>
+    </SafeAreaProvider>
   );
-}
-
-{
-  /* <SplashScreen /> */
 }

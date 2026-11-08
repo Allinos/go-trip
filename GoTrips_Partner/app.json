@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "GoTrips_Partner",
-    "slug": "GoTrips_Partner",
+    "name": "GoTrip Partner",
+    "slug": "gotrip-partner",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,7 +12,13 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "in.gotrip.partner",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "GoTrip shares your live location with passengers who booked your trip.",
+        "NSCameraUsageDescription": "Take photos of your documents and vehicle.",
+        "NSPhotoLibraryUsageDescription": "Choose photos of your documents and vehicle."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -20,13 +26,44 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "package": "in.gotrip.partner",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "@react-native-community/datetimepicker"
-    ]
+      "@react-native-community/datetimepicker",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "color": "#EF4444"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "GoTrip shares your live location with passengers who booked your trip."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose photos of your documents and vehicle.",
+          "cameraPermission": "Take photos of your documents and vehicle."
+        }
+      ]
+    ],
+    "scheme": "gotrippartner",
+    "extra": {
+      "apiUrl": "http://10.0.2.2:3000/api/v1"
+    }
   }
 }

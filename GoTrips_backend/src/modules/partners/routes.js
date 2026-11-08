@@ -269,7 +269,7 @@ router.get('/dashboard', requireActivePartner, async (req, res) => {
       },
       contacts: { callsLast30Days: calls30 },
       driverProfile: profile,
-      pendingRequests: pendingRequests.map((b) => ({ id: b.id, code: b.code, seats: b.seats, pickupName: b.pickupName, dropName: b.dropName, passengerName: b.passengerName, fareEstimate: b.fareEstimate, departureAt: b.trip.departureAt, createdAt: b.createdAt })),
+      pendingRequests: pendingRequests.map((b) => ({ id: b.id, code: b.code, seats: b.seats, pickupName: b.pickupName, dropName: b.dropName, passengerName: b.passengerName, passengerPhone: b.passengerPhone, note: b.note, fareEstimate: b.fareEstimate, departureAt: b.trip.departureAt, createdAt: b.createdAt })),
     },
   });
 });
