@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, UserCheck, Car, Route, CalendarCheck, CreditCard, LifeBuoy, Settings, Layers, MapPin, HelpCircle, Shield, ScrollText, Menu, LogOut, Truck, IdCard } from 'lucide-react';
+import { LayoutDashboard, Users, UserCheck, Car, Route, CalendarCheck, CreditCard, LifeBuoy, Settings, Layers, MapPin, HelpCircle, Shield, ScrollText, Menu, LogOut, Truck, IdCard, Star } from 'lucide-react';
 import { useAdmin, can } from '../App';
 import { useGet } from '../lib/hooks';
 import { label } from '../lib/format';
@@ -72,6 +72,9 @@ export default function Layout({ children }) {
           </Item>
           <Item to="/bookings" icon={CalendarCheck}>
             Bookings
+          </Item>
+          <Item to="/reviews" icon={Star}>
+            Reviews
           </Item>
           <Item to="/payments" icon={CreditCard}>
             Payments

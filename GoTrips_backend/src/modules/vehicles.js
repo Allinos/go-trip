@@ -290,7 +290,7 @@ const publicWhere = {
   partner: { accountStatus: 'active', user: { status: 'active' } },
 };
 
-const contactSelect = { id: true, businessName: true, whatsappPhone: true, alternatePhone: true, verificationStatus: true, district: true, city: true, user: { select: { fullName: true, phone: true, photoKey: true } } };
+const contactSelect = { id: true, ratingAvg: true, ratingCount: true, businessName: true, whatsappPhone: true, alternatePhone: true, verificationStatus: true, district: true, city: true, user: { select: { fullName: true, phone: true, photoKey: true } } };
 
 async function partnerContact(p, loggedIn) {
   return {
@@ -304,6 +304,7 @@ async function partnerContact(p, loggedIn) {
     phone: loggedIn ? p.user.phone : null,
     whatsappPhone: loggedIn ? p.whatsappPhone || p.user.phone : null,
     loginRequired: !loggedIn,
+    rating: p.ratingCount ? { average: p.ratingAvg, count: p.ratingCount } : null,
   };
 }
 

@@ -8,6 +8,22 @@ const { imageUpload } = require('../middleware/upload');
 const { notFound, badRequest } = require('../lib/errors');
 const { paginate, pageMeta } = require('../lib/util');
 const { writeLimiter } = require('../middleware/rateLimit');
+const { langOf } = require('../lib/i18n');
+const messages = require('../services/messages');
+
+/** Show stored notifications in the language the user reads the app in now, not the one at send time. */
+function localNotification(n, lang) {
+  const { _k: key, _v: vars, ...data } = n.data || {};
+  let { title, body } = n;
+  if (key && messages.has(key)) {
+    try {
+      ({ title, body } = messages.render(key, lang, vars));
+    } catch {
+      /* keep the stored text */
+    }
+  }
+  return { ...n, title, body, data };
+}
 
 async function serializeUser(u) {
   if (!u) return null;
@@ -111,7 +127,8 @@ router.get('/notifications', validate({ query: appQuery }), async (req, res) => 
     prisma.notification.count({ where }),
     prisma.notification.count({ where: { ...where, readAt: null } }),
   ]);
-  res.json({ success: true, data: items, meta: { ...pageMeta(page, limit, total), unread } });
+  const lang = langOf(req);
+  res.json({ success: true, data: items.map((n) => localNotification(n, lang)), meta: { ...pageMeta(page, limit, total), unread } });
 });
 
 router.get('/notifications/unread-count', validate({ query: appQuery }), async (req, res) => {

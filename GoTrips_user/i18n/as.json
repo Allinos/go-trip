@@ -819,5 +819,17 @@
  "{0}. Fix it and save or re-upload documents to resubmit.": "{0}। ঠিক কৰি সংৰক্ষণ কৰক বা নথিপত্ৰ পুনৰ আপলোড কৰি জমা দিয়ক।",
  "{0}/day": "{0}/দিন",
  "{0}/hr": "{0}/ঘণ্টা",
- "✓ Verified only": "✓ কেৱল পৰীক্ষিত"
+ "✓ Verified only": "✓ কেৱল পৰীক্ষিত",
+  "Please log in to continue": "আগবাঢ়িবলৈ অনুগ্ৰহ কৰি লগ ইন কৰক",
+ "Rated {0} out of 5": "৫ ৰ ভিতৰত {0} মূল্যায়ন",
+ "{0} star(s)": "{0} টা তৰা",
+ "Your rating": "আপোনাৰ মূল্যায়ন",
+ "How was your trip?": "আপোনাৰ যাত্ৰা কেনে আছিল?",
+ "Tell other passengers about the driver (optional)": "চালকৰ বিষয়ে অন্য যাত্ৰীক জনাওক (ঐচ্ছিক)",
+ "Submit rating": "মূল্যায়ন দাখিল কৰক",
+ "Anywhere": "যিকোনো ঠাই",
+ "{0} → {1}, {2} at {3}. {4} per seat. Find it in the GoTrip app.": "{0} → {1}, {2}, {3}ত। প্ৰতি আসন {4}। GoTrip এপত বিচাৰক।",
+ "Share": "শ্বেয়াৰ কৰক",
+ "New on GoTrip": "GoTrip ত নতুন",
+ "WHAT PASSENGERS SAY": "যাত্ৰীসকলে কি কয়"
 }

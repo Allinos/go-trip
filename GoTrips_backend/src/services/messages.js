@@ -40,6 +40,18 @@ const T = {
     en: (v) => ({ title: 'Your trip has started', body: `The vehicle for ${v.pickup} → ${v.drop} is on its way. Open the booking to see the driver's shared location.` }),
     as: (v) => ({ title: 'আপোনাৰ যাত্ৰা আৰম্ভ হৈছে', body: `${v.pickup} → ${v.drop} যাত্ৰাৰ গাড়ীখন ৰাওনা হৈছে। চালকৰ লাইভ অৱস্থান চাবলৈ বুকিংটো খোলক।` }),
   },
+  trip_updated: {
+    en: (v) => ({ title: 'Trip details changed', body: `The driver changed your trip ${v.pickup} → ${v.drop} (booking ${v.code}): ${v.changes === 'time' ? `it now departs ${when(v.at, 'en')}` : v.changes === 'fare' ? 'the fare changed' : `it now departs ${when(v.at, 'en')} and the fare changed`}. Open the booking for details.` }),
+    as: (v) => ({ title: 'যাত্ৰাৰ তথ্য সলনি হৈছে', body: `চালকে আপোনাৰ ${v.pickup} → ${v.drop} যাত্ৰা (বুকিং ${v.code}) সলনি কৰিছে: ${v.changes === 'time' ? `এতিয়া ${when(v.at, 'as')}ত ৰাওনা হ’ব` : v.changes === 'fare' ? 'ভাড়া সলনি হৈছে' : `এতিয়া ${when(v.at, 'as')}ত ৰাওনা হ’ব আৰু ভাড়া সলনি হৈছে`}। বিৱৰণৰ বাবে বুকিংটো খোলক।` }),
+  },
+  booking_expired: {
+    en: (v) => ({ title: 'Booking request not answered', body: `The driver did not respond to your request ${v.pickup} → ${v.drop} and the trip has left. Please book another trip.` }),
+    as: (v) => ({ title: 'বুকিং অনুৰোধৰ উত্তৰ নাপালে', body: `${v.pickup} → ${v.drop} যাত্ৰাৰ অনুৰোধৰ চালকে উত্তৰ নিদিলে আৰু যাত্ৰাটো ৰাওনা হৈছে। অনুগ্ৰহ কৰি অন্য যাত্ৰা বুক কৰক।` }),
+  },
+  vehicle_suspended: {
+    en: (v) => ({ title: 'Vehicle suspended', body: `${v.vehicle} was suspended: ${v.reason}. Its upcoming trips no longer take bookings. Contact support for help.`, sms: `GoTrip: Your vehicle ${v.reg} was suspended (${v.reason}). Contact support.` }),
+    as: (v) => ({ title: 'বাহন স্থগিত', body: `${v.vehicle} স্থগিত কৰা হৈছে: ${v.reason}। ইয়াৰ আগন্তুক যাত্ৰাত আৰু বুকিং লোৱা নহ’ব। সহায়ৰ বাবে চাপোৰ্টৰ সৈতে যোগাযোগ কৰক।`, sms: `GoTrip: আপোনাৰ বাহন ${v.reg} স্থগিত কৰা হৈছে (${v.reason})। চাপোৰ্টৰ সৈতে যোগাযোগ কৰক।` }),
+  },
   registration_complete: {
     en: (v) => ({
       title: 'Registration complete',
@@ -107,4 +119,6 @@ function render(key, lang, vars) {
   return (t[lang] || t.en)(vars || {});
 }
 
-module.exports = { render, OTP_SMS, asNum };
+const has = (key) => !!T[key];
+
+module.exports = { render, has, OTP_SMS, asNum };

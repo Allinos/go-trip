@@ -65,6 +65,7 @@ export default function AccountScreen({ navigation }) {
 
         <Group title={t("Business")}>
           {caps.driver && <MenuItem icon="person-circle" title={t("Marketplace profile")} sub={t("What customers see")} onPress={() => navigation.navigate('DriverProfile')} />}
+          {caps.trips && <MenuItem icon="star" title={t("Ratings & reviews")} sub={t("What passengers say about you")} onPress={() => navigation.navigate('Reviews')} />}
           <MenuItem icon="stats-chart" title={t("Earnings & history")} sub={t("Estimated from your bookings")} onPress={() => navigation.navigate('Earnings')} />
           {caps.trips && <MenuItem icon="navigate" title={t("Share live location")} onPress={() => navigation.navigate('LocationShare')} />}
           {goodsOn && <MenuItem icon="cube" title={t("Goods transport orders")} onPress={() => navigation.navigate('GoodsOrders')} />}

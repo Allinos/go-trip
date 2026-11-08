@@ -8,6 +8,7 @@ import { useToast } from '../../context/ToastContext';
 import { font } from '../../theme';
 import { dateTimeLabel, rupees } from '../../utils/format';
 import { t } from '../../i18n';
+import { Stars } from '../account/ReviewsScreen';
 
 export default function BookingDetailScreen({ navigation, route }) {
   const { id } = route.params;
@@ -47,6 +48,13 @@ export default function BookingDetailScreen({ navigation, route }) {
         {b.note ? <KV label={t("Message")} value={b.note} /> : null}
         {b.statusReason ? <KV label={t("Reason")} value={b.statusReason} /> : null}
       </Card>
+      {b.review && (
+        <Card style={{ marginBottom: 16 }}>
+          <Text style={[font.h3, { marginBottom: 6 }]}>{t("Passenger's rating")}</Text>
+          <Stars value={b.review.rating} size={18} />
+          {b.review.comment ? <Text style={[font.body, { marginTop: 6 }]}>“{b.review.comment}”</Text> : null}
+        </Card>
+      )}
       <Card style={{ marginBottom: 16 }} onPress={() => navigation.navigate('TripDetail', { id: b.trip.id })}>
         <Text style={font.small}>{t("TRIP")}</Text>
         <Text style={font.h3}>

@@ -6,6 +6,7 @@ import { COLORS, TYPOGRAPHY, VEHICLE_LABELS } from '../constants';
 import { dateLabel, rupees, timeLabel } from '../utils/format';
 import { t } from '../i18n';
 import CachedImage from './CachedImage';
+import { RatingPill } from './Stars';
 
 export function TripCard({ trip, onPress }) {
   const m = trip.match;
@@ -15,6 +16,7 @@ export function TripCard({ trip, onPress }) {
         <Row gap={6}>
           <Pill text={trip.tripType === 'return' ? t("Return trip") : t("Trip")} color={trip.tripType === 'return' ? COLORS.info : COLORS.primary} bg={trip.tripType === 'return' ? '#EFF6FF' : COLORS.primaryLight} />
           {trip.driver?.isVerified && <Pill text={t("Verified")} icon="verified" color={COLORS.success} bg="#ECFDF5" />}
+          <RatingPill rating={trip.driver?.rating} />
         </Row>
         <Text style={[TYPOGRAPHY.h4, { color: COLORS.primary }]}>{rupees(m?.farePerSeat ?? trip.pricePerSeat)}</Text>
       </Row>

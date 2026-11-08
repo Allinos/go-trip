@@ -16,9 +16,9 @@ const DOC_LABEL = { driving_license: 'Driving licence', aadhaar: 'Aadhaar', pan:
 export default function DriverProfile() {
   const { id } = useLocalSearchParams();
   const requireLogin = useRequireLogin();
-  const { data: d, error, loading, reload } = useFetch(() => marketplaceAPI.driver(id), [id], { cacheKey: `driver:${id}` });
+  const { data: d, error, errorStatus, loading, reload } = useFetch(() => marketplaceAPI.driver(id), [id], { cacheKey: `driver:${id}` });
   if (loading) return (<><Header title={t("Driver")} /><Loading /></>);
-  if (error) return (<><Header title={t("Driver")} /><ErrorView message={error} onRetry={reload} /></>);
+  if (error) return (<><Header title={t("Driver")} /><ErrorView message={error} status={errorStatus} onRetry={reload} /></>);
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.surface }}>
       <Header title={t("Driver profile")} />

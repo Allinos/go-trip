@@ -74,8 +74,9 @@ userRouter.post(
   validate({ body: z.object({ tripId: z.coerce.number().int().positive(), seats: z.coerce.number().int().min(1).max(20), pickupSeq: z.coerce.number().int().min(0), dropSeq: z.coerce.number().int().min(1), passengerName: optText(100), note: optText(300) }) }),
   async (req, res) => {
     const b = req.body;
-    const trip = await prisma.trip.findFirst({ where: { id: b.tripId }, include: { stops: true, partner: { select: { id: true, userId: true, accountStatus: true } } } });
+    const trip = await prisma.trip.findFirst({ where: { id: b.tripId }, include: { stops: true, vehicle: { select: { verificationStatus: true } }, partner: { select: { id: true, userId: true, accountStatus: true } } } });
     if (!trip || trip.partner.accountStatus !== 'active') throw notFound('Trip');
+    if (trip.vehicle.verificationStatus !== 'approved') throw badRequest('This trip is no longer accepting bookings', undefined, 'TRIP_CLOSED');
     if (trip.partner.userId === req.user.id) throw badRequest('You cannot book your own trip');
     if (trip.status !== 'scheduled' || !trip.bookingOpen || trip.departureAt < new Date()) throw badRequest('This trip is no longer accepting bookings', undefined, 'TRIP_CLOSED');
     if (b.seats > trip.availableSeats) throw badRequest(trip.availableSeats ? `Only ${trip.availableSeats} seat(s) left` : 'This trip is full', undefined, 'NOT_ENOUGH_SEATS');
@@ -127,13 +128,14 @@ userRouter.get('/', validate({ query: z.object({ status: z.enum(STATUSES).option
 });
 
 userRouter.get('/:id', validate({ params: idParam }), async (req, res) => {
-  const b = await prisma.booking.findFirst({ where: { id: req.params.id, userId: req.user.id }, include: { trip: { include: { ...tripInclude, partner: { select: contactSelect } } } } });
+  const b = await prisma.booking.findFirst({ where: { id: req.params.id, userId: req.user.id }, include: { review: true, trip: { include: { ...tripInclude, partner: { select: contactSelect } } } } });
   if (!b) throw notFound('Booking');
   const live = ['accepted'].includes(b.status) && ['scheduled', 'ongoing'].includes(b.trip.status) ? await sharedLocation(b.partnerId, b.tripId) : null;
   const trip = await serializeTrip(b.trip, { loggedIn: true });
   // Confirmed passengers see the full number plate so they can check the vehicle before boarding.
   if (['accepted', 'completed'].includes(b.status)) trip.vehicle.registrationNumber = b.trip.vehicle.registrationNumber;
-  res.json({ success: true, data: { ...serializeBooking(b), trip, liveLocation: live } });
+  const review = b.review ? { rating: b.review.rating, comment: b.review.comment, updatedAt: b.review.updatedAt } : null;
+  res.json({ success: true, data: { ...serializeBooking(b), trip, liveLocation: live, review, canReview: b.status === 'completed' } });
 });
 
 userRouter.get('/:id/location', validate({ params: idParam }), async (req, res) => {
@@ -143,9 +145,10 @@ userRouter.get('/:id/location', validate({ params: idParam }), async (req, res) 
 });
 
 userRouter.post('/:id/cancel', validate({ params: idParam, body: z.object({ reason: optText(255) }) }), async (req, res) => {
-  const b = await prisma.booking.findFirst({ where: { id: req.params.id, userId: req.user.id }, include: { partner: { select: { userId: true } } } });
+  const b = await prisma.booking.findFirst({ where: { id: req.params.id, userId: req.user.id }, include: { partner: { select: { userId: true } }, trip: { select: { status: true } } } });
   if (!b) throw notFound('Booking');
   if (!['pending', 'accepted'].includes(b.status)) throw badRequest('This booking cannot be cancelled');
+  if (b.trip.status !== 'scheduled') throw badRequest('The trip has already started. Please call the driver.', undefined, 'TRIP_STARTED');
   const updated = await prisma.$transaction(async (tx) => {
     const r = await tx.booking.updateMany({ where: { id: b.id, status: b.status }, data: { status: 'cancelled', cancelledBy: 'user', statusReason: req.body.reason || 'Cancelled by passenger' } });
     if (r.count !== 1) throw conflict('Booking status changed. Please refresh.');
@@ -173,14 +176,15 @@ partnerRouter.get('/', validate({ query: z.object({ status: z.enum(STATUSES).opt
 });
 
 async function ownBooking(req) {
-  const b = await prisma.booking.findFirst({ where: { id: req.params.id, partnerId: req.partner.id }, include: { trip: { include: tripInclude } } });
+  const b = await prisma.booking.findFirst({ where: { id: req.params.id, partnerId: req.partner.id }, include: { review: true, trip: { include: tripInclude } } });
   if (!b) throw notFound('Booking');
   return b;
 }
 
 partnerRouter.get('/:id', validate({ params: idParam }), async (req, res) => {
   const b = await ownBooking(req);
-  res.json({ success: true, data: { ...serializeBooking(b), trip: await serializeTrip(b.trip, { owner: true }) } });
+  const review = b.review && !b.review.isHidden ? { rating: b.review.rating, comment: b.review.comment } : null;
+  res.json({ success: true, data: { ...serializeBooking(b), trip: await serializeTrip(b.trip, { owner: true }), review } });
 });
 
 partnerRouter.post('/:id/accept', validate({ params: idParam }), async (req, res) => {

@@ -819,5 +819,13 @@
  "{0}. Fix it and save or re-upload documents to resubmit.": "{0}। ঠিক কৰি সংৰক্ষণ কৰক বা নথিপত্ৰ পুনৰ আপলোড কৰি জমা দিয়ক।",
  "{0}/day": "{0}/দিন",
  "{0}/hr": "{0}/ঘণ্টা",
- "✓ Verified only": "✓ কেৱল পৰীক্ষিত"
+ "✓ Verified only": "✓ কেৱল পৰীক্ষিত",
+ "Repeat this trip": "এই যাত্ৰাটো পুনৰ প্ৰকাশ কৰক",
+ "Ratings & reviews": "মূল্যায়ন আৰু মতামত",
+ "What passengers say about you": "যাত্ৰীসকলে আপোনাৰ বিষয়ে কি কয়",
+ "{0} rating(s)": "{0}টা মূল্যায়ন",
+ "No ratings yet. Passengers can rate you after a completed trip.": "এতিয়ালৈকে কোনো মূল্যায়ন নাই। যাত্ৰা সম্পূৰ্ণ হোৱাৰ পিছত যাত্ৰীসকলে আপোনাক মূল্যায়ন কৰিব পাৰে।",
+ "Rating": "মূল্যায়ন",
+ "No ratings yet": "এতিয়ালৈকে মূল্যায়ন নাই",
+ "Passenger's rating": "যাত্ৰীৰ মূল্যায়ন"
 }

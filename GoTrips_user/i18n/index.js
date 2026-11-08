@@ -39,6 +39,7 @@ export async function loadLang() {
 }
 
 export async function setLang(v) {
+  if (v === lang) return; // tapping the current language must not reload everything
   lang = v;
   listeners.forEach((f) => f(v));
   try {

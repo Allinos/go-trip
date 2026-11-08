@@ -1,6 +1,6 @@
 import { ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button, Card, Header, KV } from '../../components/ui';
+import { Button, Card, Header, KV, LoginPrompt } from '../../components/ui';
 import useAuthStore from '../../store/authStore';
 import { COLORS, SPACING, TYPOGRAPHY } from '../../constants';
 import { fullDate, titleCase } from '../../utils/format';
@@ -9,7 +9,13 @@ import { t } from '../../i18n';
 export default function ProfileScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  if (!user) return <Header title={t("Profile")} />;
+  if (!user)
+    return (
+      <View style={{ flex: 1, backgroundColor: COLORS.surface }}>
+        <Header title={t("Profile")} />
+        <LoginPrompt />
+      </View>
+    );
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.surface }}>
       <Header title={t("My profile")} />

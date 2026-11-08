@@ -14,7 +14,7 @@ export default function BookingsScreen() {
   const router = useRouter();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [when, setWhen] = useState('upcoming');
-  const { data, error, loading, refreshing, reload, refresh } = useFetch(() => bookingAPI.list({ when, limit: 50 }), [when, isAuthenticated], { enabled: isAuthenticated, cacheKey: `bookings:${when}` });
+  const { data, error, errorStatus, loading, refreshing, reload, refresh } = useFetch(() => bookingAPI.list({ when, limit: 50 }), [when, isAuthenticated], { enabled: isAuthenticated, cacheKey: `bookings:${when}` });
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: COLORS.surface }}>
@@ -30,7 +30,7 @@ export default function BookingsScreen() {
           {loading ? (
             <Loading />
           ) : error ? (
-            <ErrorView message={error} onRetry={reload} />
+            <ErrorView message={error} status={errorStatus} onRetry={reload} />
           ) : (
             <FlatList
               data={data}

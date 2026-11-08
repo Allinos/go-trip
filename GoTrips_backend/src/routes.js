@@ -11,6 +11,7 @@ const marketplace = require('./modules/marketplace');
 const goods = require('./modules/goods');
 const catalog = require('./modules/catalog');
 const admin = require('./modules/admin');
+const reviews = require('./modules/reviews');
 
 const router = express.Router();
 
@@ -25,6 +26,7 @@ router.use('/me', users.router);
 router.use('/marketplace', marketplace);
 router.use('/rentals', vehicles.publicRouter);
 router.use('/trips', trips.publicRouter);
+router.use('/bookings', reviews.userRouter);
 router.use('/bookings', bookings.userRouter);
 router.use('/goods-orders', goods.userRouter);
 router.use('/payments', payments.publicRouter);
@@ -35,6 +37,7 @@ router.use('/partner/trips', trips.partnerRouter);
 router.use('/partner/bookings', bookings.partnerRouter);
 router.use('/partner/payments', payments.partnerRouter);
 router.use('/partner/goods-orders', goods.partnerRouter);
+router.use('/partner/reviews', reviews.partnerRouter);
 router.use('/partner', partners);
 
 // Admin panel

@@ -6,6 +6,7 @@ import { Button, Card, ErrorView, Header, Input, KV, Loading, Notice, Row, Statu
 import useFetch from '../../hooks/useFetch';
 import { bookingAPI, errorMessage } from '../../services/api';
 import { contactPartner } from '../../utils/contact';
+import { StarInput, Stars } from '../../components/Stars';
 import { COLORS, SPACING, TYPOGRAPHY } from '../../constants';
 import { ago, dateLabel, rupees, timeLabel } from '../../utils/format';
 import { t } from '../../i18n';
@@ -13,13 +14,17 @@ import { t } from '../../i18n';
 export default function BookingScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const { data: b, error, loading, reload, refresh } = useFetch(() => bookingAPI.get(id), [id], { cacheKey: `booking:${id}` });
+  const { data: b, error, errorStatus, loading, reload, refresh } = useFetch(() => bookingAPI.get(id), [id], { cacheKey: `booking:${id}` });
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [stars, setStars] = useState(0);
+  const [comment, setComment] = useState('');
+  const [editingReview, setEditingReview] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   if (loading) return (<><Header title={t("Booking")} /><Loading /></>);
-  if (error) return (<><Header title={t("Booking")} /><ErrorView message={error} onRetry={reload} /></>);
+  if (error) return (<><Header title={t("Booking")} /><ErrorView message={error} status={errorStatus} onRetry={reload} /></>);
 
   const trip = b.trip;
   const loc = b.liveLocation;
@@ -34,6 +39,24 @@ export default function BookingScreen() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const submitReview = async () => {
+    setSaving(true);
+    try {
+      await bookingAPI.review(b.id, { rating: stars, comment: comment.trim() || undefined });
+      setEditingReview(false);
+      reload();
+    } catch (e) {
+      Alert.alert(t("Error"), errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+  const startEdit = () => {
+    setStars(b.review?.rating || 0);
+    setComment(b.review?.comment || '');
+    setEditingReview(true);
   };
 
   return (
@@ -74,12 +97,35 @@ export default function BookingScreen() {
           </Card>
         )}
 
+        {b.canReview &&
+          (b.review && !editingReview ? (
+            <Card style={{ marginBottom: SPACING.md }}>
+              <Row style={{ justifyContent: 'space-between' }}>
+                <Text style={TYPOGRAPHY.bodyBold}>{t("Your rating")}</Text>
+                <Button small variant="ghost" icon="edit" title={t("Edit")} onPress={startEdit} />
+              </Row>
+              <Stars value={b.review.rating} size={20} />
+              {b.review.comment ? <Text style={[TYPOGRAPHY.caption, { marginTop: 6, color: COLORS.text.secondary }]}>“{b.review.comment}”</Text> : null}
+            </Card>
+          ) : (
+            <Card style={{ marginBottom: SPACING.md, borderColor: '#FDE68A' }}>
+              <Text style={[TYPOGRAPHY.bodyBold, { textAlign: 'center', marginBottom: 8 }]}>{t("How was your trip?")}</Text>
+              <StarInput value={stars} onChange={(v) => { setStars(v); if (!editingReview) setEditingReview(true); }} />
+              {stars > 0 && (
+                <>
+                  <Input style={{ marginTop: 12 }} value={comment} onChangeText={setComment} placeholder={t("Tell other passengers about the driver (optional)")} maxLength={500} multiline />
+                  <Button title={t("Submit rating")} loading={saving} onPress={submitReview} />
+                </>
+              )}
+            </Card>
+          ))}
+
         <Card style={{ marginBottom: SPACING.md }}>
           <Text style={TYPOGRAPHY.bodyBold}>
             {trip.driver.name} {trip.driver.isVerified ? '✓' : ''}
           </Text>
           <Text style={[TYPOGRAPHY.small, { color: COLORS.text.secondary }]}>
-            {trip.vehicle.make} {trip.vehicle.model}{" · "}{trip.vehicle.color || ''}{" · "}{trip.vehicle.registrationNumber}
+            {[`${trip.vehicle.make} ${trip.vehicle.model}`, trip.vehicle.color, trip.vehicle.registrationNumber].filter(Boolean).join(' · ')}
           </Text>
           <Row style={{ marginTop: 10 }}>
             <Button style={{ flex: 1 }} small icon="call" title={t("Call driver")} onPress={() => contactPartner('trip', trip.id)} />

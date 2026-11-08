@@ -14,9 +14,9 @@ import CachedImage from '../../components/CachedImage';
 export default function RentalDetail() {
   const { id } = useLocalSearchParams();
   const requireLogin = useRequireLogin();
-  const { data: v, error, loading, reload } = useFetch(() => rentalAPI.get(id), [id], { cacheKey: `rental:${id}` });
+  const { data: v, error, errorStatus, loading, reload } = useFetch(() => rentalAPI.get(id), [id], { cacheKey: `rental:${id}` });
   if (loading) return (<><Header title={t("Vehicle")} /><Loading /></>);
-  if (error) return (<><Header title={t("Vehicle")} /><ErrorView message={error} onRetry={reload} /></>);
+  if (error) return (<><Header title={t("Vehicle")} /><ErrorView message={error} status={errorStatus} onRetry={reload} /></>);
   const r = v.rental;
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.surface }}>

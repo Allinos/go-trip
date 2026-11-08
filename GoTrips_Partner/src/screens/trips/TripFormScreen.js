@@ -23,25 +23,33 @@ const nextHour = () => {
  *  - params.returnOf: outbound trip → one-tap return trip (reversed route)
  *  - params.trip: existing trip to edit
  */
+/** Repeat a trip: same time of day, on the next day that is still ahead of now. */
+function sameTimeNextDay(iso) {
+  const d = new Date(iso);
+  do d.setDate(d.getDate() + 1);
+  while (d.getTime() < Date.now() + 30 * 60_000);
+  return d;
+}
+
 export default function TripFormScreen({ navigation, route }) {
-  const { trip, returnOf } = route.params || {};
+  const { trip, returnOf, copyOf } = route.params || {};
   const editing = !!trip;
   const toast = useToast();
   const [vehicles, setVehicles] = useState(null);
-  const [type, setType] = useState(trip?.tripType || (returnOf ? 'return' : route.params?.tripType || 'start'));
-  const [vehicleId, setVehicleId] = useState(trip?.vehicle?.id || returnOf?.vehicle?.id || null);
+  const [type, setType] = useState(trip?.tripType || copyOf?.tripType || (returnOf ? 'return' : route.params?.tripType || 'start'));
+  const [vehicleId, setVehicleId] = useState(trip?.vehicle?.id || returnOf?.vehicle?.id || copyOf?.vehicle?.id || null);
   const [stops, setStops] = useState(
-    trip
-      ? trip.stops.map((s) => ({ ...s, fareFromStart: s.fareFromStart != null ? String(s.fareFromStart) : '' }))
+    trip || copyOf
+      ? (trip || copyOf).stops.map((s) => ({ placeName: s.placeName, district: s.district, lat: s.lat, lng: s.lng, fareFromStart: s.fareFromStart != null ? String(s.fareFromStart) : '' }))
       : returnOf
         ? [...returnOf.stops].reverse().map((s) => ({ placeName: s.placeName, district: s.district, lat: s.lat, lng: s.lng, fareFromStart: '' }))
         : [emptyStop(), emptyStop()]
   );
-  const [departure, setDeparture] = useState(trip ? new Date(trip.departureAt) : returnOf ? new Date(new Date(returnOf.departureAt).getTime() + 6 * 3600_000) : nextHour());
-  const [seats, setSeats] = useState(trip?.totalSeats || returnOf?.totalSeats || 4);
-  const [price, setPrice] = useState(String(trip?.pricePerSeat ?? returnOf?.pricePerSeat ?? ''));
-  const [parcels, setParcels] = useState(trip?.acceptsParcels ?? returnOf?.acceptsParcels ?? false);
-  const [notes, setNotes] = useState(trip?.notes || '');
+  const [departure, setDeparture] = useState(trip ? new Date(trip.departureAt) : returnOf ? new Date(new Date(returnOf.departureAt).getTime() + 6 * 3600_000) : copyOf ? sameTimeNextDay(copyOf.departureAt) : nextHour());
+  const [seats, setSeats] = useState(trip?.totalSeats || returnOf?.totalSeats || copyOf?.totalSeats || 4);
+  const [price, setPrice] = useState(String(trip?.pricePerSeat ?? returnOf?.pricePerSeat ?? copyOf?.pricePerSeat ?? ''));
+  const [parcels, setParcels] = useState(trip?.acceptsParcels ?? returnOf?.acceptsParcels ?? copyOf?.acceptsParcels ?? false);
+  const [notes, setNotes] = useState(trip?.notes || copyOf?.notes || '');
   const [stopFares, setStopFares] = useState(stops.some((s, i) => i > 0 && i < stops.length - 1 && s.fareFromStart));
   const [busy, setBusy] = useState(false);
   const routeLocked = editing && trip.bookings?.some((b) => ['pending', 'accepted'].includes(b.status));

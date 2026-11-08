@@ -5,6 +5,7 @@ const cache = require('../lib/cache');
 const { Prisma } = require('@prisma/client');
 const storage = require('../services/storage');
 const notify = require('../services/notify');
+const { recentReviews } = require('./reviews');
 const { validate, z, idParam, trimmed, optText, lat, lng, money, pageQuery } = require('../lib/validate');
 const { authenticate, optionalAuth, requireActivePartner, requireCapability } = require('../middleware/auth');
 const { badRequest, notFound, conflict } = require('../lib/errors');
@@ -278,6 +279,14 @@ partnerRouter.patch(
       if (e.code === 'P2025') throw conflict('Seats changed while you were editing. Please refresh and try again.');
       throw e;
     });
+    // Passengers who asked for or hold seats must hear about a new time or fare.
+    const timeChanged = data.departureAt && data.departureAt.getTime() !== t.departureAt.getTime();
+    const fareChanged = data.pricePerSeat != null && data.pricePerSeat !== t.pricePerSeat;
+    if (timeChanged || fareChanged) {
+      const changes = timeChanged && fareChanged ? 'both' : timeChanged ? 'time' : 'fare';
+      const affected = await prisma.booking.findMany({ where: { tripId: t.id, status: { in: ['pending', 'accepted'] } } });
+      affected.forEach((bk) => notify.tripUpdated(bk, updated, changes));
+    }
     res.json({ success: true, data: await serializeTrip(updated, { owner: true }) });
   }
 );
@@ -296,8 +305,10 @@ partnerRouter.post('/:id/start', validate({ params: idParam }), async (req, res)
   const updated = await prisma.trip.update({ where: { id: t.id }, data: { status: 'ongoing', startedAt: new Date(), bookingOpen: false }, include: tripInclude });
   const accepted = await prisma.booking.findMany({ where: { tripId: t.id, status: 'accepted' } });
   accepted.forEach((b) => notify.tripStarted(b));
-  // Expire requests the partner never answered.
+  // Expire requests the partner never answered, and tell those passengers so they can book something else.
+  const unanswered = await prisma.booking.findMany({ where: { tripId: t.id, status: 'pending' } });
   await prisma.booking.updateMany({ where: { tripId: t.id, status: 'pending' }, data: { status: 'expired', statusReason: 'Trip started', cancelledBy: 'system' } });
+  unanswered.forEach((b) => notify.bookingExpired(b));
   res.json({ success: true, data: await serializeTrip(updated, { owner: true }) });
 });
 
@@ -305,12 +316,14 @@ partnerRouter.post('/:id/complete', validate({ params: idParam }), async (req, r
   const t = await ownTrip(req);
   if (!['scheduled', 'ongoing'].includes(t.status)) throw badRequest('Trip is already closed');
   if (t.status === 'scheduled' && t.departureAt > new Date()) throw badRequest('A trip can be completed only after its departure time');
+  const unanswered = await prisma.booking.findMany({ where: { tripId: t.id, status: 'pending' } });
   await prisma.$transaction([
     prisma.booking.updateMany({ where: { tripId: t.id, status: 'accepted' }, data: { status: 'completed', completedAt: new Date() } }),
     prisma.booking.updateMany({ where: { tripId: t.id, status: 'pending' }, data: { status: 'expired', statusReason: 'Trip completed', cancelledBy: 'system' } }),
     prisma.trip.update({ where: { id: t.id }, data: { status: 'completed', completedAt: new Date(), bookingOpen: false } }),
     prisma.locationShare.updateMany({ where: { partnerId: req.partner.id, tripId: t.id }, data: { isSharing: false } }),
   ]);
+  unanswered.forEach((b) => notify.bookingExpired(b));
   const updated = await prisma.trip.findUnique({ where: { id: t.id }, include: tripInclude });
   res.json({ success: true, data: await serializeTrip(updated, { owner: true }) });
 });
@@ -375,6 +388,7 @@ publicRouter.get(
       JOIN trip_stops b ON b.trip_id = t.id AND b.seq > a.seq
       JOIN partners p ON p.id = t.partner_id
       JOIN users u ON u.id = p.user_id
+      JOIN vehicles v ON v.id = t.vehicle_id AND v.verification_status = 'approved'
       WHERE t.status = 'scheduled' AND t.booking_open = true AND t.available_seats >= ${q.seats}
         AND t.departure_at >= ${winStart} AND t.departure_at < ${winEnd}
         AND p.account_status = 'active' AND u.status = 'active'
@@ -418,7 +432,10 @@ publicRouter.get('/:id', optionalAuth, validate({ params: idParam }), async (req
   // Shares the "trips:search:" prefix so every trip/seat change also clears it.
   const trip = await cache.wrap(`trips:search:detail:${req.params.id}:${loggedIn ? 1 : 0}`, 15, async () => {
     const t = await prisma.trip.findFirst({ where: { id: req.params.id, partner: { accountStatus: 'active' } }, include: { ...tripInclude, partner: { select: contactSelect } } });
-    return t ? serializeTrip(t, { loggedIn }) : null;
+    if (!t) return null;
+    // Recent passenger reviews help a customer decide.
+    const reviews = t.partner.ratingCount ? await recentReviews(t.partnerId, 3) : [];
+    return { ...(await serializeTrip(t, { loggedIn })), reviews };
   });
   if (!trip) throw notFound('Trip');
   const myBooking = req.user ? await prisma.booking.findFirst({ where: { tripId: trip.id, userId: req.user.id }, orderBy: { createdAt: 'desc' }, select: { id: true, code: true, status: true, seats: true } }) : null;

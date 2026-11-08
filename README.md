@@ -23,6 +23,8 @@ Partner registers (OTP) ─► picks a type ─► details / driver profile ─�
 User searches A→B (any stops in order) ─► requests seats ─► partner gets FCM (+SMS) ─► accept / reject ─► user notified
                                                                 │
                               partner shares live location ─► confirmed passengers open it in Google Maps
+                                                                │
+                              trip completed ─► passenger rates it (1–5 ★ + comment) ─► stars show on the partner's trips
 
 Drivers: paid listing ─► marketplace ─► users browse and call directly (no lead fees, no commission)
 Rentals: listed vehicles with an ON/OFF availability switch ─► users search by area / GPS ─► call the owner
@@ -34,7 +36,7 @@ Money flow: the **only** online payment is the partner registration/listing fee 
 ## Languages (English and Assamese)
 
 - **Apps:** both apps are fully translated (about 830 strings). Users switch with the English | অসমীয়া toggle on the first screen, on Home, or in Account. The choice is saved on the phone and on the server.
-- **Server-sent messages:** push notifications, SMS (including the OTP) and emails are sent in each user's saved language. Error messages, partner types, document names and FAQs also come back in the language of the request (`Accept-Language`).
+- **Server-sent messages:** push notifications, SMS (including the OTP) and emails are sent in each user's saved language. The in-app notification list is re-rendered in the user's current language, so switching language also switches old notifications. Error messages, partner types, document names and FAQs also come back in the language of the request (`Accept-Language`).
 - **Admin panel:** has Assamese fields for partner types, required documents and FAQs.
 - **Adding text:** wrap new UI text in `t('English text')` and add the Assamese line to `src/i18n/as.json` (Partner app) or `i18n/as.json` (User app). Missing translations fall back to English.
 

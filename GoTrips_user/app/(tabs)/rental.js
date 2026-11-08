@@ -27,7 +27,7 @@ export default function RentalScreen() {
   const [pickDistrict, setPickDistrict] = useState(false);
   const [locating, setLocating] = useState(false);
   const params = { district: near ? undefined : district || undefined, lat: near?.lat, lng: near?.lng, radiusKm: near ? 40 : undefined, vehicleClass: vehicleClass || undefined, driverOption: driverOption || undefined, availableOnly: availableOnly || undefined, limit: 30 };
-  const { data, error, loading, refreshing, reload, refresh } = useFetch(() => rentalAPI.search(params), [JSON.stringify(params)], { cacheKey: `rentals:${JSON.stringify(params)}` });
+  const { data, error, errorStatus, loading, refreshing, reload, refresh } = useFetch(() => rentalAPI.search(params), [JSON.stringify(params)], { cacheKey: `rentals:${JSON.stringify(params)}` });
 
   const useMyLocation = async () => {
     setLocating(true);
@@ -67,7 +67,7 @@ export default function RentalScreen() {
       {loading ? (
         <Loading />
       ) : error ? (
-        <ErrorView message={error} onRetry={reload} />
+        <ErrorView message={error} status={errorStatus} onRetry={reload} />
       ) : (
         <FlatList
           data={data}

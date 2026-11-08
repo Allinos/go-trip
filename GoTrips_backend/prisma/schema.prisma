@@ -46,6 +46,7 @@ model User {
   savedPlaces   SavedPlace[]
   tickets       SupportTicket[]
   goodsOrders   GoodsOrder[]
+  reviews       Review[]
   contactEvents ContactEvent[]
 
   @@index([createdAt])
@@ -196,6 +197,8 @@ model Partner {
   feePaidAt          DateTime?          @map("fee_paid_at")
   /// End of the paid listing period (null = no expiry / not applicable).
   listingExpiresAt   DateTime?          @map("listing_expires_at")
+  ratingAvg          Float              @default(0) @map("rating_avg")
+  ratingCount        Int                @default(0) @map("rating_count")
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
 
@@ -208,6 +211,7 @@ model Partner {
   bookings      Booking[]
   payments      Payment[]
   locationShare LocationShare?
+  reviews       Review[]
   contactEvents ContactEvent[]
 
   @@index([categoryId, accountStatus])
@@ -457,6 +461,7 @@ model Booking {
   trip    Trip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  review  Review?
 
   @@index([partnerId, status, createdAt])
   @@index([userId, createdAt])
@@ -878,4 +883,24 @@ enum AdminRole {
   super_admin
   admin
   support
+}
+
+/// Passenger rating of a completed trip (one per booking). Partner.ratingAvg/ratingCount hold the totals.
+model Review {
+  id        Int      @id @default(autoincrement())
+  bookingId Int      @unique @map("booking_id")
+  partnerId Int      @map("partner_id")
+  userId    Int      @map("user_id")
+  rating    Int      @db.SmallInt
+  comment   String?  @db.VarChar(500)
+  isHidden  Boolean  @default(false) @map("is_hidden")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId, createdAt])
+  @@map("reviews")
 }

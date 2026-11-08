@@ -80,6 +80,20 @@ export function errorMessage(e) {
 }
 export const errorCode = (e) => e?.response?.data?.error?.code;
 
+/**
+ * Identical GETs that are already on their way share one request (screens and providers often ask for
+ * the same thing at the same moment, e.g. /config on start-up).
+ */
+const inflight = new Map();
+const rawGet = http.get.bind(http);
+http.get = (url, config = {}) => {
+  const key = `${url}?${JSON.stringify(config.params || {})}|${accessToken || ''}|${getLang()}`;
+  if (inflight.has(key)) return inflight.get(key);
+  const p = rawGet(url, config).finally(() => inflight.delete(key));
+  inflight.set(key, p);
+  return p;
+};
+
 /** Unwraps { success, data, meta }. */
 export const get = async (url, params) => {
   const r = await http.get(url, { params });

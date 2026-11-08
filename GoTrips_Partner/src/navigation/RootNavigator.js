@@ -38,6 +38,7 @@ import AccountScreen from '../screens/account/AccountScreen';
 import EditProfileScreen from '../screens/account/EditProfileScreen';
 import EarningsScreen from '../screens/account/EarningsScreen';
 import PaymentsScreen from '../screens/account/PaymentsScreen';
+import ReviewsScreen from '../screens/account/ReviewsScreen';
 import NotificationsScreen from '../screens/account/NotificationsScreen';
 import SupportScreen from '../screens/account/SupportScreen';
 import LocationShareScreen from '../screens/account/LocationShareScreen';
@@ -87,6 +88,7 @@ function MainStack() {
         <Stack.Screen name="RenewPayment" component={PaymentScreen} />
         <Stack.Screen name="PaymentWebView" component={PaymentWebViewScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="Reviews" component={ReviewsScreen} />
         <Stack.Screen name="Support" component={SupportScreen} />
         <Stack.Screen name="LocationShare" component={LocationShareScreen} />
         <Stack.Screen name="GoodsOrders" component={GoodsOrdersScreen} />

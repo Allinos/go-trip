@@ -12,6 +12,7 @@ import PartnerDetail from './pages/PartnerDetail';
 import Vehicles, { VehicleDetail } from './pages/Vehicles';
 import Trips from './pages/Trips';
 import Bookings from './pages/Bookings';
+import Reviews from './pages/Reviews';
 import Payments from './pages/Payments';
 import Support from './pages/Support';
 import Categories from './pages/Categories';
@@ -67,6 +68,7 @@ export default function App() {
           <Route path="/vehicles/:id" element={<VehicleDetail />} />
           <Route path="/trips" element={<Trips />} />
           <Route path="/bookings" element={<Bookings />} />
+          <Route path="/reviews" element={<Reviews />} />
           <Route path="/payments" element={<Payments />} />
           <Route path="/support" element={<Support />} />
           <Route path="/goods-orders" element={<GoodsOrders />} />

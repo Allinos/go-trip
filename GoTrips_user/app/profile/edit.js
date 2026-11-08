@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button, Chip, Header, Input, Row } from '../../components/ui';
+import { Button, Chip, Header, Input, LoginPrompt, Row } from '../../components/ui';
 import useAuthStore from '../../store/authStore';
 import { errorMessage, userAPI } from '../../services/api';
 import { COLORS, SPACING, TYPOGRAPHY } from '../../constants';
@@ -12,6 +12,13 @@ export default function EditProfile() {
   const { user, setUser } = useAuthStore();
   const [f, setF] = useState({ fullName: user?.fullName || '', email: user?.email || '', gender: user?.gender || null, city: user?.city || '' });
   const [busy, setBusy] = useState(false);
+  if (!user)
+    return (
+      <View style={{ flex: 1, backgroundColor: COLORS.surface }}>
+        <Header title={t("Edit profile")} />
+        <LoginPrompt />
+      </View>
+    );
   const save = async () => {
     setBusy(true);
     try {

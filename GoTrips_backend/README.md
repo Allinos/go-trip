@@ -34,6 +34,7 @@ src/modules/                  feature modules (routes + logic)
   bookings.js                 booking requests, accept/reject with atomic seat reservation, shared location
   payments.js                 Razorpay registration fee: order, hosted checkout, verify, webhook, reconciliation
   marketplace.js              public driver marketplace + call tracking
+  reviews.js                  passenger ratings of completed trips (one per booking, editable), partner averages
   goods.js                    goods transport orders (built, DISABLED by the goods_orders_enabled flag)
   catalog.js                  /config, categories, districts/places, FAQs
   admin/                      complete admin API (dashboard, verification queues, payments, settings, RBAC, audit log)
@@ -74,6 +75,12 @@ A trip has ordered stops (origin, intermediate points, destination) with optiona
 
 ### Live location (no paid tracking service)
 The partner app posts its position every ~30 s while sharing (the server accepts at most one update per 10 s). Only the latest point is stored. Passengers with an **accepted** booking see it with a Google Maps link (`https://www.google.com/maps/search/?api=1&query=lat,lng`). Sharing ends automatically after the chosen time.
+
+### Ratings & reviews
+After a trip is completed the passenger can rate it from the booking (`PUT /bookings/:id/review`, 1–5 stars + optional comment, editable). The partner's average and count are stored on the partner and appear on search results and trip pages, with the latest reviews. Partners see their reviews under `GET /partner/reviews` and on the dashboard. Admins can hide abusive reviews (Admin → Reviews); hidden reviews stop counting at once.
+
+### Passenger notifications for trip changes
+Passengers with a pending or confirmed booking are notified when the partner changes the departure time or the fare. Requests the partner never answered are expired with a notification when the trip starts, completes, or leaves (scheduler). A vehicle that an admin suspends or rejects disappears from search at once, and its trips stop taking bookings.
 
 ### Earnings
 Estimates only, calculated from accepted and completed booking fares. No payouts, wallets or bank details exist anywhere in the system.

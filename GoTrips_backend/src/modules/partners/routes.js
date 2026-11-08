@@ -248,7 +248,7 @@ router.get('/dashboard', requireActivePartner, async (req, res) => {
   const cached = await cache.get(dashKey(pid));
   if (cached) return res.json({ success: true, data: cached });
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  const [vehicleGroups, vehicleActive, bookingGroups, monthGroups, upcomingTrips, ongoingTrips, completedTrips, rentalListed, calls30, profile, pendingRequests] = await Promise.all([
+  const [vehicleGroups, vehicleActive, bookingGroups, monthGroups, upcomingTrips, ongoingTrips, completedTrips, rentalListed, calls30, profile, pendingRequests, rating] = await Promise.all([
     prisma.vehicle.groupBy({ by: ['verificationStatus'], where: { partnerId: pid }, _count: { _all: true } }),
     prisma.vehicle.count({ where: { partnerId: pid, verificationStatus: 'approved', isAvailable: true } }),
     prisma.booking.groupBy({ by: ['status'], where: { partnerId: pid }, _count: { _all: true }, _sum: { fareEstimate: true } }),
@@ -260,6 +260,7 @@ router.get('/dashboard', requireActivePartner, async (req, res) => {
     prisma.contactEvent.count({ where: { partnerId: pid, createdAt: { gte: new Date(Date.now() - 30 * 86400_000) } } }),
     req.partner.category.hasDriverProfile ? prisma.driverProfile.findUnique({ where: { partnerId: pid }, select: { isListed: true, viewCount: true, callCount: true, completeness: true, isAvailable: true } }) : null,
     prisma.booking.findMany({ where: { partnerId: pid, status: 'pending' }, orderBy: { createdAt: 'desc' }, take: 5, include: { trip: { select: { departureAt: true, originName: true, destinationName: true } } } }),
+    prisma.partner.findUnique({ where: { id: pid }, select: { ratingAvg: true, ratingCount: true } }),
   ]);
   const totalVehicles = vehicleGroups.reduce((a, g) => a + g._count._all, 0);
   const vstat = (s) => vehicleGroups.find((g) => g.verificationStatus === s)?._count._all || 0;
@@ -285,6 +286,7 @@ router.get('/dashboard', requireActivePartner, async (req, res) => {
         thisMonthEstimated: sumFare(monthGroups, ['completed', 'accepted']),
       },
       contacts: { callsLast30Days: calls30 },
+      rating: { average: rating.ratingAvg, count: rating.ratingCount },
       driverProfile: profile,
       pendingRequests: pendingRequests.map((b) => ({ id: b.id, code: b.code, seats: b.seats, pickupName: b.pickupName, dropName: b.dropName, passengerName: b.passengerName, passengerPhone: b.passengerPhone, note: b.note, fareEstimate: b.fareEstimate, departureAt: b.trip.departureAt, createdAt: b.createdAt })),
   };

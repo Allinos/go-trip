@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import PlacePicker from '../../components/PlacePicker';
-import { Button, Card, Chip, Empty, Header, Loading, Row } from '../../components/ui';
+import { Button, Card, Chip, Empty, Header, Loading, LoginPrompt, Row } from '../../components/ui';
+import useAuthStore from '../../store/authStore';
 import useFetch from '../../hooks/useFetch';
 import { errorMessage, userAPI } from '../../services/api';
 import { confirm } from '../../utils/confirm';
@@ -10,6 +11,18 @@ import { COLORS, SPACING, TYPOGRAPHY } from '../../constants';
 import { t } from '../../i18n';
 
 export default function SavedPlaces() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  if (!isAuthenticated)
+    return (
+      <View style={{ flex: 1, backgroundColor: COLORS.surface }}>
+        <Header title={t("Saved places")} />
+        <LoginPrompt />
+      </View>
+    );
+  return <SavedPlacesList />;
+}
+
+function SavedPlacesList() {
   const { data, loading, reload } = useFetch(() => userAPI.savedPlaces(), [], { cacheKey: 'savedPlaces' });
   const [label, setLabel] = useState('Home');
   const [picking, setPicking] = useState(false);

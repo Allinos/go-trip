@@ -8,7 +8,7 @@ import { colors, font } from '../../theme';
 import { ago } from '../../utils/format';
 import { t } from '../../i18n';
 
-const ICON = { booking_request: 'person-add', booking_cancelled: 'close-circle', vehicle_approved: 'checkmark-circle', vehicle_rejected: 'alert-circle', documents_approved: 'shield-checkmark', documents_rejected: 'alert-circle', payment_success: 'card', registration_complete: 'ribbon', listing_expiring: 'time', support_reply: 'chatbubbles' };
+const ICON = { booking_request: 'person-add', booking_cancelled: 'close-circle', vehicle_approved: 'checkmark-circle', vehicle_rejected: 'alert-circle', vehicle_suspended: 'ban', documents_approved: 'shield-checkmark', documents_rejected: 'alert-circle', payment_success: 'card', registration_complete: 'ribbon', listing_expiring: 'time', support_reply: 'chatbubbles' };
 
 export default function NotificationsScreen({ navigation }) {
   const { data, error, loading, reload, refresh, refreshing } = useApi(() => meApi.notifications(), [], { cacheKey: 'notifications' });

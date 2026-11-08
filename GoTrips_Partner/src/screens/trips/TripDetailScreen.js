@@ -84,6 +84,8 @@ export default function TripDetailScreen({ navigation, route }) {
           <Button title={t("Cancel trip")} icon="close-circle" variant="danger" onPress={() => setCancelOpen(true)} />
         </View>
       )}
+      {/* Daily routes: publish the same trip again in two taps. */}
+      <Button title={t("Repeat this trip")} icon="repeat" variant="secondary" onPress={() => navigation.navigate('TripForm', { copyOf: trip })} style={{ marginBottom: 20 }} />
       {trip.returnTrips?.length > 0 && (
         <Section title={t("Return trips")} icon="swap-horizontal">
           {trip.returnTrips.map((r) => (

@@ -29,7 +29,7 @@ export default function MarketplaceScreen() {
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [pick, setPick] = useState(false);
   const params = { q: query || undefined, district: district || undefined, workType: workType || undefined, vehicleType: vehicleType || undefined, verifiedOnly: verifiedOnly || undefined, limit: 30 };
-  const { data, meta, error, loading, refreshing, reload, refresh } = useFetch(() => marketplaceAPI.drivers(params), [JSON.stringify(params)], { cacheKey: `drivers:${JSON.stringify(params)}` });
+  const { data, meta, error, errorStatus, loading, refreshing, reload, refresh } = useFetch(() => marketplaceAPI.drivers(params), [JSON.stringify(params)], { cacheKey: `drivers:${JSON.stringify(params)}` });
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: COLORS.surface }}>
@@ -61,7 +61,7 @@ export default function MarketplaceScreen() {
       {loading ? (
         <Loading />
       ) : error ? (
-        <ErrorView message={error} onRetry={reload} />
+        <ErrorView message={error} status={errorStatus} onRetry={reload} />
       ) : (
         <FlatList
           data={data}

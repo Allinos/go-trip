@@ -25,9 +25,17 @@ const jobs = {
   async trips() {
     const now = new Date();
     const expiryMin = Number(await settings.get('booking_request_expiry_minutes')) || 0;
-    const expired = await prisma.booking.updateMany({ where: { status: 'pending', trip: { departureAt: { lt: now } } }, data: { status: 'expired', statusReason: 'No response before departure', cancelledBy: 'system' } });
+    // Expire unanswered requests one batch at a time and tell each passenger, so nobody waits for a reply that never comes.
+    const expireWhere = async (where, statusReason) => {
+      const rows = await prisma.booking.findMany({ where: { status: 'pending', ...where }, take: 500 });
+      if (!rows.length) return { count: 0 };
+      const r = await prisma.booking.updateMany({ where: { id: { in: rows.map((b) => b.id) }, status: 'pending' }, data: { status: 'expired', statusReason, cancelledBy: 'system' } });
+      rows.forEach((b) => notify.bookingExpired(b));
+      return r;
+    };
+    const expired = await expireWhere({ trip: { departureAt: { lt: now } } }, 'No response before departure');
     let stale = { count: 0 };
-    if (expiryMin > 0) stale = await prisma.booking.updateMany({ where: { status: 'pending', createdAt: { lt: new Date(now - expiryMin * 60_000) } }, data: { status: 'expired', statusReason: 'Partner did not respond in time', cancelledBy: 'system' } });
+    if (expiryMin > 0) stale = await expireWhere({ createdAt: { lt: new Date(now - expiryMin * 60_000) } }, 'Partner did not respond in time');
     const cutoff = new Date(now - 24 * 3600_000);
     const old = await prisma.trip.findMany({ where: { status: { in: ['scheduled', 'ongoing'] }, departureAt: { lt: cutoff } }, select: { id: true } });
     for (const t of old) {

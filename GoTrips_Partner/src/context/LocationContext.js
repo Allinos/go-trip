@@ -41,7 +41,11 @@ export function LocationProvider({ children, enabled }) {
   }, []);
 
   // Restore state on launch / when app returns to foreground.
+  const lastSync = useRef(0);
   const sync = useCallback(async () => {
+    // Launch and the first "app became active" event arrive together; one request is enough.
+    if (Date.now() - lastSync.current < 5000) return;
+    lastSync.current = Date.now();
     try {
       const r = await partnerApi.location();
       setShare(r.data);

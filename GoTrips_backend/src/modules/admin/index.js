@@ -9,6 +9,8 @@ const notify = require('../../services/notify');
 const partnerService = require('../partners/service');
 const payments = require('../payments');
 const vehicles = require('../vehicles');
+const trips = require('../trips');
+const reviews = require('../reviews');
 const { signAdmin } = require('../../lib/jwt');
 const { validate, z, idParam, trimmed, optText, pageQuery, money } = require('../../lib/validate');
 const { requireAdmin, invalidateAuthCache } = require('../../middleware/auth');
@@ -244,6 +246,7 @@ router.post('/partners/:id/suspend', MANAGER, validate({ params: idParam, body: 
   const p = await prisma.partner.update({ where: { id: req.params.id }, data: { accountStatus: 'suspended', suspendedReason: req.body.reason } });
   await prisma.trip.updateMany({ where: { partnerId: p.id, status: 'scheduled' }, data: { bookingOpen: false } });
   await prisma.locationShare.updateMany({ where: { partnerId: p.id }, data: { isSharing: false } });
+  await trips.clearSearchCache();
   await invalidateAuthCache(p.userId);
   await partnerService.syncDriverListing(p.id);
   await vehicles.clearPublicCache();
@@ -317,6 +320,7 @@ router.post('/vehicles/:id/review', MANAGER, validate({ params: idParam, body: d
     await tx.vehicle.update({ where: { id: v.id }, data: decision === 'approve' ? { verificationStatus: 'approved', verifiedAt: new Date(), verifiedBy: req.admin.id, rejectionReason: null } : { verificationStatus: 'rejected', rejectionReason: reason, rentalAvailable: false } });
   });
   await vehicles.clearPublicCache();
+  await trips.clearSearchCache(); // a vehicle that lost approval takes its trips out of search
   await cache.del('admin:dashboard');
   notify.vehicleReviewed(v, v.partner.userId, decision === 'approve', reason);
   await audit(req, `vehicle.${decision}`, 'vehicle', v.id, req.body);
@@ -324,11 +328,39 @@ router.post('/vehicles/:id/review', MANAGER, validate({ params: idParam, body: d
 });
 
 router.post('/vehicles/:id/suspend', MANAGER, validate({ params: idParam, body: z.object({ reason: trimmed(500, 3) }) }), async (req, res) => {
-  await prisma.vehicle.update({ where: { id: req.params.id }, data: { verificationStatus: 'suspended', rejectionReason: req.body.reason, rentalAvailable: false } });
-  await prisma.trip.updateMany({ where: { vehicleId: req.params.id, status: 'scheduled' }, data: { bookingOpen: false } });
+  const v = await prisma.vehicle.findUnique({ where: { id: req.params.id }, include: { partner: { select: { userId: true } } } });
+  if (!v) throw notFound('Vehicle');
+  await prisma.vehicle.update({ where: { id: v.id }, data: { verificationStatus: 'suspended', rejectionReason: req.body.reason, rentalAvailable: false } });
+  await prisma.trip.updateMany({ where: { vehicleId: v.id, status: 'scheduled' }, data: { bookingOpen: false } });
   await vehicles.clearPublicCache();
+  await trips.clearSearchCache();
+  notify.vehicleSuspended(v, v.partner.userId, req.body.reason);
   await audit(req, 'vehicle.suspend', 'vehicle', req.params.id, req.body);
   res.json({ success: true, data: { verificationStatus: 'suspended' } });
+});
+
+// ============================ REVIEWS ============================
+router.get('/reviews', ANY, validate({ query: listQuery({ rating: z.coerce.number().int().min(1).max(5).optional(), hidden: z.enum(['true', 'false']).optional() }) }), async (req, res) => {
+  const q = req.query;
+  const { page, limit, skip, take } = paginate(q);
+  const where = {
+    ...(q.rating ? { rating: q.rating } : {}),
+    ...(q.hidden ? { isHidden: q.hidden === 'true' } : {}),
+    ...(q.q ? { OR: [{ comment: like(q.q) }, { partner: { user: { fullName: like(q.q) } } }, { user: { fullName: like(q.q) } }] } : {}),
+  };
+  const [items, total] = await Promise.all([
+    prisma.review.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take, include: { user: { select: { id: true, fullName: true, phone: true } }, partner: { select: { id: true, businessName: true, user: { select: { fullName: true } } } }, booking: { select: { code: true, pickupName: true, dropName: true } } } }),
+    prisma.review.count({ where }),
+  ]);
+  res.json({ success: true, data: items, meta: pageMeta(page, limit, total) });
+});
+
+router.post('/reviews/:id/visibility', MANAGER, validate({ params: idParam, body: z.object({ hidden: z.boolean() }) }), async (req, res) => {
+  const r = await prisma.review.update({ where: { id: req.params.id }, data: { isHidden: req.body.hidden } }).catch(() => null);
+  if (!r) throw notFound('Review');
+  await reviews.refreshRating(r.partnerId);
+  await audit(req, req.body.hidden ? 'review.hide' : 'review.show', 'review', r.id);
+  res.json({ success: true, data: { id: r.id, isHidden: r.isHidden } });
 });
 
 // ============================ TRIPS & BOOKINGS ============================

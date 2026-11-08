@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Image, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Image, Linking, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Button, Card, ErrorView, Header, Input, KV, Loading, Notice, Pill, Row } from '../../components/ui';
@@ -12,14 +12,21 @@ import { COLORS, SPACING, TYPOGRAPHY, VEHICLE_LABELS } from '../../constants';
 import { dateLabel, rupees, timeLabel } from '../../utils/format';
 import { t } from '../../i18n';
 import CachedImage from '../../components/CachedImage';
+import { Stars } from '../../components/Stars';
 
 /** Trip details + send a booking request (choose pickup/drop stop and seats). */
+/** Send the trip to family or a travel buddy (WhatsApp, SMS…). */
+function shareTrip(trip) {
+  const message = t("{0} → {1}, {2} at {3}. {4} per seat. Find it in the GoTrip app.", [trip.originName, trip.destinationName, dateLabel(trip.departureAt), timeLabel(trip.departureAt), rupees(trip.pricePerSeat)]);
+  Share.share({ message }).catch(() => {});
+}
+
 export default function TripScreen() {
   const p = useLocalSearchParams();
   const router = useRouter();
   const requireLogin = useRequireLogin();
   const user = useAuthStore((s) => s.user);
-  const { data: trip, error, loading, reload } = useFetch(() => tripAPI.get(p.id), [p.id]);
+  const { data: trip, error, errorStatus, loading, reload } = useFetch(() => tripAPI.get(p.id), [p.id]);
   const [pickup, setPickup] = useState(Number(p.pickupSeq ?? 0));
   const [drop, setDrop] = useState(p.dropSeq != null ? Number(p.dropSeq) : null);
   const [seats, setSeats] = useState(Number(p.seats || 1));
@@ -40,7 +47,7 @@ export default function TripScreen() {
   }, [trip, pickup, drop, seats]);
 
   if (loading) return (<><Header title={t("Trip")} /><Loading /></>);
-  if (error) return (<><Header title={t("Trip")} /><ErrorView message={error} onRetry={reload} /></>);
+  if (error) return (<><Header title={t("Trip")} /><ErrorView message={error} status={errorStatus} onRetry={reload} /></>);
 
   const closed = trip.status !== 'scheduled' || !trip.bookingOpen || new Date(trip.departureAt) < new Date();
   const request = () =>
@@ -58,7 +65,10 @@ export default function TripScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.surface }}>
-      <Header title={trip.tripType === 'return' ? t("Return trip") : t("Trip details")} />
+      <Header
+        title={trip.tripType === 'return' ? t("Return trip") : t("Trip details")}
+        right={<MaterialIcons name="share" size={22} color={COLORS.primary} accessibilityLabel={t("Share")} onPress={() => shareTrip(trip)} />}
+      />
       <ScrollView contentContainerStyle={{ padding: SPACING.md, paddingBottom: 140 }}>
         <Card style={{ marginBottom: SPACING.md }}>
           <Row style={{ justifyContent: 'space-between' }}>
@@ -101,6 +111,7 @@ export default function TripScreen() {
                 <Text style={TYPOGRAPHY.bodyBold}>{trip.driver.name}</Text>
                 {trip.driver.isVerified && <MaterialIcons name="verified" size={18} color={COLORS.success} />}
               </Row>
+              {trip.driver.rating ? <Stars value={trip.driver.rating.average} count={trip.driver.rating.count} size={13} /> : <Text style={[TYPOGRAPHY.small, { color: COLORS.text.tertiary }]}>{t("New on GoTrip")}</Text>}
               <Text style={[TYPOGRAPHY.small, { color: COLORS.text.secondary }]}>
                 {trip.vehicle.make} {trip.vehicle.model}{" · "}{VEHICLE_LABELS[trip.vehicle.vehicleClass]} {trip.vehicle.color ? `· ${trip.vehicle.color}` : ''} {trip.vehicle.hasAc ? t("· AC") : ''}
               </Text>
@@ -108,6 +119,20 @@ export default function TripScreen() {
           </Row>
           {trip.vehicle.photo && <CachedImage uri={trip.vehicle.photo} style={{ width: '100%', height: 150, borderRadius: 10, marginTop: 10 }} />}
           {trip.notes ? <Text style={[TYPOGRAPHY.caption, { marginTop: 10, color: COLORS.text.secondary }]}>“{trip.notes}”</Text> : null}
+          {trip.reviews?.length > 0 && (
+            <View style={{ marginTop: 12, gap: 8 }}>
+              <Text style={[TYPOGRAPHY.small, { color: COLORS.text.secondary, fontWeight: '700' }]}>{t("WHAT PASSENGERS SAY")}</Text>
+              {trip.reviews.map((r) => (
+                <View key={r.id} style={{ backgroundColor: COLORS.surface, borderRadius: 8, padding: 8 }}>
+                  <Row style={{ justifyContent: 'space-between' }}>
+                    <Stars value={r.rating} size={12} />
+                    <Text style={[TYPOGRAPHY.small, { color: COLORS.text.tertiary }]}>{r.by || ''}</Text>
+                  </Row>
+                  {r.comment ? <Text style={[TYPOGRAPHY.caption, { marginTop: 4 }]}>{r.comment}</Text> : null}
+                </View>
+              ))}
+            </View>
+          )}
           <Row style={{ marginTop: 12 }}>
             <Button style={{ flex: 1 }} small variant="outline" icon="call" title={t("Call driver")} onPress={() => requireLogin(() => contactPartner('trip', trip.id), 'to call the driver')} />
             <Button style={{ flex: 1 }} small variant="outline" icon="chat" title={t("WhatsApp")} onPress={() => requireLogin(() => contactPartner('trip', trip.id, 'whatsapp'), 'to message the driver')} />

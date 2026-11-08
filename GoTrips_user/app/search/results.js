@@ -15,11 +15,11 @@ export default function ResultsScreen() {
   const [type, setType] = useState('');
   const [anyDay, setAnyDay] = useState(!p.date);
   const params = { from: p.from || undefined, to: p.to || undefined, date: anyDay ? undefined : p.date, seats: p.seats || 1, type: type || undefined, limit: 30 };
-  const { data, meta, error, loading, refreshing, reload, refresh } = useFetch(() => tripAPI.search(params), [JSON.stringify(params)]);
+  const { data, meta, error, errorStatus, loading, refreshing, reload, refresh } = useFetch(() => tripAPI.search(params), [JSON.stringify(params)]);
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.surface }}>
-      <Header title={`${p.from || 'Anywhere'} → ${p.to || 'Anywhere'}`} />
+      <Header title={`${p.from || t("Anywhere")} → ${p.to || t("Anywhere")}`} />
       <View style={{ paddingHorizontal: SPACING.md, paddingTop: 10 }}>
         <Text style={[TYPOGRAPHY.caption, { color: COLORS.text.secondary }]}>
           {anyDay ? t("Next 60 days") : dateLabel(`${p.date}T12:00:00+05:30`)}{" · "}{p.seats || 1}{" "}{t("seat(s)")}{meta ? t(" · {0} trip(s)", [meta.total]) : ''}
@@ -34,7 +34,7 @@ export default function ResultsScreen() {
       {loading ? (
         <Loading />
       ) : error ? (
-        <ErrorView message={error} onRetry={reload} />
+        <ErrorView message={error} status={errorStatus} onRetry={reload} />
       ) : (
         <FlatList
           data={data}

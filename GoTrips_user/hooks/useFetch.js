@@ -8,7 +8,7 @@ import { readCache, writeCache } from '../services/cache';
  * With { cacheKey } the last saved response is shown instantly (also offline), then refreshed.
  */
 export default function useFetch(fn, deps = [], { refocus = true, enabled = true, cacheKey } = {}) {
-  const [state, setState] = useState({ data: null, meta: null, error: null, loading: enabled, refreshing: false, stale: false });
+  const [state, setState] = useState({ data: null, meta: null, error: null, errorStatus: null, loading: enabled, refreshing: false, stale: false });
   const ref = useRef(fn);
   ref.current = fn;
   const first = useRef(true);
@@ -20,9 +20,9 @@ export default function useFetch(fn, deps = [], { refocus = true, enabled = true
         const r = await ref.current();
         has.current = true;
         if (cacheKey) writeCache(cacheKey, r?.data ?? r, r?.meta ?? null);
-        setState({ data: r?.data ?? r, meta: r?.meta ?? null, error: null, loading: false, refreshing: false, stale: false });
+        setState({ data: r?.data ?? r, meta: r?.meta ?? null, error: null, errorStatus: null, loading: false, refreshing: false, stale: false });
       } catch (e) {
-        setState((s) => (has.current ? { ...s, stale: true, loading: false, refreshing: false } : { ...s, error: errorMessage(e), loading: false, refreshing: false }));
+        setState((s) => (has.current ? { ...s, stale: true, loading: false, refreshing: false } : { ...s, error: errorMessage(e), errorStatus: e?.response?.status ?? null, loading: false, refreshing: false }));
       }
     },
     [cacheKey]

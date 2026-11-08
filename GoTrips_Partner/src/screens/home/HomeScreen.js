@@ -122,10 +122,15 @@ export default function HomeScreen({ navigation }) {
                   {caps.trips && <Stat label={t("Requests")} value={d.bookings.pending} sub={t("waiting for you")} icon="hourglass" tone="amber" onPress={() => navigation.navigate('Bookings')} />}
                   {caps.trips && <Stat label={t("Upcoming")} value={d.trips.upcoming + d.trips.ongoing} sub={t("trips")} icon="calendar" tone="blue" onPress={() => navigation.navigate('Trips')} />}
                 </Row>
-                <Row style={{ marginBottom: 16 }}>
+                <Row style={{ marginBottom: 12 }}>
                   {caps.vehicles && <Stat label={t("Vehicles")} value={d.vehicles.total} sub={t("{0} active · {1} in review", [d.vehicles.active, d.vehicles.pending])} icon="car" onPress={() => navigation.navigate('Vehicles')} />}
                   {caps.trips && <Stat label={t("Completed")} value={d.bookings.completed} sub={t("bookings")} icon="checkmark-done" tone="green" />}
                 </Row>
+                {caps.trips && (
+                  <Row style={{ marginBottom: 16 }}>
+                    <Stat label={t("Rating")} value={d.rating?.count ? `★ ${d.rating.average.toFixed(1)}` : '—'} sub={d.rating?.count ? t("{0} rating(s)", [d.rating.count]) : t("No ratings yet")} icon="star" tone="amber" onPress={() => navigation.navigate('Reviews')} />
+                  </Row>
+                )}
               </>
             )}
 

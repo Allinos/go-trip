@@ -22,7 +22,8 @@ async function deliver({ userId, app, key, type = key, vars, data = {}, channels
   if (!user) return;
   const lang = user.language || 'en';
   const msg = render(key, lang, { name: user.fullName, ...vars });
-  await prisma.notification.create({ data: { userId, app, type, title: msg.title, body: msg.body, data } });
+  // Key + variables are kept so the inbox can be shown again in whatever language the user picks later.
+  await prisma.notification.create({ data: { userId, app, type, title: msg.title, body: msg.body, data: { ...data, _k: key, _v: vars || {} } } });
   const jobs = [push.sendToUser(userId, app, { title: msg.title, body: msg.body, data: { type, ...data } })];
   if (channels.sms && msg.sms) jobs.push(sms.send(user.phone, msg.sms));
   if (channels.email && msg.email && user.email) jobs.push(email.send(user.email, msg.email.subject, msg.title, msg.email.lines));
@@ -50,6 +51,15 @@ const N = {
   },
   bookingCancelledByPartner(booking, reason) {
     queue({ userId: booking.userId, app: 'user', key: 'booking_cancelled_by_partner', type: 'booking_cancelled', vars: { ...seg(booking), reason }, data: { bookingId: booking.id, screen: 'booking' } });
+  },
+  tripUpdated(booking, trip, changes) {
+    queue({ userId: booking.userId, app: 'user', key: 'trip_updated', vars: { ...seg(booking), at: trip.departureAt, changes }, data: { bookingId: booking.id, tripId: trip.id, screen: 'booking' } });
+  },
+  bookingExpired(booking) {
+    queue({ userId: booking.userId, app: 'user', key: 'booking_expired', vars: seg(booking), data: { bookingId: booking.id, screen: 'booking' } });
+  },
+  vehicleSuspended(vehicle, partnerUserId, reason) {
+    queue({ userId: partnerUserId, app: 'partner', key: 'vehicle_suspended', vars: { vehicle: `${vehicle.make} ${vehicle.model} (${vehicle.registrationNumber})`, reg: vehicle.registrationNumber, reason }, data: { vehicleId: vehicle.id, screen: 'VehicleDetail' }, channels: { sms: true } });
   },
   tripStarted(booking) {
     queue({ userId: booking.userId, app: 'user', key: 'trip_started', vars: seg(booking), data: { bookingId: booking.id, screen: 'booking' } });

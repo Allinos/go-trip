@@ -93,7 +93,19 @@ export const Loading = () => (
   </View>
 );
 
-export const ErrorView = ({ message, onRetry }) => <Empty icon="cloud-off" text={message} action={onRetry && <Button small variant="outline" title={t("Try again")} onPress={onRetry} />} />;
+export function ErrorView({ message, onRetry, status }) {
+  const router = useRouter();
+  if (status === 401) return <LoginPrompt />;
+  if (status === 404 || status === 403)
+    return <Empty icon="search-off" text={message} action={<Button small variant="outline" title={t("Go back")} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />} />;
+  return <Empty icon="cloud-off" text={message} action={onRetry && <Button small variant="outline" title={t("Try again")} onPress={onRetry} />} />;
+}
+
+/** Shown to guests on screens that need an account. */
+export function LoginPrompt({ text }) {
+  const router = useRouter();
+  return <Empty icon="lock-outline" text={text || t("Please log in to continue")} action={<Button title={t("Log in")} onPress={() => router.push('/(auth)/login')} />} />;
+}
 
 export function Input({ label, style, prefix, ...props }) {
   return (

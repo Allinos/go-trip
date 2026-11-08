@@ -44,6 +44,7 @@ export const partnerApi = {
   startSharing: (body) => post('/partner/location/start', body),
   sendLocation: (body) => post('/partner/location', body),
   stopSharing: () => post('/partner/location/stop'),
+  reviews: (params) => get('/partner/reviews', params),
 };
 
 export const paymentApi = {
