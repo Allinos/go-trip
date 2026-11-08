@@ -7,7 +7,7 @@ const { authenticate, requireActivePartner } = require('../middleware/auth');
 const { writeLimiter } = require('../middleware/rateLimit');
 const { badRequest, notFound, conflict } = require('../lib/errors');
 const { shortCode, paginate, pageMeta, mapsUrl } = require('../lib/util');
-const { serializeTrip, estimateFare, tripInclude } = require('./trips');
+const { serializeTrip, estimateFare, tripInclude, clearSearchCache } = require('./trips');
 const { contactSelect } = require('./vehicles');
 
 const STATUSES = ['pending', 'accepted', 'rejected', 'cancelled', 'completed', 'expired'];
@@ -46,9 +46,15 @@ async function sharedLocation(partnerId, tripId) {
   return { lat: s.lat, lng: s.lng, accuracyM: s.accuracyM, updatedAt: s.updatedAt, mapsUrl: mapsUrl(s.lat, s.lng), stale: Date.now() - s.updatedAt.getTime() > 10 * 60_000 };
 }
 
+/** Seat counts change on accept/cancel: drop cached search pages once the change is committed. */
+const clearAfterWrite = (req, res, next) => {
+  if (req.method !== 'GET') res.on('finish', () => res.statusCode < 400 && clearSearchCache());
+  next();
+};
+
 // ======================= User: /bookings =======================
 const userRouter = express.Router();
-userRouter.use(authenticate);
+userRouter.use(authenticate, clearAfterWrite);
 
 userRouter.post(
   '/',
@@ -139,7 +145,7 @@ userRouter.post('/:id/cancel', validate({ params: idParam, body: z.object({ reas
 
 // ======================= Partner: /partner/bookings =======================
 const partnerRouter = express.Router();
-partnerRouter.use(authenticate, requireActivePartner);
+partnerRouter.use(authenticate, requireActivePartner, clearAfterWrite);
 
 partnerRouter.get('/', validate({ query: z.object({ status: z.enum(STATUSES).optional(), tripId: z.coerce.number().int().positive().optional(), ...pageQuery }) }), async (req, res) => {
   const { page, limit, skip, take } = paginate(req.query);

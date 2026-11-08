@@ -36,6 +36,7 @@ const jobs = {
         prisma.trip.update({ where: { id: t.id }, data: { status: 'completed', completedAt: now, bookingOpen: false } }),
       ]);
     }
+    if (old.length) await require('../lib/cache').delPrefix('trips:search:');
     if (expired.count || stale.count || old.length) logger.info({ expired: expired.count + stale.count, autoCompleted: old.length }, 'job:trips');
   },
 

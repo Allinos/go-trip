@@ -1,6 +1,7 @@
 'use strict';
 const express = require('express');
 const prisma = require('../lib/prisma');
+const cache = require('../lib/cache');
 const { Prisma } = require('@prisma/client');
 const storage = require('../services/storage');
 const notify = require('../services/notify');
@@ -11,6 +12,9 @@ const { placeKey, paginate, pageMeta, mapsUrl, mapsDirectionsUrl } = require('..
 const { partnerContact, contactSelect } = require('./vehicles');
 
 const MAX_DAYS_AHEAD = 60;
+
+/** Drop cached search pages after any change to trips or seat counts. */
+const clearSearchCache = () => cache.delPrefix('trips:search:');
 
 const stopSchema = z.object({
   placeName: trimmed(120, 2),
@@ -100,6 +104,10 @@ const tripInclude = { stops: true, vehicle: true };
 // ======================= Partner: /partner/trips =======================
 const partnerRouter = express.Router();
 partnerRouter.use(authenticate, requireActivePartner, requireCapability('canCreateTrips'));
+partnerRouter.use((req, res, next) => {
+  if (req.method !== 'GET') res.on('finish', () => res.statusCode < 400 && clearSearchCache());
+  next();
+});
 
 async function ownTrip(req, include = tripInclude) {
   const t = await prisma.trip.findFirst({ where: { id: req.params.id, partnerId: req.partner.id }, include });
@@ -365,30 +373,35 @@ publicRouter.get(
         ${fromKey ? fromCond : Prisma.sql`AND a.seq = 0`}
         ${toKey ? toCond : Prisma.sql`AND b.seq = (SELECT max(seq) FROM trip_stops s WHERE s.trip_id = t.id)`}`;
 
-    const [rows, countRows] = await Promise.all([
-      prisma.$queryRaw`
-        SELECT * FROM (
+    const loggedIn = !!req.user;
+    // Popular routes are searched again and again: cache each page for a few seconds.
+    // Cache is cleared whenever a trip or its seats change (see clearSearchCache).
+    const payload = await cache.wrap(`trips:search:${loggedIn ? 1 : 0}:${JSON.stringify(q)}`, 15, async () => {
+      // One query: DISTINCT ON picks the best stop pair per trip, COUNT(*) OVER() gives the total for paging.
+      const rows = await prisma.$queryRaw`
+        SELECT m.*, COUNT(*) OVER()::int AS total FROM (
           SELECT DISTINCT ON (t.id) t.id, t.departure_at, a.seq AS pickup_seq, b.seq AS drop_seq
           ${base}
           ORDER BY t.id, a.seq, b.seq
-        ) m ORDER BY m.departure_at ASC LIMIT ${take} OFFSET ${skip}`,
-      prisma.$queryRaw`SELECT COUNT(DISTINCT t.id)::int AS total ${base}`,
-    ]);
+        ) m ORDER BY m.departure_at ASC LIMIT ${take} OFFSET ${skip}`;
+      let total = rows[0]?.total || 0;
+      if (!rows.length && skip > 0) total = Number((await prisma.$queryRaw`SELECT COUNT(DISTINCT t.id)::int AS total ${base}`)[0]?.total || 0);
 
-    const trips = rows.length ? await prisma.trip.findMany({ where: { id: { in: rows.map((r) => r.id) } }, include: { ...tripInclude, partner: { select: contactSelect } } }) : [];
-    const byId = Object.fromEntries(trips.map((t) => [t.id, t]));
-    const loggedIn = !!req.user;
-    const data = await Promise.all(
-      rows.map(async (r) => {
-        const t = byId[r.id];
-        const stops = [...t.stops].sort((x, y) => x.seq - y.seq);
-        return {
-          ...(await serializeTrip(t, { loggedIn })),
-          match: { pickupSeq: r.pickup_seq, dropSeq: r.drop_seq, pickupName: stops[r.pickup_seq].placeName, dropName: stops[r.drop_seq].placeName, farePerSeat: estimateFare(t, stops, r.pickup_seq, r.drop_seq, 1) },
-        };
-      })
-    );
-    res.json({ success: true, data, meta: pageMeta(page, limit, countRows[0]?.total || 0) });
+      const trips = rows.length ? await prisma.trip.findMany({ where: { id: { in: rows.map((r) => r.id) } }, include: { ...tripInclude, partner: { select: contactSelect } } }) : [];
+      const byId = Object.fromEntries(trips.map((t) => [t.id, t]));
+      const data = await Promise.all(
+        rows.map(async (r) => {
+          const t = byId[r.id];
+          const stops = [...t.stops].sort((x, y) => x.seq - y.seq);
+          return {
+            ...(await serializeTrip(t, { loggedIn })),
+            match: { pickupSeq: r.pickup_seq, dropSeq: r.drop_seq, pickupName: stops[r.pickup_seq].placeName, dropName: stops[r.drop_seq].placeName, farePerSeat: estimateFare(t, stops, r.pickup_seq, r.drop_seq, 1) },
+          };
+        })
+      );
+      return { data, meta: pageMeta(page, limit, total) };
+    });
+    res.json({ success: true, data: payload.data, meta: payload.meta });
   }
 );
 
@@ -399,4 +412,4 @@ publicRouter.get('/:id', optionalAuth, validate({ params: idParam }), async (req
   res.json({ success: true, data: { ...(await serializeTrip(t, { loggedIn: !!req.user })), myBooking } });
 });
 
-module.exports = { partnerRouter, publicRouter, serializeTrip, estimateFare, tripInclude };
+module.exports = { partnerRouter, publicRouter, serializeTrip, estimateFare, tripInclude, clearSearchCache };

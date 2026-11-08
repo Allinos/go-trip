@@ -20,6 +20,11 @@ const { paginate, pageMeta, placeKey } = require('../../lib/util');
 const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', 10);
 
 const router = express.Router();
+// Any admin change (suspensions, cancellations, approvals) may affect public listings.
+router.use((req, res, next) => {
+  if (req.method !== 'GET') res.on('finish', () => res.statusCode < 400 && Promise.all([cache.delPrefix('trips:search:'), cache.delPrefix('rent:'), cache.delPrefix('mkt:')]).catch(() => {}));
+  next();
+});
 const ANY = requireAdmin();
 const MANAGER = requireAdmin('super_admin', 'admin');
 const SUPER = requireAdmin('super_admin');
