@@ -49,6 +49,10 @@ describe('Driver registration with Razorpay fee', () => {
 
     await uploadRequiredDocs(s.token);
     st = (await api().get('/api/v1/partner/onboarding').set(auth(s.token))).body.data;
+    // Uploading the last document does not finish registration: the partner reviews and submits.
+    expect(st.nextStep).toBe('review');
+    expect(st.completed).toBe(false);
+    st = (await api().post('/api/v1/partner/onboarding/submit').set(auth(s.token)).expect(200)).body.data;
     expect(st.nextStep).toBe('payment');
     expect(st.accountStatus).toBe('onboarding');
     expect(st.steps.find((x) => x.key === 'payment').amount).toBe(49900);
@@ -116,6 +120,7 @@ describe('Driver registration with Razorpay fee', () => {
     const s = await startDriver();
     await api().put('/api/v1/partner/driver-profile').set(auth(s.token)).send(driverDetails);
     await uploadRequiredDocs(s.token);
+    await api().post('/api/v1/partner/onboarding/submit').set(auth(s.token)).expect(200);
     const order = await api().post('/api/v1/partner/payments/registration-order').set(auth(s.token));
     const orderId = order.body.data.orderId;
     const body = JSON.stringify({ event: 'payment.captured', created_at: 1, payload: { payment: { entity: { id: `pay_W${orderId.slice(7)}`, order_id: orderId, amount: 49900, currency: 'INR', status: 'captured', method: 'card' } } } });
@@ -140,6 +145,7 @@ describe('Driver registration with Razorpay fee', () => {
     const s = await startDriver();
     await api().put('/api/v1/partner/driver-profile').set(auth(s.token)).send(driverDetails);
     await uploadRequiredDocs(s.token);
+    await api().post('/api/v1/partner/onboarding/submit').set(auth(s.token)).expect(200);
     const order = await api().post('/api/v1/partner/payments/registration-order').set(auth(s.token));
     const body = JSON.stringify({ event: 'payment.captured', payload: { payment: { entity: { id: 'pay_cheap1', order_id: order.body.data.orderId, amount: 100, currency: 'INR', status: 'captured' } } } });
     const r = await api().post('/api/v1/payments/webhook/razorpay').set('content-type', 'application/json').set('x-razorpay-signature', sign(body, 'rzp_webhook_secret')).set('x-razorpay-event-id', 'evt_cheap1').send(body);
@@ -162,6 +168,7 @@ describe('Driver registration with Razorpay fee', () => {
     const s = await startDriver();
     await api().put('/api/v1/partner/driver-profile').set(auth(s.token)).send(driverDetails).expect(200);
     await uploadRequiredDocs(s.token);
+    await api().post('/api/v1/partner/onboarding/submit').set(auth(s.token)).expect(200);
     const order = await api().post('/api/v1/partner/payments/registration-order').set(auth(s.token));
     const orderId = order.body.data.orderId;
     const paymentId = `pay_${orderId.slice(6)}`;

@@ -25,7 +25,7 @@ async function partner(phone, name, code, extra = {}) {
   const existing = await prisma.partner.findUnique({ where: { userId: user.id } });
   if (existing) return existing;
   const p = await prisma.partner.create({
-    data: { userId: user.id, categoryId: category.id, district: extra.district || 'Nagaon', city: extra.city || 'Nagaon', accountStatus: 'active', verificationStatus: extra.verification || 'pending', activatedAt: new Date(), submittedAt: new Date(), businessName: extra.businessName, ...(category.registrationFee ? { feePaidAt: new Date(), listingExpiresAt: hours(24 * 365) } : {}) },
+    data: { userId: user.id, categoryId: category.id, district: extra.district || 'Nagaon', city: extra.city || 'Nagaon', address: extra.address || 'Main Road', pincode: extra.pincode || '782001', accountStatus: 'active', verificationStatus: extra.verification || 'pending', activatedAt: new Date(), submittedAt: new Date(), businessName: extra.businessName, ...(category.registrationFee ? { feePaidAt: new Date(), listingExpiresAt: hours(24 * 365) } : {}) },
   });
   for (const r of category.requirements.filter((x) => x.scope === 'partner' && x.isRequired)) {
     await prisma.partnerDocument.create({ data: { partnerId: p.id, docType: r.docType, frontKey: DEMO_FILE, docNumber: r.requiresNumber ? 'DEMO12345' : null, expiryDate: r.requiresExpiry ? hours(24 * 900) : null, status: extra.verification === 'approved' ? 'approved' : 'pending' } });
@@ -59,7 +59,7 @@ async function main() {
   await veh(taxi.id, 'AS02CD5678', { vehicleClass: 'sedan', make: 'Maruti', model: 'Dzire', year: 2022, seats: 4, fuelType: 'cng', hasAc: true, forTrips: true, verificationStatus: 'pending' });
   await veh(rental.id, 'AS01RR1111', { vehicleClass: 'suv', make: 'Mahindra', model: 'Scorpio N', year: 2023, seats: 7, fuelType: 'diesel', hasAc: true, forRental: true, forTrips: false, verificationStatus: 'approved', verifiedAt: new Date(), rentalAvailable: true, rentalPricePerDay: 3500, rentalDriverOption: 'both', securityDeposit: 5000, rentalDistrict: 'Kamrup Metropolitan', rentalCity: 'Guwahati', rentalAddress: 'GS Road, Christian Basti', rentalLat: 26.1445, rentalLng: 91.7898 });
   await veh(rental.id, 'AS01RR2222', { vehicleClass: 'hatchback', make: 'Hyundai', model: 'i20', year: 2022, seats: 5, fuelType: 'petrol', hasAc: true, forRental: true, verificationStatus: 'approved', verifiedAt: new Date(), rentalAvailable: false, rentalPricePerDay: 1800, rentalPricePerHour: 200, rentalDriverOption: 'self_drive', rentalDistrict: 'Kamrup Metropolitan', rentalCity: 'Guwahati', rentalLat: 26.18, rentalLng: 91.75 });
-  await veh(fleet.id, 'AS03TR9090', { vehicleClass: 'mini_truck', make: 'Tata', model: 'Ace Gold', year: 2020, loadCapacityKg: 750, fuelType: 'diesel', forGoods: true, forTrips: false, verificationStatus: 'pending' });
+  await veh(fleet.id, 'AS03TR9090', { category: 'commercial', vehicleClass: 'mini_truck', bodyType: 'open', make: 'Tata', model: 'Ace Gold', year: 2020, loadCapacityKg: 750, fuelType: 'diesel', forGoods: true, forTrips: false, verificationStatus: 'pending' });
 
   if (!(await prisma.trip.findFirst({ where: { partnerId: taxi.id } }))) {
     const stops = [

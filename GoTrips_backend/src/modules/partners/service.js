@@ -15,8 +15,8 @@ const { invalidateAuthCache } = require('../../middleware/auth');
 const { tr } = require('../../lib/i18n');
 
 const STEP_LABELS = {
-  en: { profile: 'Your name', category: 'Partner type', driver: 'Driver details', business: 'Business details', documents: 'Documents', payment: 'Registration fee' },
-  as: { profile: 'আপোনাৰ নাম', category: 'পাৰ্টনাৰৰ প্ৰকাৰ', driver: 'চালকৰ বিৱৰণ', business: 'ব্যৱসায়ৰ বিৱৰণ', documents: 'নথিপত্ৰ', payment: 'পঞ্জীয়ন মাচুল' },
+  en: { profile: 'Your name', category: 'Partner type', driver: 'Driver details', business: 'Business details', documents: 'Documents', review: 'Review & submit', payment: 'Registration fee' },
+  as: { profile: 'আপোনাৰ নাম', category: 'পাৰ্টনাৰৰ প্ৰকাৰ', driver: 'চালকৰ বিৱৰণ', business: 'ব্যৱসায়ৰ বিৱৰণ', documents: 'নথিপত্ৰ', review: 'পৰীক্ষা কৰি দাখিল কৰক', payment: 'পঞ্জীয়ন মাচুল' },
 };
 
 const CATEGORIES_KEY = 'catalog:categories';
@@ -42,6 +42,16 @@ const feeIsValid = (partner, category) => {
   if (!partner.feePaidAt) return false;
   return !partner.listingExpiresAt || partner.listingExpiresAt > new Date();
 };
+
+/** Contact / location details every business partner (taxi, rental, fleet) must give before submitting. */
+function missingBusinessDetails(p) {
+  const out = [];
+  if (!p.district) out.push('district');
+  if (!p.city || p.city.trim().length < 2) out.push('city');
+  if (!p.address || p.address.trim().length < 5) out.push('address');
+  if (!p.pincode || !/^\d{6}$/.test(p.pincode)) out.push('pincode');
+  return out;
+}
 
 function driverDetailsComplete(profile) {
   return !!(profile && profile.licenseNumber && profile.vehicleTypes?.length && profile.district && (profile.hasPriorExperience ? profile.experienceYears >= 0 : true));
@@ -94,13 +104,16 @@ async function onboardingState(userId) {
   const category = await categoryById(partner.categoryId);
   steps.push({ key: 'category', label: L.category, done: true });
 
-  const detailsDone = !!(partner.district && partner.city) && (!category.hasDriverProfile || driverDetailsComplete(partner.driverProfile));
-  steps.push({ key: 'details', label: category.hasDriverProfile ? L.driver : L.business, done: detailsDone });
+  const missingDetails = category.hasDriverProfile ? (partner.district && partner.city ? [] : ['district', 'city']) : missingBusinessDetails(partner);
+  const detailsDone = missingDetails.length === 0 && (!category.hasDriverProfile || driverDetailsComplete(partner.driverProfile));
+  steps.push({ key: 'details', label: category.hasDriverProfile ? L.driver : L.business, done: detailsDone, missing: missingDetails });
 
   const required = category.requirements.filter((r) => r.scope === 'partner' && r.isRequired);
   const byType = Object.fromEntries(partner.documents.map((d) => [d.docType, d]));
   const missing = required.filter((r) => !byType[r.docType] || byType[r.docType].status === 'rejected').map((r) => ({ docType: r.docType, label: tr(r, lang, 'label'), rejected: byType[r.docType]?.status === 'rejected', reason: byType[r.docType]?.rejectionReason || null }));
   steps.push({ key: 'documents', label: L.documents, done: missing.length === 0, missing });
+  // The partner checks everything and submits it on purpose; uploading the last document never activates the account by itself.
+  steps.push({ key: 'review', label: L.review, done: partner.accountStatus !== 'onboarding' || !!partner.submittedAt });
 
   if (category.registrationFee > 0) {
     const valid = feeIsValid(partner, category);
@@ -155,6 +168,20 @@ async function syncDriverListing(partnerId) {
   return listed;
 }
 
+/**
+ * The partner taps "Submit for verification" on the review screen. Every step before it must be done.
+ * Returns the new onboarding state (activated now when no fee is due).
+ */
+async function submit(userId) {
+  const state = await onboardingState(userId);
+  if (!state.started) return { error: 'Choose your partner type first', state };
+  const idx = state.steps.findIndex((s) => s.key === 'review');
+  const before = state.steps.slice(0, idx).filter((s) => !s.done);
+  if (before.length) return { error: `Please complete: ${before.map((s) => s.label).join(', ')}`, state };
+  await prisma.partner.updateMany({ where: { id: state.partnerId, accountStatus: 'onboarding', submittedAt: null }, data: { submittedAt: new Date() } });
+  return { state: await tryComplete(userId) };
+}
+
 /** Activate the partner once every onboarding step is complete. Idempotent. */
 async function tryComplete(userId) {
   const state = await onboardingState(userId);
@@ -177,4 +204,4 @@ async function tryComplete(userId) {
   return state;
 }
 
-module.exports = { categories, categoryByCode, categoryById, clearCategoryCache, onboardingState, tryComplete, syncDriverListing, driverCompleteness, feeIsValid, loadFull };
+module.exports = { submit, missingBusinessDetails, categories, categoryByCode, categoryById, clearCategoryCache, onboardingState, tryComplete, syncDriverListing, driverCompleteness, feeIsValid, loadFull };

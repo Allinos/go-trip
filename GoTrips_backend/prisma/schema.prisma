@@ -294,6 +294,8 @@ model DriverProfile {
 model Vehicle {
   id                 Int          @id @default(autoincrement())
   partnerId          Int          @map("partner_id")
+  /// passenger = carries people (seats); commercial = carries goods (load capacity)
+  category           VehicleCategory @default(passenger)
   vehicleClass       VehicleClass @map("vehicle_class")
   make               String       @db.VarChar(50)
   model              String       @db.VarChar(50)
@@ -302,6 +304,9 @@ model Vehicle {
   registrationNumber String       @unique @map("registration_number") @db.VarChar(20)
   seats              Int?
   loadCapacityKg     Int?         @map("load_capacity_kg")
+  /// Goods vehicles: open, closed, container, flatbed, tipper, tanker, refrigerated
+  bodyType           String?      @map("body_type") @db.VarChar(30)
+  cargoLengthFt      Float?       @map("cargo_length_ft")
   fuelType           FuelType?    @map("fuel_type")
   hasAc              Boolean      @default(false) @map("has_ac")
   features           String[]     @default([])
@@ -378,6 +383,9 @@ model Trip {
   partnerId       Int        @map("partner_id")
   vehicleId       Int        @map("vehicle_id")
   tripType        TripType   @map("trip_type")
+  /// passenger = seat sharing; goods = the whole vehicle is hired to carry a load on this route
+  kind            TripKind   @default(passenger)
+  capacityKg      Int?       @map("capacity_kg")
   /// For a return trip: the outbound trip it returns from (optional).
   parentTripId    Int?       @map("parent_trip_id")
   originName      String     @map("origin_name") @db.VarChar(120)
@@ -406,6 +414,7 @@ model Trip {
   bookings    Booking[]
 
   @@index([status, departureAt])
+  @@index([kind, status, departureAt])
   @@index([partnerId, departureAt])
   @@index([vehicleId, departureAt])
   @@map("trips")
@@ -450,6 +459,9 @@ model Booking {
   passengerName  String?       @map("passenger_name") @db.VarChar(100)
   passengerPhone String        @map("passenger_phone") @db.VarChar(15)
   note           String?       @db.VarChar(300)
+  /// Goods trips: what is being carried and roughly how heavy
+  goodsType      String?       @map("goods_type") @db.VarChar(80)
+  loadKg         Int?          @map("load_kg")
   status         BookingStatus @default(pending)
   statusReason   String?       @map("status_reason") @db.VarChar(255)
   cancelledBy    Actor?        @map("cancelled_by")
@@ -797,6 +809,16 @@ enum VehicleClass {
   truck
   trailer
   other
+}
+
+enum VehicleCategory {
+  passenger
+  commercial
+}
+
+enum TripKind {
+  passenger
+  goods
 }
 
 enum FuelType {

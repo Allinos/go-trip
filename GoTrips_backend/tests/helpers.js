@@ -50,9 +50,11 @@ async function uploadRequiredDocs(token) {
 async function activePartner(categoryCode = 'taxi', extra = {}) {
   const s = await login('partner');
   await api().patch('/api/v1/me').set(auth(s.token)).send({ fullName: extra.fullName || 'Test Partner' });
-  const r = await api().post('/api/v1/partner/register').set(auth(s.token)).send({ categoryCode, district: 'Nagaon', city: 'Nagaon', ...extra.details });
+  const r = await api().post('/api/v1/partner/register').set(auth(s.token)).send({ categoryCode, district: 'Nagaon', city: 'Nagaon', address: 'Station Road, Haibargaon', pincode: '782002', ...extra.details });
   if (r.status >= 300) throw new Error(JSON.stringify(r.body));
   await uploadRequiredDocs(s.token);
+  const sub = await api().post('/api/v1/partner/onboarding/submit').set(auth(s.token));
+  if (sub.status !== 200) throw new Error(JSON.stringify(sub.body));
   return s;
 }
 

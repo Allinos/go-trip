@@ -14,9 +14,16 @@ const { langOf, tr } = require('../lib/i18n');
 const localReq = (r, lang) => ({ ...r, label: tr(r, lang, 'label'), hint: tr(r, lang, 'hint'), translations: undefined });
 
 const VEHICLE_CLASSES = ['hatchback', 'sedan', 'suv', 'muv', 'van', 'mini_bus', 'bus', 'auto', 'bike', 'pickup', 'tempo', 'mini_truck', 'truck', 'trailer', 'other'];
+/** Vehicle types allowed in each vehicle category ('other' fits both). */
+const CLASSES_BY_CATEGORY = {
+  passenger: ['hatchback', 'sedan', 'suv', 'muv', 'van', 'mini_bus', 'bus', 'auto', 'bike', 'other'],
+  commercial: ['pickup', 'tempo', 'mini_truck', 'truck', 'trailer', 'other'],
+};
+const categoryOfClass = (c) => (CLASSES_BY_CATEGORY.commercial.includes(c) && c !== 'other' ? 'commercial' : 'passenger');
+const BODY_TYPES = ['open', 'closed', 'container', 'flatbed', 'tipper', 'tanker', 'refrigerated'];
 const MAX_PHOTOS = 8;
 // Changing these on an approved vehicle sends it back for admin verification.
-const KEY_FIELDS = ['registrationNumber', 'vehicleClass', 'make', 'model', 'year'];
+const KEY_FIELDS = ['registrationNumber', 'category', 'vehicleClass', 'make', 'model', 'year'];
 
 const regNo = z
   .string()
@@ -26,6 +33,7 @@ const regNo = z
   .refine((v) => /^[A-Z]{2}\d{1,2}[A-Z]{0,3}\d{1,4}$/.test(v) || /^\d{2}BH\d{4}[A-Z]{1,2}$/.test(v), 'Enter a valid registration number, e.g. AS01AB1234');
 
 const baseVehicle = {
+  category: z.enum(['passenger', 'commercial']).optional(),
   vehicleClass: z.enum(VEHICLE_CLASSES),
   make: trimmed(50),
   model: trimmed(50),
@@ -33,7 +41,9 @@ const baseVehicle = {
   color: optText(30),
   registrationNumber: regNo,
   seats: z.coerce.number().int().min(1).max(80).optional().nullable(),
-  loadCapacityKg: z.coerce.number().int().min(0).max(60000).optional().nullable(),
+  loadCapacityKg: z.coerce.number().int().min(50, 'Load capacity must be at least 50 kg').max(60000, 'Load capacity can be at most 60 tonnes').optional().nullable(),
+  bodyType: z.enum(BODY_TYPES).optional().nullable(),
+  cargoLengthFt: z.coerce.number().min(3).max(80).optional().nullable(),
   fuelType: z.enum(['petrol', 'diesel', 'cng', 'electric', 'hybrid']).optional().nullable(),
   hasAc: z.boolean().optional(),
   features: strList(20, 40).optional(),
@@ -64,6 +74,33 @@ function checkUsage(category, v) {
   if (v.forGoods && !category.canViewGoodsOrders) throw forbidden('Your partner type cannot carry goods');
 }
 
+/** Which vehicle categories a partner type may register. */
+function allowedCategories(pc) {
+  const out = [];
+  if (pc.canCreateTrips || pc.canListRentals) out.push('passenger');
+  if (pc.canViewGoodsOrders || pc.canListRentals) out.push('commercial');
+  return out;
+}
+
+/**
+ * Category rules (applied to the merged vehicle on create and edit):
+ *  - passenger vehicles need a seat count and never carry goods orders
+ *  - commercial (goods) vehicles need a load capacity; seats and passenger comforts don't apply
+ * Returns the fields to store.
+ */
+function checkCategory(pc, v) {
+  const category = v.category || categoryOfClass(v.vehicleClass);
+  if (!allowedCategories(pc).includes(category)) throw forbidden(category === 'commercial' ? 'Your partner type cannot add goods vehicles' : 'Your partner type cannot add passenger vehicles');
+  if (!CLASSES_BY_CATEGORY[category].includes(v.vehicleClass)) throw badRequest(category === 'commercial' ? 'Choose a goods vehicle type (pickup, tempo, truck…)' : 'Choose a passenger vehicle type (car, SUV, bus…)');
+  if (category === 'passenger') {
+    if (!v.seats) throw badRequest('Enter the seating capacity');
+    if (v.forGoods) throw badRequest('Goods transport needs a commercial (goods) vehicle');
+    return { category, loadCapacityKg: null, bodyType: null, cargoLengthFt: null };
+  }
+  if (!v.loadCapacityKg) throw badRequest('Enter the load capacity');
+  return { category, seats: null, hasAc: false };
+}
+
 function checkRental(v) {
   if (!v.forRental) return;
   if (!v.rentalPricePerDay && !v.rentalPricePerHour) throw badRequest('Set a rental price per day or per hour');
@@ -74,6 +111,7 @@ function checkRental(v) {
 async function serialize(v, { owner = false } = {}) {
   const out = {
     id: v.id,
+    category: v.category,
     vehicleClass: v.vehicleClass,
     make: v.make,
     model: v.model,
@@ -82,6 +120,8 @@ async function serialize(v, { owner = false } = {}) {
     registrationNumber: owner ? v.registrationNumber : v.registrationNumber?.replace(/^(.{4}).*(.{4})$/, '$1••$2'),
     seats: v.seats,
     loadCapacityKg: v.loadCapacityKg,
+    bodyType: v.bodyType,
+    cargoLengthFt: v.cargoLengthFt,
     fuelType: v.fuelType,
     hasAc: v.hasAc,
     features: v.features,
@@ -140,7 +180,7 @@ partnerRouter.get('/', validate({ query: z.object({ status: z.enum(['pending', '
 
 partnerRouter.get('/requirements', async (req, res) => {
   const category = await partnerService.categoryById(req.partner.category.id);
-  res.json({ success: true, data: { vehicleClasses: VEHICLE_CLASSES, documents: category.requirements.filter((r) => r.scope === 'vehicle').map((r) => localReq(r, langOf(req))) } });
+  res.json({ success: true, data: { vehicleClasses: VEHICLE_CLASSES, classesByCategory: CLASSES_BY_CATEGORY, categories: allowedCategories(req.partner.category), bodyTypes: BODY_TYPES, documents: category.requirements.filter((r) => r.scope === 'vehicle').map((r) => localReq(r, langOf(req))) } });
 });
 
 partnerRouter.post('/', writeLimiter, validate({ body: createSchema }), async (req, res) => {
@@ -154,7 +194,7 @@ partnerRouter.post('/', writeLimiter, validate({ body: createSchema }), async (r
   }
   checkUsage(req.partner.category, b);
   checkRental(b);
-  if (b.forTrips && !b.seats) throw badRequest('Enter the number of passenger seats');
+  Object.assign(b, checkCategory(req.partner.category, b));
   const count = await prisma.vehicle.count({ where: { partnerId: req.partner.id } });
   if (count >= 50) throw badRequest('You can list up to 50 vehicles. Contact support for more.');
   const v = await prisma.vehicle.create({ data: { ...b, partnerId: req.partner.id, verificationStatus: 'pending', rentalAvailable: !!b.forRental } });
@@ -183,9 +223,11 @@ partnerRouter.get('/:id', validate({ params: idParam }), async (req, res) => {
 partnerRouter.patch('/:id', validate({ params: idParam, body: updateSchema }), async (req, res) => {
   const v = await ownVehicle(req);
   const merged = { ...v, ...req.body };
+  // Switching the vehicle type to another category without saying so moves the category with it.
+  if (req.body.vehicleClass && !req.body.category) merged.category = CLASSES_BY_CATEGORY[v.category].includes(req.body.vehicleClass) ? v.category : categoryOfClass(req.body.vehicleClass);
   checkUsage(req.partner.category, merged);
   checkRental(merged);
-  const data = { ...req.body };
+  const data = { ...req.body, ...checkCategory(req.partner.category, merged) };
   const keyChanged = KEY_FIELDS.some((k) => k in req.body && req.body[k] !== v[k]);
   if (keyChanged && v.verificationStatus !== 'pending') Object.assign(data, { verificationStatus: 'pending', submittedAt: new Date(), rejectionReason: null, verifiedAt: null });
   if (v.verificationStatus === 'rejected') Object.assign(data, { verificationStatus: 'pending', submittedAt: new Date(), rejectionReason: null });
@@ -383,4 +425,4 @@ publicRouter.get('/:id', optionalAuth, validate({ params: idParam }), async (req
   res.json({ success: true, data });
 });
 
-module.exports = { partnerRouter, publicRouter, serialize, partnerContact, contactSelect, VEHICLE_CLASSES, clearPublicCache };
+module.exports = { partnerRouter, publicRouter, serialize, partnerContact, contactSelect, VEHICLE_CLASSES, CLASSES_BY_CATEGORY, BODY_TYPES, clearPublicCache };

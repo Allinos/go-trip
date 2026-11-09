@@ -28,6 +28,8 @@ const serializeBooking = (b) => ({
   passengerName: b.passengerName,
   passengerPhone: b.passengerPhone,
   note: b.note,
+  goodsType: b.goodsType,
+  loadKg: b.loadKg,
   respondedAt: b.respondedAt,
   createdAt: b.createdAt,
 });
@@ -71,7 +73,7 @@ userRouter.use(authenticate, clearAfterWrite);
 userRouter.post(
   '/',
   writeLimiter,
-  validate({ body: z.object({ tripId: z.coerce.number().int().positive(), seats: z.coerce.number().int().min(1).max(20), pickupSeq: z.coerce.number().int().min(0), dropSeq: z.coerce.number().int().min(1), passengerName: optText(100), note: optText(300) }) }),
+  validate({ body: z.object({ tripId: z.coerce.number().int().positive(), seats: z.coerce.number().int().min(1).max(20), pickupSeq: z.coerce.number().int().min(0), dropSeq: z.coerce.number().int().min(1), passengerName: optText(100), note: optText(300), goodsType: optText(80), loadKg: z.coerce.number().int().min(1).max(60000).optional().nullable() }) }),
   async (req, res) => {
     const b = req.body;
     const trip = await prisma.trip.findFirst({ where: { id: b.tripId }, include: { stops: true, vehicle: { select: { verificationStatus: true } }, partner: { select: { id: true, userId: true, accountStatus: true } } } });
@@ -79,6 +81,15 @@ userRouter.post(
     if (trip.vehicle.verificationStatus !== 'approved') throw badRequest('This trip is no longer accepting bookings', undefined, 'TRIP_CLOSED');
     if (trip.partner.userId === req.user.id) throw badRequest('You cannot book your own trip');
     if (trip.status !== 'scheduled' || !trip.bookingOpen || trip.departureAt < new Date()) throw badRequest('This trip is no longer accepting bookings', undefined, 'TRIP_CLOSED');
+    if (trip.kind === 'goods') {
+      // The whole vehicle is hired: one request = the vehicle, described by what is carried.
+      b.seats = 1;
+      if (!b.goodsType) throw badRequest('Say what goods you want to send', undefined, 'GOODS_REQUIRED');
+      if (b.loadKg && trip.capacityKg && b.loadKg > trip.capacityKg) throw badRequest(`This vehicle can carry up to ${trip.capacityKg} kg`, undefined, 'OVER_CAPACITY');
+    } else {
+      b.goodsType = null;
+      b.loadKg = null;
+    }
     if (b.seats > trip.availableSeats) throw badRequest(trip.availableSeats ? `Only ${trip.availableSeats} seat(s) left` : 'This trip is full', undefined, 'NOT_ENOUGH_SEATS');
     const stops = [...trip.stops].sort((x, y) => x.seq - y.seq);
     if (b.dropSeq <= b.pickupSeq || b.dropSeq >= stops.length) throw badRequest('Choose a drop point after your pickup point');
@@ -100,6 +111,8 @@ userRouter.post(
           passengerName: b.passengerName || user.fullName,
           passengerPhone: user.phone,
           note: b.note,
+          goodsType: b.goodsType,
+          loadKg: b.loadKg,
         },
       });
       res.locals.partnerId = trip.partnerId;
@@ -168,7 +181,7 @@ partnerRouter.get('/', validate({ query: z.object({ status: z.enum(STATUSES).opt
   const { page, limit, skip, take } = paginate(req.query);
   const where = { partnerId: req.partner.id, ...(req.query.status ? { status: req.query.status } : {}), ...(req.query.tripId ? { tripId: req.query.tripId } : {}) };
   const [items, total, counts] = await Promise.all([
-    prisma.booking.findMany({ where, orderBy: [{ createdAt: 'desc' }], skip, take, include: { trip: { select: { id: true, originName: true, destinationName: true, departureAt: true, status: true, tripType: true, availableSeats: true } } } }),
+    prisma.booking.findMany({ where, orderBy: [{ createdAt: 'desc' }], skip, take, include: { trip: { select: { id: true, originName: true, destinationName: true, departureAt: true, status: true, tripType: true, kind: true, availableSeats: true } } } }),
     prisma.booking.count({ where }),
     prisma.booking.groupBy({ by: ['status'], where: { partnerId: req.partner.id }, _count: { _all: true } }),
   ]);

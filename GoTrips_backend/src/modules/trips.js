@@ -39,7 +39,10 @@ const tripBody = z.object({
   departureAt: z.coerce.date(),
   arrivalAt: z.coerce.date().optional().nullable(),
   stops: z.array(stopSchema).min(2, 'Add a starting point and a destination').max(15, 'Up to 15 stops are allowed'),
-  totalSeats: z.coerce.number().int().min(1).max(80),
+  // Passenger trips: seats for sale. Goods trips: ignored (the whole vehicle is hired once).
+  totalSeats: z.coerce.number().int().min(1).max(80).optional(),
+  capacityKg: z.coerce.number().int().min(50).max(60000).optional().nullable(),
+  /** Passenger trips: price per seat for the full route. Goods trips: price to hire the vehicle for the route. */
   pricePerSeat: money,
   acceptsParcels: z.boolean().optional(),
   notes: optText(500),
@@ -82,6 +85,8 @@ async function serializeTrip(t, { loggedIn = false, owner = false } = {}) {
   return {
     id: t.id,
     tripType: t.tripType,
+    kind: t.kind,
+    capacityKg: t.capacityKg,
     parentTripId: t.parentTripId,
     originName: t.originName,
     destinationName: t.destinationName,
@@ -99,7 +104,7 @@ async function serializeTrip(t, { loggedIn = false, owner = false } = {}) {
     stops: stops.map((s) => ({ seq: s.seq, placeName: s.placeName, district: s.district, lat: s.lat, lng: s.lng, fareFromStart: s.fareFromStart, etaMinutes: s.etaMinutes, mapsUrl: mapsUrl(s.lat, s.lng) })),
     routeMapsUrl: mapsDirectionsUrl(t.originName, t.destinationName),
     vehicle: t.vehicle
-      ? { id: t.vehicle.id, vehicleClass: t.vehicle.vehicleClass, make: t.vehicle.make, model: t.vehicle.model, color: t.vehicle.color, hasAc: t.vehicle.hasAc, seats: t.vehicle.seats, photo: await storage.url(t.vehicle.photoKeys?.[0]), registrationNumber: owner ? t.vehicle.registrationNumber : t.vehicle.registrationNumber.replace(/^(.{4}).*(.{4})$/, '$1••$2') }
+      ? { id: t.vehicle.id, category: t.vehicle.category, vehicleClass: t.vehicle.vehicleClass, loadCapacityKg: t.vehicle.loadCapacityKg, bodyType: t.vehicle.bodyType, make: t.vehicle.make, model: t.vehicle.model, color: t.vehicle.color, hasAc: t.vehicle.hasAc, seats: t.vehicle.seats, photo: await storage.url(t.vehicle.photoKeys?.[0]), registrationNumber: owner ? t.vehicle.registrationNumber : t.vehicle.registrationNumber.replace(/^(.{4}).*(.{4})$/, '$1••$2') }
       : undefined,
     driver: t.partner && !owner ? await partnerContact(t.partner, loggedIn) : undefined,
     createdAt: t.createdAt,
@@ -126,11 +131,28 @@ async function usableVehicle(partnerId, vehicleId, seats) {
   const v = await prisma.vehicle.findFirst({ where: { id: vehicleId, partnerId } });
   if (!v) throw notFound('Vehicle');
   if (v.verificationStatus !== 'approved') throw badRequest('This vehicle is not verified yet. You can create trips after admin approval.', undefined, 'VEHICLE_NOT_VERIFIED');
-  if (!v.forTrips) throw badRequest('Turn on "Use for trips" for this vehicle first');
-  if (!v.isAvailable) throw badRequest('This vehicle is switched OFF. Turn it ON to create trips.');
-  if (v.seats && seats > v.seats) throw badRequest(`This vehicle has only ${v.seats} seats`);
+  if (!v.forTrips) throw badRequest('Turn on "Use for trips" for this vehicle first', undefined, 'VEHICLE_NOT_FOR_TRIPS');
+  if (!v.isAvailable) throw badRequest('This vehicle is switched OFF. Turn it ON to create trips.', undefined, 'VEHICLE_OFF');
+  if (v.category === 'passenger' && v.seats && seats > v.seats) throw badRequest(`This vehicle has only ${v.seats} seats`);
   return v;
 }
+
+/**
+ * Kind-specific trip fields. Goods vehicles are hired whole: one "seat", a load capacity (at most the vehicle's)
+ * and a single price for the route (no per-stop fares, no passenger parcels).
+ */
+function kindFields(v, b, fallback = {}) {
+  if (v.category !== 'commercial') {
+    const seats = b.totalSeats ?? fallback.totalSeats;
+    if (!seats) throw badRequest('Enter the number of seats available');
+    return { kind: 'passenger', totalSeats: seats, capacityKg: null };
+  }
+  const cap = b.capacityKg ?? fallback.capacityKg ?? v.loadCapacityKg;
+  if (!cap) throw badRequest('Enter the load capacity available for this trip');
+  if (v.loadCapacityKg && cap > v.loadCapacityKg) throw badRequest(`This vehicle can carry up to ${v.loadCapacityKg} kg`);
+  return { kind: 'goods', totalSeats: 1, capacityKg: cap, acceptsParcels: false };
+}
+const goodsStops = (stops) => stops.map((s, i) => (i === 0 || i === stops.length - 1 ? s : { ...s, fareFromStart: null }));
 
 async function ensureNoClash(vehicleId, departureAt, excludeId) {
   const window = 60 * 60_000;
@@ -166,7 +188,9 @@ partnerRouter.post('/', validate({ body: tripBody }), async (req, res) => {
   const b = req.body;
   validateTiming(b.departureAt, b.arrivalAt);
   validateStops(b.stops);
-  await usableVehicle(req.partner.id, b.vehicleId, b.totalSeats);
+  const vehicle = await usableVehicle(req.partner.id, b.vehicleId, b.totalSeats);
+  const kf = kindFields(vehicle, b);
+  if (kf.kind === 'goods') b.stops = goodsStops(b.stops);
   if (b.parentTripId) {
     const parent = await prisma.trip.findFirst({ where: { id: b.parentTripId, partnerId: req.partner.id } });
     if (!parent) throw notFound('Outbound trip');
@@ -184,10 +208,10 @@ partnerRouter.post('/', validate({ body: tripBody }), async (req, res) => {
       destinationName: b.stops[b.stops.length - 1].placeName,
       departureAt: b.departureAt,
       arrivalAt: b.arrivalAt || null,
-      totalSeats: b.totalSeats,
-      availableSeats: b.totalSeats,
+      availableSeats: kf.totalSeats,
       pricePerSeat: b.pricePerSeat,
       acceptsParcels: !!b.acceptsParcels,
+      ...kf,
       notes: b.notes,
       stops: { create: stopRows(b.stops) },
     },
@@ -199,18 +223,20 @@ partnerRouter.post('/', validate({ body: tripBody }), async (req, res) => {
 /** One-tap return trip: same vehicle, reversed route, new time. */
 partnerRouter.post(
   '/:id/return-trip',
-  validate({ params: idParam, body: z.object({ departureAt: z.coerce.date(), arrivalAt: z.coerce.date().optional().nullable(), totalSeats: z.coerce.number().int().min(1).max(80).optional(), pricePerSeat: money.optional(), notes: optText(500) }) }),
+  validate({ params: idParam, body: z.object({ departureAt: z.coerce.date(), arrivalAt: z.coerce.date().optional().nullable(), totalSeats: z.coerce.number().int().min(1).max(80).optional(), capacityKg: z.coerce.number().int().min(50).max(60000).optional().nullable(), pricePerSeat: money.optional(), notes: optText(500) }) }),
   async (req, res) => {
     const parent = await ownTrip(req);
     const b = req.body;
     validateTiming(b.departureAt, b.arrivalAt);
     if (b.departureAt <= parent.departureAt) throw badRequest('The return trip must depart after the outbound trip');
     const seats = b.totalSeats || parent.totalSeats;
-    await usableVehicle(req.partner.id, parent.vehicleId, seats);
+    const vehicle = await usableVehicle(req.partner.id, parent.vehicleId, seats);
+    const kf = kindFields(vehicle, b, { totalSeats: seats, capacityKg: parent.capacityKg });
     await ensureNoClash(parent.vehicleId, b.departureAt);
     const stops = [...parent.stops].sort((a, c) => c.seq - a.seq);
     const total = parent.pricePerSeat;
-    const reversed = stops.map((s, i) => ({ placeName: s.placeName, district: s.district, lat: s.lat, lng: s.lng, fareFromStart: i === 0 ? 0 : s.fareFromStart != null ? total - s.fareFromStart : null, etaMinutes: null }));
+    let reversed = stops.map((s, i) => ({ placeName: s.placeName, district: s.district, lat: s.lat, lng: s.lng, fareFromStart: i === 0 ? 0 : s.fareFromStart != null ? total - s.fareFromStart : null, etaMinutes: null }));
+    if (kf.kind === 'goods') reversed = goodsStops(reversed);
     const trip = await prisma.trip.create({
       data: {
         partnerId: req.partner.id,
@@ -221,10 +247,10 @@ partnerRouter.post(
         destinationName: parent.originName,
         departureAt: b.departureAt,
         arrivalAt: b.arrivalAt || null,
-        totalSeats: seats,
-        availableSeats: seats,
+        availableSeats: kf.totalSeats,
         pricePerSeat: b.pricePerSeat ?? parent.pricePerSeat,
         acceptsParcels: parent.acceptsParcels,
+        ...kf,
         notes: b.notes ?? parent.notes,
         stops: { create: stopRows(reversed) },
       },
@@ -241,7 +267,7 @@ partnerRouter.get('/:id', validate({ params: idParam }), async (req, res) => {
     data: {
       ...(await serializeTrip(t, { owner: true })),
       returnTrips: t.returnTrips,
-      bookings: t.bookings.map((b) => ({ id: b.id, code: b.code, status: b.status, seats: b.seats, pickupName: b.pickupName, dropName: b.dropName, fareEstimate: b.fareEstimate, passengerName: b.passengerName, passengerPhone: b.passengerPhone, note: b.note, createdAt: b.createdAt })),
+      bookings: t.bookings.map((b) => ({ id: b.id, code: b.code, status: b.status, seats: b.seats, pickupName: b.pickupName, dropName: b.dropName, fareEstimate: b.fareEstimate, passengerName: b.passengerName, passengerPhone: b.passengerPhone, note: b.note, goodsType: b.goodsType, loadKg: b.loadKg, createdAt: b.createdAt })),
     },
   });
 });
@@ -260,6 +286,11 @@ partnerRouter.patch(
       if (b.departureAt) await ensureNoClash(t.vehicleId, dep, t.id);
       Object.assign(data, { departureAt: dep, ...(b.arrivalAt !== undefined ? { arrivalAt: b.arrivalAt } : {}) });
     }
+    if (t.kind === 'goods') {
+      delete b.totalSeats;
+      if (b.capacityKg != null) data.capacityKg = kindFields(t.vehicle, { capacityKg: b.capacityKg }).capacityKg;
+      if (b.stops) b.stops = goodsStops(b.stops);
+    } else delete b.capacityKg;
     if (b.totalSeats != null) {
       const booked = t.totalSeats - t.availableSeats;
       if (b.totalSeats < booked) throw badRequest(`${booked} seat(s) are already booked. Total seats cannot be less than that.`);
@@ -361,6 +392,7 @@ publicRouter.get(
       date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').optional(),
       seats: z.coerce.number().int().min(1).max(20).default(1),
       type: z.enum(['start', 'return']).optional(),
+      kind: z.enum(['passenger', 'goods']).default('passenger'),
       ...pageQuery,
     }),
   }),
@@ -392,13 +424,14 @@ publicRouter.get(
       WHERE t.status = 'scheduled' AND t.booking_open = true AND t.available_seats >= ${q.seats}
         AND t.departure_at >= ${winStart} AND t.departure_at < ${winEnd}
         AND p.account_status = 'active' AND u.status = 'active'
+        AND t.kind = ${q.kind}::"TripKind"
         ${typeCond}
         ${fromKey ? fromCond : Prisma.sql`AND a.seq = 0`}
         ${toKey ? toCond : Prisma.sql`AND b.seq = (SELECT max(seq) FROM trip_stops s WHERE s.trip_id = t.id)`}`;
 
     // Popular routes are searched again and again. Results never contain phone numbers (those are on the
     // trip page), so every user shares one cached page per normalised query. Any trip or seat change clears it.
-    const searchKey = `trips:search:${JSON.stringify([fromKey, toKey, q.date || '', q.seats, q.type || '', page, limit])}`;
+    const searchKey = `trips:search:${JSON.stringify([fromKey, toKey, q.date || '', q.seats, q.type || '', q.kind, page, limit])}`;
     await cache.sendCached(req, res, searchKey, 30, async () => {
       // One query: DISTINCT ON picks the best stop pair per trip, COUNT(*) OVER() gives the total for paging.
       const rows = await prisma.$queryRaw`
