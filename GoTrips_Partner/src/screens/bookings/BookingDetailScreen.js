@@ -6,7 +6,7 @@ import { errorMessage } from '../../api/client';
 import { useApi } from '../../hooks/useApi';
 import { useToast } from '../../context/ToastContext';
 import { font } from '../../theme';
-import { dateTimeLabel, rupees } from '../../utils/format';
+import { dateTimeLabel, loadText, phoneText, rupees } from '../../utils/format';
 import { t } from '../../i18n';
 import { Stars } from '../account/ReviewsScreen';
 
@@ -31,16 +31,24 @@ export default function BookingDetailScreen({ navigation, route }) {
       setBusy(false);
     }
   };
+  const goods = b.trip?.kind === 'goods' || !!b.goodsType;
   const wa = `https://wa.me/${b.passengerPhone.replace(/\D/g, '')}`;
   return (
     <Screen title={t("Booking {0}", [b.code])}>
       <Card style={{ marginBottom: 16 }}>
         <Row style={{ justifyContent: 'space-between', marginBottom: 8 }}>
-          <Text style={font.h2}>{b.passengerName || t("Passenger")}</Text>
+          <Text style={[font.h2, { flex: 1 }]}>{b.passengerName || (goods ? t("Customer") : t("Passenger"))}</Text>
           <Badge status={b.status} />
         </Row>
-        <KV label={t("Phone")} value={b.passengerPhone} />
-        <KV label={t("Seats")} value={b.seats} />
+        <KV label={t("Phone")} value={phoneText(b.passengerPhone)} />
+        {goods ? (
+          <>
+            <KV label={t("Goods")} value={b.goodsType} />
+            {b.loadKg ? <KV label={t("Approx. weight")} value={loadText(b.loadKg)} /> : null}
+          </>
+        ) : (
+          <KV label={t("Seats")} value={b.seats} />
+        )}
         <KV label={t("Pickup")} value={b.pickupName} />
         <KV label={t("Drop")} value={b.dropName} />
         <KV label={t("Fare (estimated)")} value={rupees(b.fareEstimate)} />
@@ -61,7 +69,7 @@ export default function BookingDetailScreen({ navigation, route }) {
           {b.trip.originName}{" → "}{b.trip.destinationName}
         </Text>
         <Text style={font.sub}>
-          {dateTimeLabel(b.trip.departureAt)}{" · "}{b.trip.availableSeats}{" "}{t("seat(s) left")}</Text>
+          {dateTimeLabel(b.trip.departureAt)}{" · "}{goods ? loadText(b.trip.capacityKg) : `${b.trip.availableSeats} ${t("seat(s) left")}`}</Text>
       </Card>
       <Row style={{ marginBottom: 12 }}>
         <Button style={{ flex: 1 }} icon="call" title={t("Call")} onPress={() => Linking.openURL(`tel:${b.passengerPhone}`)} />
@@ -69,7 +77,7 @@ export default function BookingDetailScreen({ navigation, route }) {
       </Row>
       {b.status === 'pending' && (
         <Row>
-          <Button style={{ flex: 1 }} variant="success" icon="checkmark" title={t("Accept")} loading={busy} onPress={() => run(() => bookingApi.accept(b.id), 'Booking confirmed. Passenger notified.')} />
+          <Button style={{ flex: 1 }} variant="success" icon="checkmark" title={t("Accept")} loading={busy} onPress={() => run(() => bookingApi.accept(b.id), goods ? t('Hire confirmed. Customer notified.') : t('Booking confirmed. Passenger notified.'))} />
           <Button style={{ flex: 1 }} variant="danger" icon="close" title={t("Decline")} onPress={() => setPrompt('reject')} />
         </Row>
       )}
@@ -77,14 +85,14 @@ export default function BookingDetailScreen({ navigation, route }) {
       <PromptModal
         visible={!!prompt}
         title={prompt === 'cancel' ? t("Cancel confirmed booking?") : t("Decline this request?")}
-        message={t("The passenger will be notified.")}
+        message={goods ? t("The customer will be notified.") : t("The passenger will be notified.")}
         placeholder={t("Reason")}
         presets={prompt === 'cancel' ? ['Vehicle problem', 'Trip changed'] : ['Seats are full', 'Not going that way']}
         required={prompt === 'cancel'}
         danger
         confirmText={prompt === 'cancel' ? t("Cancel booking") : t("Decline")}
         onClose={() => setPrompt(null)}
-        onConfirm={(reason) => (prompt === 'cancel' ? run(() => bookingApi.cancel(b.id, reason), 'Booking cancelled') : run(() => bookingApi.reject(b.id, reason || undefined), 'Request declined'))}
+        onConfirm={(reason) => (prompt === 'cancel' ? run(() => bookingApi.cancel(b.id, reason), t('Booking cancelled')) : run(() => bookingApi.reject(b.id, reason || undefined), t('Request declined')))}
       />
     </Screen>
   );

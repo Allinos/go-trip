@@ -11,6 +11,8 @@ export function stepScreen(state) {
       return state.category?.hasDriverProfile ? 'DriverDetails' : 'BusinessDetails';
     case 'documents':
       return 'Documents';
+    case 'review':
+      return 'Review';
     case 'payment':
       return 'Payment';
     default:
@@ -23,6 +25,7 @@ export const STEP_LABELS = [
   { key: 'category', label: 'Partner type' },
   { key: 'details', label: 'Your details' },
   { key: 'documents', label: 'Documents' },
+  { key: 'review', label: 'Review & submit' },
   { key: 'payment', label: 'Registration fee' },
 ];
 

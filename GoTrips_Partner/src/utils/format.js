@@ -52,3 +52,24 @@ const STATUS_RAW = {
 const translated = (raw) => new Proxy(raw, { get: (o, k) => (typeof o[k] === 'string' ? t(o[k]) : o[k]) });
 export const VEHICLE_LABELS = translated(VEHICLE_RAW);
 export const STATUS_TEXT = translated(STATUS_RAW);
+
+export const phoneText = (p) => (p ? String(p).replace(/^\+91(\d{5})(\d{5})$/, '+91 $1 $2') : '—');
+
+/** Vehicle categories and the types that belong to each (matches the API). */
+export const VEHICLE_CATEGORIES = {
+  passenger: { label: 'Passenger vehicle', sub: 'Cars, SUVs, buses — carries people', icon: 'people', classes: ['hatchback', 'sedan', 'suv', 'muv', 'van', 'mini_bus', 'bus', 'auto', 'bike', 'other'] },
+  commercial: { label: 'Commercial goods vehicle', sub: 'Pickups, tempos, trucks — carries goods', icon: 'cube', classes: ['pickup', 'tempo', 'mini_truck', 'truck', 'trailer', 'other'] },
+};
+export const CLASS_ICON = { hatchback: 'car-sport', sedan: 'car', suv: 'car-sport', muv: 'car', van: 'bus', mini_bus: 'bus', bus: 'bus', auto: 'bicycle', bike: 'bicycle', pickup: 'car', tempo: 'cube', mini_truck: 'cube', truck: 'cube', trailer: 'cube', other: 'ellipsis-horizontal' };
+export const categoryOf = (v) => v?.category || (VEHICLE_CATEGORIES.commercial.classes.includes(v?.vehicleClass) && v?.vehicleClass !== 'other' ? 'commercial' : 'passenger');
+
+const BODY_RAW = { open: 'Open body', closed: 'Closed body', container: 'Container', flatbed: 'Flatbed', tipper: 'Tipper', tanker: 'Tanker', refrigerated: 'Refrigerated' };
+export const BODY_TYPES = translated(BODY_RAW);
+export const BODY_TYPE_KEYS = Object.keys(BODY_RAW);
+
+/** 750 → "750 kg", 7000 → "7 t", 2500 → "2.5 t". */
+export const loadText = (kg) => (kg == null ? '—' : kg >= 1000 ? `${Number((kg / 1000).toFixed(2))} t` : `${kg} kg`);
+
+/** One line describing capacity: "7 seats" or "1.5 t · Open body". */
+export const capacityText = (v) =>
+  categoryOf(v) === 'commercial' ? [loadText(v.loadCapacityKg), v.bodyType && BODY_TYPES[v.bodyType]].filter(Boolean).join(' · ') : v.seats ? t('{0} seats', [v.seats]) : '';

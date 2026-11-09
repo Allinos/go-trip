@@ -16,6 +16,19 @@ import { ScrollView, RefreshControl } from 'react-native';
 import { t } from '../../i18n';
 import CachedImage from '../../components/CachedImage';
 
+const styles = {
+  hero: { backgroundColor: colors.primary, borderRadius: 16, padding: 16, marginBottom: 20 },
+  heroLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6 },
+  heroValue: { color: '#fff', fontSize: 32, lineHeight: 40, fontWeight: '800', marginTop: 4 },
+  heroSub: { color: 'rgba(255,255,255,0.85)', fontSize: 13 },
+  heroLink: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.16)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
+  grid: { flexDirection: 'row', gap: 8, marginBottom: 20 },
+  action: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 4, borderRadius: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.divider },
+  actionIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
+  stat: { flexBasis: '46%', flexGrow: 1 },
+};
+
 export default function HomeScreen({ navigation }) {
   const { user, onboarding } = useAuth();
   const caps = useCaps();
@@ -26,7 +39,7 @@ export default function HomeScreen({ navigation }) {
   const setAvailable = async (isAvailable) => {
     try {
       await partnerApi.saveDriverProfile({ isAvailable });
-      toast(isAvailable ? t("You are visible to customers") : t("You are hidden from the marketplace"), isAvailable ? t("success") : t("info"));
+      toast(isAvailable ? t("You are visible to customers") : t("You are hidden from the marketplace"), isAvailable ? 'success' : 'info');
       reload();
     } catch (e) {
       toast(errorMessage(e), 'error');
@@ -50,7 +63,7 @@ export default function HomeScreen({ navigation }) {
           )}
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={font.small}>{t("Namaskar 🙏")}</Text>
+          <Text style={font.small}>{t("Namaskar 🙏")}{caps.name ? ` · ${caps.name}` : ''}</Text>
           <Text style={font.h2} numberOfLines={1}>
             {user?.fullName}
           </Text>
@@ -109,39 +122,51 @@ export default function HomeScreen({ navigation }) {
 
             {(caps.trips || caps.vehicles) && (
               <>
-                <Card style={{ marginBottom: 12, backgroundColor: '#FFF' }}>
-                  <Text style={font.small}>{t("ESTIMATED EARNINGS")}</Text>
-                  <Row style={{ justifyContent: 'space-between', marginTop: 4 }}>
-                    <Text style={[font.h1, { fontSize: 30 }]}>{rupees(d.earnings.totalEstimated)}</Text>
-                    <Ionicons name="cash-outline" size={26} color={colors.green} />
+                <View style={styles.hero}>
+                  <Row style={{ justifyContent: 'space-between' }}>
+                    <Text style={styles.heroLabel}>{t("Estimated earnings")}</Text>
+                    <Ionicons name="wallet-outline" size={22} color="#fff" />
                   </Row>
-                  <Text style={font.small}>
-                    {rupees(d.earnings.thisMonthEstimated)}{" "}{t("this month ·")}{" "}{rupees(d.earnings.upcomingEstimated)}{" "}{t("upcoming")}</Text>
-                  <Button small variant="ghost" title={t("See earnings details")} onPress={() => navigation.navigate('Earnings')} style={{ alignSelf: 'flex-start', marginTop: 4, paddingHorizontal: 0 }} />
-                </Card>
-                <Row style={{ marginBottom: 12 }}>
-                  {caps.trips && <Stat label={t("Requests")} value={d.bookings.pending} sub={t("waiting for you")} icon="hourglass" tone="amber" onPress={() => navigation.navigate('Bookings')} />}
-                  {caps.trips && <Stat label={t("Upcoming")} value={d.trips.upcoming + d.trips.ongoing} sub={t("trips")} icon="calendar" tone="blue" onPress={() => navigation.navigate('Trips')} />}
-                </Row>
-                <Row style={{ marginBottom: 12 }}>
-                  {caps.vehicles && <Stat label={t("Vehicles")} value={d.vehicles.total} sub={t("{0} active · {1} in review", [d.vehicles.active, d.vehicles.pending])} icon="car" onPress={() => navigation.navigate('Vehicles')} />}
-                  {caps.trips && <Stat label={t("Completed")} value={d.bookings.completed} sub={t("bookings")} icon="checkmark-done" tone="green" />}
-                </Row>
-                {caps.trips && (
-                  <Row style={{ marginBottom: 16 }}>
-                    <Stat label={t("Rating")} value={d.rating?.count ? `★ ${d.rating.average.toFixed(1)}` : '—'} sub={d.rating?.count ? t("{0} rating(s)", [d.rating.count]) : t("No ratings yet")} icon="star" tone="amber" onPress={() => navigation.navigate('Reviews')} />
+                  <Text style={styles.heroValue}>{rupees(d.earnings.totalEstimated)}</Text>
+                  <Row gap={16} style={{ marginTop: 4 }}>
+                    <Text style={styles.heroSub}>{t("This month")} <Text style={{ fontWeight: '700', color: '#fff' }}>{rupees(d.earnings.thisMonthEstimated)}</Text></Text>
+                    <Text style={styles.heroSub}>{t("Upcoming")} <Text style={{ fontWeight: '700', color: '#fff' }}>{rupees(d.earnings.upcomingEstimated)}</Text></Text>
                   </Row>
-                )}
+                  <Pressable onPress={() => navigation.navigate('Earnings')} style={styles.heroLink} accessibilityRole="button">
+                    <Text style={{ color: '#fff', fontWeight: '600' }}>{t("See earnings details")}</Text>
+                    <Ionicons name="arrow-forward" size={16} color="#fff" />
+                  </Pressable>
+                </View>
+
+                <Text style={[font.label, { marginBottom: 8 }]}>{t("Quick actions")}</Text>
+                <View style={styles.grid}>
+                  {[
+                    caps.trips && ['add-circle', t("Create trip"), () => navigation.navigate('TripForm', { tripType: 'start' })],
+                    caps.trips && ['swap-horizontal', t("Return trip"), () => navigation.navigate('Trips', { tab: 'upcoming', pickReturn: true })],
+                    caps.vehicles && ['car', t("Add vehicle"), () => navigation.navigate('VehicleForm')],
+                    caps.trips && ['people', t("Requests"), () => navigation.navigate('Bookings')],
+                  ]
+                    .filter(Boolean)
+                    .map(([icon, label, onPress]) => (
+                      <Pressable key={label} onPress={onPress} style={({ pressed }) => [styles.action, pressed && { backgroundColor: colors.primarySoft }]} accessibilityRole="button">
+                        <View style={styles.actionIcon}>
+                          <Ionicons name={icon} size={22} color={colors.primary} />
+                        </View>
+                        <Text style={[font.small, { color: colors.text, fontWeight: '600', textAlign: 'center' }]} numberOfLines={2}>{label}</Text>
+                      </Pressable>
+                    ))}
+                </View>
+
+                <Text style={[font.label, { marginBottom: 8, marginTop: 4 }]}>{t("Overview")}</Text>
+                <View style={styles.statGrid}>
+                  {caps.trips && <Stat style={styles.stat} label={t("Requests")} value={d.bookings.pending} sub={t("waiting for you")} icon="hourglass" tone="amber" onPress={() => navigation.navigate('Bookings')} />}
+                  {caps.trips && <Stat style={styles.stat} label={t("Upcoming trips")} value={d.trips.upcoming + d.trips.ongoing} sub={t("{0} completed", [d.trips.completed])} icon="calendar" tone="blue" onPress={() => navigation.navigate('Trips')} />}
+                  {caps.vehicles && <Stat style={styles.stat} label={t("Vehicles")} value={d.vehicles.total} sub={t("{0} active · {1} in review", [d.vehicles.active, d.vehicles.pending])} icon="car" onPress={() => navigation.navigate('Vehicles')} />}
+                  {caps.trips && <Stat style={styles.stat} label={t("Rating")} value={d.rating?.count ? `★ ${d.rating.average.toFixed(1)}` : '—'} sub={d.rating?.count ? t("{0} rating(s)", [d.rating.count]) : t("No ratings yet")} icon="star" tone="amber" onPress={() => navigation.navigate('Reviews')} />}
+                </View>
               </>
             )}
 
-            {caps.trips && (
-              <View style={{ gap: 10, marginBottom: 20 }}>
-                <Button title={t("Create a trip")} icon="add-circle" onPress={() => navigation.navigate('TripForm', { tripType: 'start' })} />
-                <Button title={t("Create a return trip")} icon="swap-horizontal" variant="secondary" onPress={() => navigation.navigate('Trips', { tab: 'upcoming', pickReturn: true })} />
-              </View>
-            )}
-            {caps.vehicles && !caps.trips && <Button title={t("Add a vehicle")} icon="add-circle" onPress={() => navigation.navigate('VehicleForm')} style={{ marginBottom: 20 }} />}
             {caps.vehicles && d.vehicles.total === 0 && (
               <Notice tone="blue" icon="car" title={t("Add your first vehicle")} text={t("Vehicles are checked by our team before customers can see them.")} action={<Button small title={t("Add vehicle")} onPress={() => navigation.navigate('VehicleForm')} style={{ alignSelf: 'flex-start', marginTop: 6 }} />} />
             )}

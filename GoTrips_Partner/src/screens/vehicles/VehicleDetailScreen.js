@@ -9,7 +9,8 @@ import { errorMessage } from '../../api/client';
 import { useApi } from '../../hooks/useApi';
 import { useToast } from '../../context/ToastContext';
 import { colors, font } from '../../theme';
-import { fullDate, rupees, titleCase, VEHICLE_LABELS } from '../../utils/format';
+import { BODY_TYPES, capacityText, categoryOf, fullDate, loadText, rupees, titleCase, VEHICLE_CATEGORIES, VEHICLE_LABELS } from '../../utils/format';
+import { useCaps } from '../../context/AuthContext';
 import { confirm } from '../../utils/confirm';
 import { t } from '../../i18n';
 import CachedImage from '../../components/CachedImage';
@@ -17,6 +18,7 @@ import CachedImage from '../../components/CachedImage';
 export default function VehicleDetailScreen({ navigation, route }) {
   const { id, justAdded } = route.params;
   const toast = useToast();
+  const caps = useCaps();
   const { data: v, error, loading, reload, refresh, refreshing } = useApi(() => vehicleApi.get(id), [id], { cacheKey: `vehicle:${id}` });
   const [busy, setBusy] = useState(null);
 
@@ -41,7 +43,7 @@ export default function VehicleDetailScreen({ navigation, route }) {
     if (!perm.granted) return;
     const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: 8 - v.photos.length, quality: 0.7 });
     if (r.canceled) return;
-    run('photos', () => vehicleApi.addPhotos(v.id, r.assets.map((a) => a.uri)), 'Photos added');
+    run('photos', () => vehicleApi.addPhotos(v.id, r.assets.map((a) => a.uri)), t('Photos added'));
   };
   const removePhoto = async (i) => (await confirm(t("Remove photo?"), '', { okText: 'Remove', destructive: true })) && run('photo', () => vehicleApi.removePhoto(v.id, i));
   const setRentalLocation = async () => {
@@ -59,8 +61,9 @@ export default function VehicleDetailScreen({ navigation, route }) {
       setBusy(null);
     }
   };
-  const remove = async () => (await confirm(t("Remove this vehicle?"), t("It will be hidden from customers."), { okText: 'Remove', destructive: true })) && run('del', async () => (await vehicleApi.remove(v.id), navigation.goBack()), 'Vehicle removed');
+  const remove = async () => (await confirm(t("Remove this vehicle?"), t("It will be hidden from customers."), { okText: 'Remove', destructive: true })) && run('del', async () => (await vehicleApi.remove(v.id), navigation.goBack()), t('Vehicle removed'));
 
+  const goods = categoryOf(v) === 'commercial';
   const missingDocs = v.documents.filter((d) => d.requirement.isRequired && (!d.document || d.document.status === 'rejected'));
   return (
     <Screen title={`${v.make} ${v.model}`} refreshing={refreshing} onRefresh={refresh} right={v.verificationStatus !== 'suspended' && <Button small variant="ghost" icon="create-outline" title={t("Edit")} onPress={() => navigation.navigate('VehicleForm', { vehicle: v })} />}>
@@ -93,35 +96,46 @@ export default function VehicleDetailScreen({ navigation, route }) {
         <Text style={[font.small, { marginTop: 6 }]}>{t("Add front, side, back and inside photos. Tap a photo to remove it.")}</Text>
       </Section>
 
-      <Section title={t("Documents")} icon="document-text">
-        {v.documents.map(({ requirement: r, document: d }) => (
-          <Card key={r.docType} style={{ marginBottom: 10 }} onPress={() => navigation.navigate('DocumentUpload', { requirement: r, document: d, scope: 'vehicle', vehicleId: v.id })}>
+      <Section title={t("Documents")} icon="document-text" subtitle={missingDocs.length ? t("{0} required document(s) missing", [missingDocs.length]) : t("All required documents uploaded")}>
+        {v.documents.map(({ requirement: r, document: d }, i) => (
+          <Pressable key={r.docType} onPress={() => navigation.navigate('DocumentUpload', { requirement: r, document: d, scope: 'vehicle', vehicleId: v.id })} accessibilityRole="button" style={({ pressed }) => [{ paddingVertical: 10, borderTopWidth: i ? 1 : 0, borderTopColor: colors.divider }, pressed && { opacity: 0.6 }]}>
             <Row>
-              <Ionicons name={d ? (d.status === 'rejected' ? 'alert-circle' : 'checkmark-circle') : 'cloud-upload-outline'} size={22} color={d ? (d.status === 'rejected' ? colors.primaryDark : colors.green) : colors.primary} />
+              <Ionicons name={d ? (d.status === 'rejected' ? 'alert-circle' : 'checkmark-circle') : r.isRequired ? 'cloud-upload-outline' : 'add-circle-outline'} size={22} color={d ? (d.status === 'rejected' ? colors.primaryDark : colors.green) : r.isRequired ? colors.primary : colors.faint} />
               <View style={{ flex: 1 }}>
-                <Text style={font.h3}>
+                <Text style={font.body}>
                   {r.label}
                   {!r.isRequired && <Text style={font.small}>{" "}{t("(optional)")}</Text>}
                 </Text>
                 <Text style={font.small}>{d ? (d.status === 'rejected' ? d.rejectionReason : d.expiryDate ? t("Valid till {0}", [fullDate(d.expiryDate)]) : t("Uploaded")) : t("Tap to upload")}</Text>
               </View>
-              {d && <Badge status={d.status} text={d.status === 'pending' ? t("In review") : undefined} />}
+              {d ? <Badge status={d.status} text={d.status === 'pending' ? t("In review") : undefined} /> : <Ionicons name="chevron-forward" size={18} color={colors.faint} />}
             </Row>
-          </Card>
+          </Pressable>
         ))}
       </Section>
 
       <Section title={t("Details")} icon="information-circle">
-        <Card>
-          <KV label={t("Registration")} value={v.registrationNumber} />
-          <KV label={t("Type")} value={VEHICLE_LABELS[v.vehicleClass]} />
-          <KV label={t("Year / colour")} value={[v.year, v.color].filter(Boolean).join(' · ') || '—'} />
-          {v.seats ? <KV label={t("Seats")} value={v.seats} /> : null}
-          {v.loadCapacityKg ? <KV label={t("Load")} value={`${v.loadCapacityKg} kg`} /> : null}
-          <KV label={t("Fuel / AC")} value={`${titleCase(v.fuelType) || '—'} · ${v.hasAc ? 'AC' : 'Non-AC'}`} />
-          <KV label={t("Used for")} value={[v.forTrips && 'Trips', v.forRental && 'Rental', v.forGoods && 'Goods'].filter(Boolean).join(', ')} />
-          <KV label={t("Trips created")} value={v.tripCount} />
-        </Card>
+        <KV label={t("Category")} value={t(VEHICLE_CATEGORIES[goods ? 'commercial' : 'passenger'].label)} />
+        <KV label={t("Registration")} value={v.registrationNumber} />
+        <KV label={t("Type")} value={VEHICLE_LABELS[v.vehicleClass]} />
+        <KV label={t("Manufacturer / model")} value={`${v.make} ${v.model}`} />
+        <KV label={t("Year / colour")} value={[v.year, v.color].filter(Boolean).join(' · ') || '—'} />
+        {goods ? (
+          <>
+            <KV label={t("Load capacity")} value={loadText(v.loadCapacityKg)} />
+            {v.bodyType ? <KV label={t("Body type")} value={BODY_TYPES[v.bodyType]} /> : null}
+            {v.cargoLengthFt ? <KV label={t("Cargo length")} value={`${v.cargoLengthFt} ft`} /> : null}
+            <KV label={t("Fuel")} value={titleCase(v.fuelType) || '—'} />
+          </>
+        ) : (
+          <>
+            <KV label={t("Seating capacity")} value={v.seats ? t("{0} seats", [v.seats]) : '—'} />
+            <KV label={t("Fuel / AC")} value={`${titleCase(v.fuelType) || '—'} · ${v.hasAc ? 'AC' : t('Non-AC')}`} />
+          </>
+        )}
+        {v.features?.length ? <KV label={t("Extras")} value={v.features.map((x) => t(x)).join(', ')} /> : null}
+        <KV label={t("Used for")} value={[v.forTrips && (goods ? t('Goods trips') : t('Seat-sharing trips')), v.forRental && t('Rental'), v.forGoods && t('Goods orders')].filter(Boolean).join(', ')} />
+        <KV label={t("Trips created")} value={v.tripCount} />
       </Section>
 
       {v.verificationStatus !== 'suspended' && (
@@ -133,17 +147,26 @@ export default function VehicleDetailScreen({ navigation, route }) {
 
       {v.forRental && v.rental && (
         <Section title={t("Rental listing")} icon="key">
-          <Card>
+          <View>
             <KV label={t("Rent")} value={[v.rental.pricePerDay && `${rupees(v.rental.pricePerDay)}/day`, v.rental.pricePerHour && `${rupees(v.rental.pricePerHour)}/hour`].filter(Boolean).join(' · ')} />
             <KV label={t("Driver")} value={titleCase(v.rental.driverOption)} />
             <KV label={t("Location")} value={[v.rental.city, v.rental.district].filter(Boolean).join(', ')} />
             <KV label={t("On map")} value={v.rental.lat ? 'Yes' : 'Not set'} />
-            <Button small variant="secondary" icon="locate" title={t("Use my current location")} loading={busy === 'loc'} onPress={setRentalLocation} style={{ marginTop: 8 }} />
-          </Card>
+            <Button small variant="secondary" icon="locate" title={t("Use my current location")} loading={busy === 'loc'} onPress={setRentalLocation} style={{ marginTop: 8, marginBottom: 12 }} />
+          </View>
         </Section>
       )}
 
-      {v.forTrips && v.verificationStatus === 'approved' && <Button title={t("Create a trip with this vehicle")} icon="add-circle" onPress={() => navigation.navigate('TripForm', { tripType: 'start' })} style={{ marginBottom: 12 }} />}
+      {caps.trips && v.verificationStatus === 'approved' && v.forTrips && v.isAvailable && <Button title={t("Create a trip with this vehicle")} icon="add-circle" onPress={() => navigation.navigate('TripForm', { tripType: 'start', vehicleId: v.id })} style={{ marginBottom: 12 }} />}
+      {caps.trips && v.verificationStatus === 'approved' && !v.forTrips && (
+        <Notice
+          tone="blue"
+          icon="map"
+          title={t("Not used for trips")}
+          text={t("Turn on trips for this vehicle to use it in Create trip.")}
+          action={<Button small variant="secondary" title={t("Use for trips")} loading={busy === 'trips'} onPress={() => run('trips', () => vehicleApi.update(v.id, { forTrips: true }), t('This vehicle can now be used for trips'))} style={{ alignSelf: 'flex-start', marginTop: 8 }} />}
+        />
+      )}
       <Button title={t("Remove vehicle")} icon="trash" variant="danger" onPress={remove} loading={busy === 'del'} />
     </Screen>
   );

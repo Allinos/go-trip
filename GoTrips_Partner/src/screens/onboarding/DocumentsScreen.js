@@ -21,6 +21,8 @@ export default function DocumentsScreen({ navigation, route }) {
   const items = data || [];
   const missing = items.filter((i) => i.requirement.isRequired && (!i.document || i.document.status === 'rejected'));
 
+  const required = items.filter((i) => i.requirement.isRequired);
+  const done = required.length - missing.length;
   const next = async () => advance((await partnerApi.onboarding()).data);
 
   return (
@@ -30,15 +32,19 @@ export default function DocumentsScreen({ navigation, route }) {
       right={inOnboarding && <Button title={t("Log out")} variant="ghost" small onPress={logout} />}
       refreshing={refreshing}
       onRefresh={refresh}
-      footer={inOnboarding ? <Button title={missing.length ? missing.length > 1 ? t("Upload {0} more documents", [missing.length]) : t("Upload 1 more document") : t("Continue")} disabled={missing.length > 0} onPress={next} /> : null}
+      footer={inOnboarding ? <Button title={missing.length ? missing.length > 1 ? t("Upload {0} more documents", [missing.length]) : t("Upload 1 more document") : t("Continue to review")} disabled={missing.length > 0} onPress={next} /> : null}
     >
       {inOnboarding && <ProgressSteps steps={progressSteps(onboarding)} current="documents" />}
       {inOnboarding && (
         <>
-          <Text style={[font.h1, { marginTop: 8 }]}>{t("Upload your documents")}</Text>
-          <Text style={[font.sub, { marginTop: 6, marginBottom: 16 }]}>{t(
+          <Text style={font.h1}>{t("Upload your documents")}</Text>
+          <Text style={[font.sub, { marginTop: 4, marginBottom: 12 }]}>{t(
             "Take clear photos. Our team checks them to keep GoTrip safe. Your documents are private and never shown to customers."
           )}</Text>
+          <Text style={[font.small, { fontWeight: '600', marginBottom: 6 }]}>{t("{0} of {1} required documents uploaded", [done, required.length])}</Text>
+          <View style={{ height: 6, backgroundColor: colors.divider, borderRadius: 3, marginBottom: 16 }}>
+            <View style={{ height: 6, width: `${required.length ? (done / required.length) * 100 : 100}%`, backgroundColor: colors.green, borderRadius: 3 }} />
+          </View>
         </>
       )}
       {!inOnboarding && onboarding?.verificationStatus === 'rejected' && <Notice tone="red" title={t("Some documents were rejected")} text={onboarding.rejectionReason} />}

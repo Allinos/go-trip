@@ -42,13 +42,13 @@ export default function DriverProfileScreen({ navigation }) {
         </Row>
       </Card>
       {p.bio ? (
-        <Section title={t("About")} icon="person">
+        <Section plain title={t("About")} icon="person">
           <Card>
             <Text style={font.body}>{p.bio}</Text>
           </Card>
         </Section>
       ) : null}
-      <Section title={t("Details customers see")} icon="list">
+      <Section plain title={t("Details customers see")} icon="list">
         <Card>
           <KV label={t("Experience")} value={p.hasPriorExperience ? `${p.experienceYears} year(s)` : 'New driver'} />
           <KV label={t("Drives")} value={p.vehicleTypes.map(titleCase).join(', ')} />

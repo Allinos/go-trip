@@ -31,6 +31,8 @@ export default function TripScreen() {
   const [drop, setDrop] = useState(p.dropSeq != null ? Number(p.dropSeq) : null);
   const [seats, setSeats] = useState(Number(p.seats || 1));
   const [note, setNote] = useState('');
+  const [goodsType, setGoodsType] = useState('');
+  const [loadKg, setLoadKg] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -43,18 +45,20 @@ export default function TripScreen() {
     const at = (i) => (i === 0 ? 0 : i === last ? (trip.stops[i].fareFromStart ?? trip.pricePerSeat) : trip.stops[i].fareFromStart);
     const a = at(pickup);
     const b = at(drop);
+    if (trip.kind === 'goods') return trip.pricePerSeat; // the whole vehicle is hired for the route
     return (a != null && b != null && b > a ? b - a : trip.pricePerSeat) * seats;
   }, [trip, pickup, drop, seats]);
 
   if (loading) return (<><Header title={t("Trip")} /><Loading /></>);
   if (error) return (<><Header title={t("Trip")} /><ErrorView message={error} status={errorStatus} onRetry={reload} /></>);
 
+  const goods = trip.kind === 'goods';
   const closed = trip.status !== 'scheduled' || !trip.bookingOpen || new Date(trip.departureAt) < new Date();
   const request = () =>
     requireLogin(async () => {
       setBusy(true);
       try {
-        const r = await bookingAPI.create({ tripId: trip.id, seats, pickupSeq: pickup, dropSeq: drop, note: note.trim() || undefined, passengerName: user?.fullName || undefined });
+        const r = await bookingAPI.create({ tripId: trip.id, seats: goods ? 1 : seats, pickupSeq: pickup, dropSeq: drop, note: note.trim() || undefined, passengerName: user?.fullName || undefined, ...(goods ? { goodsType: goodsType.trim(), loadKg: loadKg ? Number(loadKg) : undefined } : {}) });
         router.replace(`/booking/${r.data.id}`);
       } catch (e) {
         Alert.alert(t("Could not send request"), errorMessage(e));
@@ -75,9 +79,9 @@ export default function TripScreen() {
             <Text style={TYPOGRAPHY.h4}>
               {dateLabel(trip.departureAt)}{", "}{timeLabel(trip.departureAt)}
             </Text>
-            <Pill text={t("{0} seats left", [trip.availableSeats])} color={COLORS.success} bg="#ECFDF5" />
+            <Pill text={goods ? t("Goods · up to {0} kg", [trip.capacityKg]) : t("{0} seats left", [trip.availableSeats])} color={COLORS.success} bg="#ECFDF5" />
           </Row>
-          <Text style={[TYPOGRAPHY.small, { color: COLORS.text.secondary, marginTop: 4, marginBottom: 10 }]}>{t("Tap where you will get on and get off")}</Text>
+          <Text style={[TYPOGRAPHY.small, { color: COLORS.text.secondary, marginTop: 4, marginBottom: 10 }]}>{goods ? t("Tap where the goods are loaded and unloaded") : t("Tap where you will get on and get off")}</Text>
           {trip.stops.map((s, i) => {
             const isPick = i === pickup;
             const isDrop = i === drop;
@@ -95,8 +99,8 @@ export default function TripScreen() {
                   <MaterialIcons name={isPick ? 'trip-origin' : isDrop ? 'place' : 'circle'} size={isPick || isDrop ? 20 : 10} color={isPick ? COLORS.success : isDrop || inRange ? COLORS.primary : COLORS.text.tertiary} />
                 </View>
                 <Text style={[TYPOGRAPHY.body, { flex: 1 }, (isPick || isDrop) && { fontWeight: '700' }]}>{s.placeName}</Text>
-                {isPick && <Pill text={t("Get on")} color={COLORS.success} bg="#ECFDF5" />}
-                {isDrop && <Pill text={t("Get off")} />}
+                {isPick && <Pill text={goods ? t("Loading") : t("Get on")} color={COLORS.success} bg="#ECFDF5" />}
+                {isDrop && <Pill text={goods ? t("Unloading") : t("Get off")} />}
               </Pressable>
             );
           })}
@@ -147,6 +151,16 @@ export default function TripScreen() {
         ) : closed ? (
           <Notice title={t("Bookings closed")} text={t("This trip is no longer taking requests.")} color={COLORS.text.secondary} bg={COLORS.divider} />
         ) : (
+          goods ? (
+            <Card>
+              <Text style={[TYPOGRAPHY.bodyBold, { marginBottom: SPACING.sm }]}>{t("Hire the whole vehicle")}</Text>
+              <Input label={t("What do you want to send?")} value={goodsType} onChangeText={setGoodsType} placeholder={t("e.g. Cement bags, furniture, rice")} maxLength={80} />
+              <Input label={t("Approx. weight in kg (optional)")} value={loadKg} onChangeText={(x) => setLoadKg(x.replace(/\D/g, '').slice(0, 5))} keyboardType="number-pad" placeholder={t("Up to {0}", [trip.capacityKg])} />
+              <Input label={t("Message for driver (optional)")} value={note} onChangeText={setNote} placeholder={t("e.g. Loading help needed")} maxLength={300} />
+              <KV label={t("Hire price (pay the driver directly)")} value={rupees(fare)} />
+              <Text style={[TYPOGRAPHY.small, { color: COLORS.text.tertiary }]}>{t("No booking fee. Confirm the details with the driver on call.")}</Text>
+            </Card>
+          ) : (
           <Card>
             <Row style={{ justifyContent: 'space-between', marginBottom: SPACING.md }}>
               <Text style={TYPOGRAPHY.bodyBold}>{t("Seats")}</Text>
@@ -164,11 +178,16 @@ export default function TripScreen() {
             <KV label={t("Fare (pay the driver directly)")} value={rupees(fare)} />
             <Text style={[TYPOGRAPHY.small, { color: COLORS.text.tertiary }]}>{t("No booking fee. Pay cash or UPI to the driver.")}</Text>
           </Card>
+          )
         )}
       </ScrollView>
       {!closed && !(trip.myBooking && ['pending', 'accepted'].includes(trip.myBooking.status)) && (
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: SPACING.md, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: COLORS.border }}>
-          <Button title={seats > 1 ? t("Request {0} seats · {1}", [seats, rupees(fare)]) : t("Request 1 seat · {0}", [rupees(fare)])} icon="send" onPress={request} loading={busy} disabled={drop == null || seats > trip.availableSeats} />
+          {goods ? (
+            <Button title={t("Request this vehicle · {0}", [rupees(fare)])} icon="send" onPress={request} loading={busy} disabled={drop == null || goodsType.trim().length < 2 || !trip.availableSeats || (loadKg && Number(loadKg) > trip.capacityKg)} />
+          ) : (
+            <Button title={seats > 1 ? t("Request {0} seats · {1}", [seats, rupees(fare)]) : t("Request 1 seat · {0}", [rupees(fare)])} icon="send" onPress={request} loading={busy} disabled={drop == null || seats > trip.availableSeats} />
+          )}
         </View>
       )}
     </View>

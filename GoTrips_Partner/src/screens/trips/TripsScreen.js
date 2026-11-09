@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Badge, Button, Card, Empty, ErrorView, Header, Loading, Notice, Row } from '../../components/ui';
+import { Badge, Button, Card, Empty, ErrorView, Header, Loading, Notice, Row, Segmented } from '../../components/ui';
 import { tripApi } from '../../api';
 import { useApi } from '../../hooks/useApi';
 import { colors, font, space } from '../../theme';
-import { dateLabel, rupees, timeLabel } from '../../utils/format';
+import { dateLabel, loadText, rupees, timeLabel } from '../../utils/format';
 import { t } from '../../i18n';
 
 const TABS = [
@@ -21,6 +21,7 @@ export function TripCard({ trip, onPress, right }) {
         <Row gap={6}>
           <Badge tone={trip.tripType === 'return' ? 'blue' : 'gray'} text={trip.tripType === 'return' ? t("Return trip") : t("Trip")} />
           <Badge status={trip.status} />
+          {trip.kind === 'goods' && <Badge tone="gray" icon="cube" text={t('Goods')} />}
           {trip.status === 'scheduled' && !trip.bookingOpen && <Badge tone="gray" text={t("Bookings paused")} />}
         </Row>
         {trip.pendingRequests > 0 && <Badge tone="amber" text={trip.pendingRequests > 1 ? t("{0} new requests", [trip.pendingRequests]) : t("1 new request")} />}
@@ -42,9 +43,20 @@ export function TripCard({ trip, onPress, right }) {
       </Row>
       {trip.stops?.length > 2 && <Text style={[font.small, { marginTop: 6 }]}>{t("via")}{" "}{trip.stops.slice(1, -1).map((x) => x.placeName).join(', ')}</Text>}
       <Row style={{ marginTop: 10, justifyContent: 'space-between' }}>
-        <Text style={font.sub}>
-          <Ionicons name="people" size={14} /> {trip.bookedSeats}/{trip.totalSeats}{" "}{t("seats booked")}</Text>
-        <Text style={[font.body, { fontWeight: '700' }]}>{rupees(trip.pricePerSeat)}{t("/seat")}</Text>
+        {trip.kind === 'goods' ? (
+          <>
+            <Text style={font.sub}>
+              <Ionicons name="cube" size={14} /> {loadText(trip.capacityKg)} · {trip.availableSeats ? t('Available') : t('Hired')}
+            </Text>
+            <Text style={[font.body, { fontWeight: '700' }]}>{rupees(trip.pricePerSeat)}</Text>
+          </>
+        ) : (
+          <>
+            <Text style={font.sub}>
+              <Ionicons name="people" size={14} /> {trip.bookedSeats}/{trip.totalSeats}{" "}{t("seats booked")}</Text>
+            <Text style={[font.body, { fontWeight: '700' }]}>{rupees(trip.pricePerSeat)}{t("/seat")}</Text>
+          </>
+        )}
       </Row>
       {right}
     </Card>
@@ -59,11 +71,9 @@ export default function TripsScreen({ navigation, route }) {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       <Header title={t("My trips")} back={false} right={<Button small title={t("New trip")} icon="add" onPress={() => navigation.navigate('TripForm', { tripType: 'start' })} />} />
-      <Row style={{ paddingHorizontal: space.lg, marginBottom: 8 }}>
-        {TABS.map(([v, l]) => (
-          <Button key={v} small title={t(l)} variant={tab === v ? 'primary' : 'secondary'} onPress={() => (setTab(v), navigation.setParams({ pickReturn: false }))} style={{ flex: 1 }} />
-        ))}
-      </Row>
+      <View style={{ paddingHorizontal: space.lg }}>
+        <Segmented value={tab} onChange={(v) => (setTab(v), navigation.setParams({ pickReturn: false }))} options={TABS.map(([value, label]) => ({ value, label }))} />
+      </View>
       {pickReturn && (
         <View style={{ paddingHorizontal: space.lg }}>
           <Notice tone="blue" icon="swap-horizontal" title={t("Create a return trip")} text={t(

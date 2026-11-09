@@ -219,6 +219,8 @@ const decisionSchema = z.object({
   decision: z.enum(['approve', 'reject']),
   reason: optText(500),
   documents: z.array(z.object({ id: z.number().int(), status: z.enum(['approved', 'rejected']), reason: optText(255) })).max(30).optional(),
+  /** Vehicles only: approve even though required documents are missing (the admin checked them another way). */
+  ignoreMissingDocuments: z.boolean().optional(),
 });
 
 router.post('/partners/:id/verify', MANAGER, validate({ params: idParam, body: decisionSchema }), async (req, res) => {
@@ -303,14 +305,28 @@ router.get('/vehicles/:id', ANY, validate({ params: idParam }), async (req, res)
   if (!v) throw notFound('Vehicle');
   const documents = await Promise.all(v.documents.map(async (d) => ({ ...d, frontUrl: await storage.url(d.frontKey, 600), backUrl: await storage.url(d.backKey, 600) })));
   const tripCount = await prisma.trip.count({ where: { vehicleId: v.id } });
-  res.json({ success: true, data: { ...(await vehicles.serialize(v, { owner: true })), documents, requirements: v.partner.category.requirements, partner: { id: v.partner.id, businessName: v.partner.businessName, user: v.partner.user, category: v.partner.category.name }, tripCount } });
+  const missingDocuments = missingVehicleDocs(v.partner.category.requirements, v.documents).map((r) => r.label);
+  res.json({ success: true, data: { ...(await vehicles.serialize(v, { owner: true })), documents, requirements: v.partner.category.requirements, missingDocuments, partner: { id: v.partner.id, businessName: v.partner.businessName, user: v.partner.user, category: v.partner.category.name }, tripCount } });
 });
 
+/** Required vehicle documents that are not uploaded, or rejected (also counting rejections being made now). */
+function missingVehicleDocs(requirements, docs, decisions = []) {
+  const rejectedNow = new Set(decisions.filter((d) => d.status === 'rejected').map((d) => d.id));
+  return requirements.filter((r) => r.scope === 'vehicle' && r.isRequired).filter((r) => {
+    const d = docs.find((x) => x.docType === r.docType);
+    return !d || d.status === 'rejected' || rejectedNow.has(d.id);
+  });
+}
+
 router.post('/vehicles/:id/review', MANAGER, validate({ params: idParam, body: decisionSchema }), async (req, res) => {
-  const v = await prisma.vehicle.findUnique({ where: { id: req.params.id }, include: { documents: true, partner: { select: { userId: true } } } });
+  const v = await prisma.vehicle.findUnique({ where: { id: req.params.id }, include: { documents: true, partner: { select: { userId: true, category: { include: { requirements: { where: { scope: 'vehicle' } } } } } } } });
   if (!v) throw notFound('Vehicle');
   const { decision, reason, documents = [] } = req.body;
   if (decision === 'reject' && !reason) throw badRequest('Give a reason so the partner knows what to fix');
+  if (decision === 'approve' && !req.body.ignoreMissingDocuments) {
+    const missing = missingVehicleDocs(v.partner.category.requirements, v.documents, documents);
+    if (missing.length) throw badRequest(`Required documents are missing: ${missing.map((r) => r.label).join(', ')}`, undefined, 'DOCUMENTS_MISSING');
+  }
   await prisma.$transaction(async (tx) => {
     for (const d of documents) {
       if (!v.documents.find((x) => x.id === d.id)) continue;

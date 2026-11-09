@@ -66,7 +66,7 @@ async function approvedVehicle(partnerToken, admin, body = {}) {
     .set(auth(partnerToken))
     .send({ vehicleClass: 'suv', make: 'Toyota', model: 'Innova', registrationNumber: uniqueReg(), seats: 7, forTrips: true, ...body });
   if (v.status !== 201) throw new Error(JSON.stringify(v.body));
-  const r = await api().post(`/api/v1/admin/vehicles/${v.body.data.id}/review`).set(auth(admin)).send({ decision: 'approve' });
+  const r = await api().post(`/api/v1/admin/vehicles/${v.body.data.id}/review`).set(auth(admin)).send({ decision: 'approve', ignoreMissingDocuments: true });
   if (r.status !== 200) throw new Error(JSON.stringify(r.body));
   return v.body.data;
 }

@@ -18,7 +18,7 @@ export function TripCard({ trip, onPress }) {
           {trip.driver?.isVerified && <Pill text={t("Verified")} icon="verified" color={COLORS.success} bg="#ECFDF5" />}
           <RatingPill rating={trip.driver?.rating} />
         </Row>
-        <Text style={[TYPOGRAPHY.h4, { color: COLORS.primary }]}>{rupees(m?.farePerSeat ?? trip.pricePerSeat)}</Text>
+        <Text style={[TYPOGRAPHY.h4, { color: COLORS.primary }]}>{rupees(trip.kind === 'goods' ? trip.pricePerSeat : m?.farePerSeat ?? trip.pricePerSeat)}</Text>
       </Row>
       <Row style={{ marginTop: 10, alignItems: 'flex-start' }}>
         <View style={{ alignItems: 'center', paddingTop: 5 }}>
@@ -47,7 +47,11 @@ export function TripCard({ trip, onPress }) {
             {trip.vehicle?.hasAc ? t(" · AC") : ''}{" · "}{trip.driver?.name}
           </Text>
         </Row>
-        <Text style={[TYPOGRAPHY.captionBold, { color: trip.availableSeats <= 1 ? COLORS.primary : COLORS.success, marginLeft: 8 }]}>{trip.availableSeats === 1 ? t("1 seat left") : t("{0} seats left", [trip.availableSeats])}</Text>
+        {trip.kind === 'goods' ? (
+          <Text style={[TYPOGRAPHY.captionBold, { color: COLORS.success, marginLeft: 8 }]}>{t("Goods · up to {0} kg", [trip.capacityKg])}</Text>
+        ) : (
+          <Text style={[TYPOGRAPHY.captionBold, { color: trip.availableSeats <= 1 ? COLORS.primary : COLORS.success, marginLeft: 8 }]}>{trip.availableSeats === 1 ? t("1 seat left") : t("{0} seats left", [trip.availableSeats])}</Text>
+        )}
       </Row>
     </Card>
   );
@@ -131,7 +135,7 @@ export function BookingCard({ booking: b, onPress }) {
         {b.pickupName}{" → "}{b.dropName}
       </Text>
       <Text style={[TYPOGRAPHY.caption, { color: COLORS.text.secondary, marginTop: 2 }]}>
-        {dateLabel(b.trip.departureAt)}{", "}{timeLabel(b.trip.departureAt)}{" · "}{b.seats > 1 ? t("{0} seats", [b.seats]) : t("1 seat")}
+        {dateLabel(b.trip.departureAt)}{", "}{timeLabel(b.trip.departureAt)}{" · "}{b.goodsType ? b.goodsType : b.seats > 1 ? t("{0} seats", [b.seats]) : t("1 seat")}
       </Text>
       <Row style={{ justifyContent: 'space-between', marginTop: 8 }}>
         <Text style={[TYPOGRAPHY.caption, { color: COLORS.text.secondary }]}>

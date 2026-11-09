@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Text } from 'react-native';
-import { Button, Input, Notice, Screen } from '../../components/ui';
+import { Button, Input, Notice, Row, Screen, Section } from '../../components/ui';
 import { DateField, ImageField, toIsoDate } from '../../components/fields';
 import { partnerApi, vehicleApi } from '../../api';
 import { errorMessage } from '../../api/client';
@@ -43,11 +43,23 @@ export default function DocumentUploadScreen({ navigation, route }) {
   return (
     <Screen title={r.label} footer={<Button title={t("Upload")} icon="cloud-upload" onPress={save} loading={busy} disabled={!ready} />}>
       {d?.status === 'rejected' && <Notice tone="red" title={t("Please upload again")} text={d.rejectionReason} />}
-      <Text style={[font.sub, { marginBottom: 16 }]}>{r.hint || t("Place the document on a flat surface and make sure all text is readable.")}</Text>
-      <ImageField label={r.requiresBack ? t("Front side") : t("Photo of document")} required value={front} url={d?.frontUrl} onChange={setFront} />
-      {r.requiresBack && <ImageField label={t("Back side")} required value={back} url={d?.backUrl} onChange={setBack} />}
-      {r.requiresNumber && <Input label={t("{0} number", [r.label])} required value={number} onChangeText={setNumber} autoCapitalize="characters" />}
-      {r.requiresExpiry && <DateField label={t("Valid till (expiry date)")} required value={expiry} onChange={setExpiry} minimumDate={new Date()} />}
+      <Notice tone="blue" icon="camera" text={r.hint || t("Place the document on a flat surface and make sure all text is readable.")} />
+      <Section title={t("Photos")} icon="images" subtitle={r.requiresBack ? t("Both sides are required") : undefined}>
+        {r.requiresBack ? (
+          <Row style={{ alignItems: 'flex-start' }} gap={12}>
+            <ImageField compact label={t("Front side")} required value={front} url={d?.frontUrl} onChange={setFront} />
+            <ImageField compact label={t("Back side")} required value={back} url={d?.backUrl} onChange={setBack} />
+          </Row>
+        ) : (
+          <ImageField label={t("Photo of document")} required value={front} url={d?.frontUrl} onChange={setFront} />
+        )}
+      </Section>
+      {(r.requiresNumber || r.requiresExpiry) && (
+        <Section title={t("Document details")} icon="create">
+          {r.requiresNumber && <Input label={t("{0} number", [r.label])} required value={number} onChangeText={(v) => setNumber(v.toUpperCase())} autoCapitalize="characters" />}
+          {r.requiresExpiry && <DateField label={t("Valid till (expiry date)")} required value={expiry} onChange={setExpiry} minimumDate={new Date()} />}
+        </Section>
+      )}
     </Screen>
   );
 }

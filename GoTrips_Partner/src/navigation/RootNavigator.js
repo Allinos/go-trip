@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useCaps } from '../context/AuthContext';
 import { LocationProvider } from '../context/LocationContext';
@@ -22,6 +23,7 @@ import DriverDetailsScreen from '../screens/onboarding/DriverDetailsScreen';
 import DocumentsScreen from '../screens/onboarding/DocumentsScreen';
 import DocumentUploadScreen from '../screens/onboarding/DocumentUploadScreen';
 import PaymentScreen from '../screens/onboarding/PaymentScreen';
+import ReviewSubmitScreen from '../screens/onboarding/ReviewSubmitScreen';
 import PaymentWebViewScreen from '../screens/onboarding/PaymentWebViewScreen';
 import { stepScreen } from '../screens/onboarding/flow';
 import HomeScreen from '../screens/home/HomeScreen';
@@ -53,9 +55,12 @@ const theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, primary: colo
 
 function Tabs() {
   const caps = useCaps();
+  const insets = useSafeAreaInsets();
   const icon = (name) => ({ color, size, focused }) => <Ionicons name={focused ? name : `${name}-outline`} size={size} color={color} />;
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.faint, tabBarLabelStyle: { fontSize: 12, fontWeight: '600' }, tabBarStyle: { height: 62, paddingTop: 6 } }}>
+    // Android draws edge-to-edge: the tab bar must add the gesture/3-button navigation bar height itself,
+    // otherwise a fixed height puts the labels under the system buttons.
+    <Tab.Navigator screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.sub, tabBarLabelStyle: { fontSize: 12, fontWeight: '600' }, tabBarStyle: { height: 64 + insets.bottom, paddingTop: 6, paddingBottom: Math.max(insets.bottom, 8), backgroundColor: colors.card, borderTopColor: colors.border }, tabBarHideOnKeyboard: true }}>
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: t('Home'), tabBarIcon: icon('home') }} />
       {caps.trips && <Tab.Screen name="Trips" component={TripsScreen} options={{ title: t('Trips'), tabBarIcon: icon('map') }} />}
       {caps.trips && <Tab.Screen name="Bookings" component={BookingsScreen} options={{ title: t('Bookings'), tabBarIcon: icon('people') }} />}
@@ -107,6 +112,7 @@ function OnboardingStack() {
       <Stack.Screen name="DriverDetails" component={DriverDetailsScreen} />
       <Stack.Screen name="Documents" component={DocumentsScreen} />
       <Stack.Screen name="DocumentUpload" component={DocumentUploadScreen} />
+      <Stack.Screen name="Review" component={ReviewSubmitScreen} />
       <Stack.Screen name="Payment" component={PaymentScreen} />
       <Stack.Screen name="PaymentWebView" component={PaymentWebViewScreen} />
     </Stack.Navigator>

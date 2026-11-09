@@ -46,7 +46,7 @@ export default function Trips() {
             { title: 'Departure', render: (t) => dateTime(t.departureAt) },
             { title: 'Driver', render: (t) => <Link to={`/partners/${t.partner.id}`} onClick={(e) => e.stopPropagation()}>{t.partner.user.fullName}</Link> },
             { title: 'Vehicle', render: (t) => <span className="mono">{t.vehicle.registrationNumber}</span> },
-            { title: 'Seats', render: (t) => `${t.totalSeats - t.availableSeats}/${t.totalSeats}` },
+            { title: 'Seats / load', render: (t) => (t.kind === 'goods' ? `Goods · ${t.capacityKg?.toLocaleString('en-IN')} kg · ${t.availableSeats ? 'open' : 'hired'}` : `${t.totalSeats - t.availableSeats}/${t.totalSeats}`) },
             { title: 'Fare', render: (t) => rupees(t.pricePerSeat) },
             { title: 'Requests', render: (t) => t._count.bookings },
             { title: 'Status', render: (t) => <Badge status={t.status} /> },

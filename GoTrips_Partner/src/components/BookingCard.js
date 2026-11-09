@@ -6,7 +6,7 @@ import { bookingApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useToast } from '../context/ToastContext';
 import { colors, font } from '../theme';
-import { ago, dateTimeLabel, rupees } from '../utils/format';
+import { ago, dateTimeLabel, loadText, rupees } from '../utils/format';
 import { t } from '../i18n';
 
 /** Booking request card with Accept / Decline / Call actions. */
@@ -18,7 +18,7 @@ export default function BookingCard({ booking: b, onChanged, onPress, showTrip =
     setBusy(kind);
     try {
       await fn();
-      toast(kind === 'accept' ? t("Booking confirmed. Passenger notified.") : t("Request declined"), kind === 'accept' ? t("success") : t("info"));
+      toast(kind === 'accept' ? goods ? t("Hire confirmed. Customer notified.") : t("Booking confirmed. Passenger notified.") : t("Request declined"), kind === 'accept' ? 'success' : 'info');
       onChanged?.();
     } catch (e) {
       toast(errorMessage(e), 'error');
@@ -26,17 +26,22 @@ export default function BookingCard({ booking: b, onChanged, onPress, showTrip =
       setBusy(null);
     }
   };
+  const goods = !!b.goodsType || b.kind === 'goods' || b.trip?.kind === 'goods';
   return (
     <Card style={{ marginBottom: 12 }} onPress={onPress}>
       <Row style={{ justifyContent: 'space-between' }}>
-        <Text style={font.h3}>{b.passengerName || t("Passenger")}</Text>
+        <Text style={[font.h3, { flex: 1 }]} numberOfLines={1}>{b.passengerName || (goods ? t("Customer") : t("Passenger"))}</Text>
         <Badge status={b.status} />
       </Row>
       <Row style={{ marginTop: 6 }}>
-        <Ionicons name="people" size={16} color={colors.sub} />
-        <Text style={font.body}>
-          {b.seats > 1 ? t("{0} seats", [b.seats]) : t("{0} seat", [b.seats])}{" · "}{b.pickupName}{" → "}{b.dropName}
+        <Ionicons name={goods ? 'cube' : 'people'} size={16} color={colors.sub} />
+        <Text style={[font.body, { flex: 1 }]}>
+          {goods ? [b.goodsType, b.loadKg && loadText(b.loadKg)].filter(Boolean).join(' · ') : b.seats > 1 ? t("{0} seats", [b.seats]) : t("{0} seat", [b.seats])}
         </Text>
+      </Row>
+      <Row style={{ marginTop: 4 }}>
+        <Ionicons name="navigate-outline" size={16} color={colors.sub} />
+        <Text style={[font.sub, { flex: 1 }]}>{b.pickupName}{" → "}{b.dropName}</Text>
       </Row>
       {showTrip && b.trip && (
         <Row style={{ marginTop: 4 }}>

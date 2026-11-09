@@ -71,13 +71,20 @@ export default function BookingScreen() {
           {b.status === 'pending' && <Text style={[TYPOGRAPHY.caption, { marginTop: 8, color: COLORS.text.secondary }]}>{t(
             "The driver has been notified. You will get a notification when they accept or decline."
           )}</Text>}
-          {b.status === 'accepted' && <Text style={[TYPOGRAPHY.caption, { marginTop: 8, color: COLORS.success }]}>{t("Your seats are confirmed. Be at your pickup point on time.")}</Text>}
+          {b.status === 'accepted' && <Text style={[TYPOGRAPHY.caption, { marginTop: 8, color: COLORS.success }]}>{b.goodsType ? t("The vehicle is confirmed. Keep the goods ready at the loading point.") : t("Your seats are confirmed. Be at your pickup point on time.")}</Text>}
           {b.statusReason && ['rejected', 'cancelled', 'expired'].includes(b.status) ? <Text style={[TYPOGRAPHY.caption, { marginTop: 8, color: COLORS.text.secondary }]}>{t("Reason:")}{" "}{b.statusReason}</Text> : null}
           <View style={{ height: 1, backgroundColor: COLORS.divider, marginVertical: 10 }} />
           <KV label={t("Pickup")} value={b.pickupName} />
           <KV label={t("Drop")} value={b.dropName} />
           <KV label={t("Departure")} value={`${dateLabel(trip.departureAt)}, ${timeLabel(trip.departureAt)}`} />
-          <KV label={t("Seats")} value={b.seats} />
+          {b.goodsType ? (
+            <>
+              <KV label={t("Goods")} value={b.goodsType} />
+              {b.loadKg ? <KV label={t("Approx. weight")} value={`${b.loadKg} kg`} /> : null}
+            </>
+          ) : (
+            <KV label={t("Seats")} value={b.seats} />
+          )}
           <KV label={t("Fare (pay driver)")} value={rupees(b.fareEstimate)} />
         </Card>
 

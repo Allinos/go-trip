@@ -106,7 +106,7 @@ describe('Driver registration with Razorpay fee', () => {
     // Admin approval adds the verified badge
     const admin = await adminToken();
     const partnerId = st.partnerId;
-    expect((await api().post(`/api/v1/admin/partners/${partnerId}/verify`).set(auth(admin)).send({ decision: 'approve' })).status).toBe(200);
+    expect((await api().post(`/api/v1/admin/partners/${partnerId}/verify`).set(auth(admin)).send({ decision: 'approve', ignoreMissingDocuments: true })).status).toBe(200);
     const after = await api().get(`/api/v1/marketplace/drivers/${card.id}`);
     expect(after.body.data.isVerified).toBe(true);
 

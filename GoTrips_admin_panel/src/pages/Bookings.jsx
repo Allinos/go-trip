@@ -33,7 +33,7 @@ export default function Bookings() {
             { title: 'Segment', render: (b) => `${b.pickupName} → ${b.dropName}` },
             { title: 'Trip', render: (b) => (<div><div className="small">{b.trip.originName} → {b.trip.destinationName}</div><div className="muted small">{dateTime(b.trip.departureAt)}</div></div>) },
             { title: 'Driver', render: (b) => <Link to={`/partners/${b.partner.id}`}>{b.partner.user.fullName}</Link> },
-            { title: 'Seats', key: 'seats' },
+            { title: 'Seats / goods', render: (b) => b.goodsType ? `${b.goodsType}${b.loadKg ? ` · ${b.loadKg} kg` : ''}` : b.seats },
             { title: 'Fare (est.)', render: (b) => rupees(b.fareEstimate) },
             { title: 'Status', render: (b) => <Badge status={b.status}>{b.status === 'accepted' ? 'Confirmed' : undefined}</Badge> },
             { title: 'Requested', render: (b) => dateTime(b.createdAt) },

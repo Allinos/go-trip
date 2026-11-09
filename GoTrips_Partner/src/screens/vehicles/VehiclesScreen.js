@@ -1,5 +1,6 @@
 import React from 'react';
-import { FlatList, Image, RefreshControl, Switch, Text, View } from 'react-native';
+import { FlatList, RefreshControl, Text, View } from 'react-native';
+import { Switch } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Badge, Button, Card, Empty, ErrorView, Header, Loading, Row } from '../../components/ui';
@@ -8,7 +9,7 @@ import { errorMessage } from '../../api/client';
 import { useApi } from '../../hooks/useApi';
 import { useToast } from '../../context/ToastContext';
 import { colors, font, space } from '../../theme';
-import { rupees, VEHICLE_LABELS } from '../../utils/format';
+import { capacityText, categoryOf, CLASS_ICON, rupees, VEHICLE_LABELS } from '../../utils/format';
 import { t } from '../../i18n';
 import CachedImage from '../../components/CachedImage';
 
@@ -49,7 +50,7 @@ export default function VehiclesScreen({ navigation }) {
                   <CachedImage uri={v.photos[0]} style={{ width: 84, height: 64, borderRadius: 10 }} />
                 ) : (
                   <View style={{ width: 84, height: 64, borderRadius: 10, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="car-sport" size={28} color={colors.primary} />
+                    <Ionicons name={CLASS_ICON[v.vehicleClass] || 'car-sport'} size={28} color={colors.primary} />
                   </View>
                 )}
                 <View style={{ flex: 1 }}>
@@ -57,26 +58,26 @@ export default function VehiclesScreen({ navigation }) {
                     {v.make} {v.model}
                   </Text>
                   <Text style={font.small}>
-                    {v.registrationNumber}{" · "}{VEHICLE_LABELS[v.vehicleClass]}
-                    {v.seats ? t(" · {0} seats", [v.seats]) : ''}
+                    {[v.registrationNumber, VEHICLE_LABELS[v.vehicleClass], capacityText(v)].filter(Boolean).join(' · ')}
                   </Text>
                   <Row style={{ marginTop: 6 }} gap={6}>
-                    <Badge status={v.verificationStatus} text={STATUS_HELP[v.verificationStatus]} />
+                    <Badge status={v.verificationStatus} text={t(STATUS_HELP[v.verificationStatus])} />
+                    {categoryOf(v) === 'commercial' && <Badge tone="gray" icon="cube" text={t('Goods')} />}
                     {v.forRental && v.rental?.pricePerDay ? <Badge tone="blue" text={t("{0}/day", [rupees(v.rental.pricePerDay)])} /> : null}
                   </Row>
                 </View>
               </Row>
               {v.verificationStatus === 'rejected' && v.rejectionReason ? <Text style={{ color: colors.primaryDark, marginTop: 8 }}>{v.rejectionReason}</Text> : null}
               {v.verificationStatus !== 'suspended' && (
-                <View style={{ borderTopWidth: 1, borderTopColor: colors.border, marginTop: 12, paddingTop: 8 }}>
+                <View style={{ borderTopWidth: 1, borderTopColor: colors.divider, marginTop: 12, paddingTop: 8, gap: 4 }}>
                   <Row style={{ justifyContent: 'space-between' }}>
                     <Text style={font.body}>{v.isAvailable ? t("Vehicle is ON") : t("Vehicle is OFF")}</Text>
-                    <Switch value={v.isAvailable} onValueChange={(isAvailable) => toggle(v, { isAvailable })} trackColor={{ true: '#86EFAC' }} thumbColor={v.isAvailable ? colors.green : '#fff'} />
+                    <Switch value={v.isAvailable} onValueChange={(isAvailable) => toggle(v, { isAvailable })} color={colors.primary} />
                   </Row>
                   {v.forRental && (
                     <Row style={{ justifyContent: 'space-between' }}>
                       <Text style={font.body}>{v.rentalAvailable ? t("Available for rent") : t("Not available for rent")}</Text>
-                      <Switch value={v.rentalAvailable} onValueChange={(rentalAvailable) => toggle(v, { rentalAvailable })} trackColor={{ true: '#86EFAC' }} thumbColor={v.rentalAvailable ? colors.green : '#fff'} />
+                      <Switch value={v.rentalAvailable} onValueChange={(rentalAvailable) => toggle(v, { rentalAvailable })} color={colors.primary} />
                     </Row>
                   )}
                 </View>

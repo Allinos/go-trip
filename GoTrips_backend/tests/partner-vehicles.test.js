@@ -72,7 +72,7 @@ describe('Vehicle categories', () => {
     const stops = [{ placeName: 'Nagaon' }, { placeName: 'Jakhalabandha', fareFromStart: 900 }, { placeName: 'Jorhat' }];
     const body = { vehicleId: truck.id, departureAt: new Date(Date.now() + 86400_000).toISOString(), stops, pricePerSeat: 4500, capacityKg: 900 };
     expect((await api().post(`${P}/trips`).set(auth(s.token)).send(body)).body.error.code).toBe('VEHICLE_NOT_VERIFIED');
-    await api().post(`/api/v1/admin/vehicles/${truck.id}/review`).set(auth(admin)).send({ decision: 'approve' }).expect(200);
+    await api().post(`/api/v1/admin/vehicles/${truck.id}/review`).set(auth(admin)).send({ decision: 'approve', ignoreMissingDocuments: true }).expect(200);
 
     const list = (await api().get(`${P}/vehicles`).query({ usage: 'trips' }).set(auth(s.token))).body.data;
     expect(list.map((v) => v.id)).toContain(truck.id);
@@ -108,12 +108,28 @@ describe('Vehicle categories', () => {
     const s = await activePartner('rental');
     const v = (await api().post(`${P}/vehicles`).set(auth(s.token)).send({ category: 'passenger', vehicleClass: 'suv', make: 'Mahindra', model: 'Scorpio', registrationNumber: reg(), seats: 6, forTrips: true })).body.data;
     expect(v.forTrips).toBe(true);
-    await api().post(`/api/v1/admin/vehicles/${v.id}/review`).set(auth(admin)).send({ decision: 'approve' }).expect(200);
+    await api().post(`/api/v1/admin/vehicles/${v.id}/review`).set(auth(admin)).send({ decision: 'approve', ignoreMissingDocuments: true }).expect(200);
     const bad = await api().patch(`${P}/vehicles/${v.id}`).set(auth(s.token)).send({ vehicleClass: 'pickup' });
     expect(bad.status).toBe(400); // goods vehicle needs a load capacity
     const ok = await api().patch(`${P}/vehicles/${v.id}`).set(auth(s.token)).send({ vehicleClass: 'pickup', loadCapacityKg: 1200 });
     expect(ok.status).toBe(200);
     expect(ok.body.data).toMatchObject({ category: 'commercial', seats: null, verificationStatus: 'pending' });
     expect(ok.body.meta.resubmitted).toBe(true);
+  });
+});
+
+describe('Admin vehicle approval', () => {
+  test('approval needs the required documents unless the admin overrides it', async () => {
+    const admin = await adminToken();
+    const s = await activePartner('taxi');
+    const v = (await api().post(`${P}/vehicles`).set(auth(s.token)).send({ category: 'passenger', vehicleClass: 'sedan', make: 'Maruti Suzuki', model: 'Dzire', registrationNumber: reg(), seats: 4, forTrips: true })).body.data;
+    const detail = (await api().get(`/api/v1/admin/vehicles/${v.id}`).set(auth(admin))).body.data;
+    expect(detail.missingDocuments).toEqual(['Registration Certificate (RC)', 'Insurance']);
+    const r = await api().post(`/api/v1/admin/vehicles/${v.id}/review`).set(auth(admin)).send({ decision: 'approve' });
+    expect(r.status).toBe(400);
+    expect(r.body.error.code).toBe('DOCUMENTS_MISSING');
+    await api().post(`${P}/vehicles/${v.id}/documents/rc`).set(auth(s.token)).attach('front', await image(), 'f.png').attach('back', await image(), 'b.png').field('docNumber', 'RC1').expect(200);
+    await api().post(`${P}/vehicles/${v.id}/documents/insurance`).set(auth(s.token)).attach('front', await image(), 'f.png').field('docNumber', 'IN1').field('expiryDate', '2031-01-01').expect(200);
+    await api().post(`/api/v1/admin/vehicles/${v.id}/review`).set(auth(admin)).send({ decision: 'approve' }).expect(200);
   });
 });

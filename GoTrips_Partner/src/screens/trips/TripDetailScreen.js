@@ -9,7 +9,7 @@ import { errorMessage } from '../../api/client';
 import { useApi } from '../../hooks/useApi';
 import { useToast } from '../../context/ToastContext';
 import { colors, font } from '../../theme';
-import { dateTimeLabel, rupees } from '../../utils/format';
+import { dateTimeLabel, loadText, rupees, STATUS_TEXT } from '../../utils/format';
 import { confirm } from '../../utils/confirm';
 import { t } from '../../i18n';
 
@@ -36,13 +36,14 @@ export default function TripDetailScreen({ navigation, route }) {
     }
   };
   const active = ['scheduled', 'ongoing'].includes(trip.status);
+  const goods = trip.kind === 'goods';
   const pending = trip.bookings.filter((b) => b.status === 'pending');
   const confirmed = trip.bookings.filter((b) => b.status === 'accepted' || b.status === 'completed');
   const others = trip.bookings.filter((b) => !['pending', 'accepted', 'completed'].includes(b.status));
   const confirmStart = async () => (await confirm(t("Start this trip?"), t(
     "Passengers with confirmed seats will be notified. Unanswered requests will close."
-  ), { okText: 'Start trip', cancelText: 'Not yet' })) && run('start', () => tripApi.start(trip.id), 'Trip started. Have a safe journey!');
-  const confirmComplete = async () => (await confirm(t("Mark trip as completed?"), t("Confirmed bookings will be counted in your earnings."), { okText: 'Complete' })) && run('complete', () => tripApi.complete(trip.id), 'Trip completed');
+  ), { okText: 'Start trip', cancelText: 'Not yet' })) && run('start', () => tripApi.start(trip.id), t('Trip started. Have a safe journey!'));
+  const confirmComplete = async () => (await confirm(t("Mark trip as completed?"), t("Confirmed bookings will be counted in your earnings."), { okText: 'Complete' })) && run('complete', () => tripApi.complete(trip.id), t('Trip completed'));
 
   return (
     <Screen title={trip.tripType === 'return' ? t("Return trip") : t("Trip")} refreshing={refreshing} onRefresh={refresh} right={trip.status === 'scheduled' && <Button small variant="ghost" title={t("Edit")} icon="create-outline" onPress={() => navigation.navigate('TripForm', { trip: trip })} />}>
@@ -63,8 +64,18 @@ export default function TripDetailScreen({ navigation, route }) {
         ))}
         <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 10 }} />
         <KV label={t("Vehicle")} value={`${trip.vehicle.make} ${trip.vehicle.model} · ${trip.vehicle.registrationNumber}`} />
-        <KV label={t("Seats booked")} value={`${trip.bookedSeats} of ${trip.totalSeats}`} />
-        <KV label={t("Price per seat")} value={rupees(trip.pricePerSeat)} />
+        {goods ? (
+          <>
+            <KV label={t("Load capacity")} value={loadText(trip.capacityKg)} />
+            <KV label={t("Hire price")} value={rupees(trip.pricePerSeat)} />
+            <KV label={t("Status")} value={trip.availableSeats ? t("Available for hire") : t("Hired")} />
+          </>
+        ) : (
+          <>
+            <KV label={t("Seats booked")} value={t("{0} of {1}", [trip.bookedSeats, trip.totalSeats])} />
+            <KV label={t("Price per seat")} value={rupees(trip.pricePerSeat)} />
+          </>
+        )}
         <KV label={t("Estimated earnings")} value={rupees(confirmed.reduce((a, b) => a + b.fareEstimate, 0))} />
         {trip.notes ? <KV label={t("Notes")} value={trip.notes} /> : null}
         {trip.cancelReason ? <KV label={t("Cancelled")} value={trip.cancelReason} /> : null}
@@ -72,7 +83,7 @@ export default function TripDetailScreen({ navigation, route }) {
       </Card>
 
       {trip.status === 'scheduled' && (
-        <ToggleRow title={t("Accepting booking requests")} sub={trip.bookingOpen ? t("Passengers can find and book this trip") : t("Hidden from search — existing bookings stay")} value={trip.bookingOpen} onChange={(v) => run('open', () => tripApi.bookingOpen(trip.id, v))} />
+        <ToggleRow title={t("Accepting booking requests")} sub={trip.bookingOpen ? (goods ? t("Customers can find and hire this vehicle") : t("Passengers can find and book this trip")) : t("Hidden from search — existing bookings stay")} value={trip.bookingOpen} onChange={(v) => run('open', () => tripApi.bookingOpen(trip.id, v))} />
       )}
       {active && <LocationShareCard tripId={trip.id} compact />}
 
@@ -87,25 +98,25 @@ export default function TripDetailScreen({ navigation, route }) {
       {/* Daily routes: publish the same trip again in two taps. */}
       <Button title={t("Repeat this trip")} icon="repeat" variant="secondary" onPress={() => navigation.navigate('TripForm', { copyOf: trip })} style={{ marginBottom: 20 }} />
       {trip.returnTrips?.length > 0 && (
-        <Section title={t("Return trips")} icon="swap-horizontal">
+        <Section plain title={t("Return trips")} icon="swap-horizontal">
           {trip.returnTrips.map((r) => (
-            <Button key={r.id} variant="secondary" small title={`${dateTimeLabel(r.departureAt)} · ${r.status}`} onPress={() => navigation.push('TripDetail', { id: r.id })} style={{ marginBottom: 8 }} />
+            <Button key={r.id} variant="secondary" small title={`${dateTimeLabel(r.departureAt)} · ${STATUS_TEXT[r.status]}`} onPress={() => navigation.push('TripDetail', { id: r.id })} style={{ marginBottom: 8 }} />
           ))}
         </Section>
       )}
 
-      <Section title={t("New requests ({0})", [pending.length])} icon="hourglass">
+      <Section plain title={t("New requests ({0})", [pending.length])} icon="hourglass">
         {pending.length ? pending.map((b) => <BookingCard key={b.id} booking={b} showTrip={false} onChanged={reload} onPress={() => navigation.navigate('BookingDetail', { id: b.id })} />) : <Text style={font.sub}>{t("No new requests.")}</Text>}
       </Section>
-      <Section title={t("Confirmed passengers ({0})", [confirmed.length])} icon="people">
-        {confirmed.length ? confirmed.map((b) => <BookingCard key={b.id} booking={b} showTrip={false} onChanged={reload} onPress={() => navigation.navigate('BookingDetail', { id: b.id })} />) : <Text style={font.sub}>{t("No confirmed passengers yet.")}</Text>}
+      <Section plain title={goods ? t("Confirmed hire ({0})", [confirmed.length]) : t("Confirmed passengers ({0})", [confirmed.length])} icon="people">
+        {confirmed.length ? confirmed.map((b) => <BookingCard key={b.id} booking={b} showTrip={false} onChanged={reload} onPress={() => navigation.navigate('BookingDetail', { id: b.id })} />) : <Text style={font.sub}>{goods ? t("Not hired yet.") : t("No confirmed passengers yet.")}</Text>}
       </Section>
       {others.length > 0 && (
-        <Section title={t("Declined / cancelled")} icon="close-circle">
+        <Section plain title={t("Declined / cancelled")} icon="close-circle">
           {others.map((b) => (
             <Card key={b.id} style={{ marginBottom: 8 }} onPress={() => navigation.navigate('BookingDetail', { id: b.id })}>
               <Row style={{ justifyContent: 'space-between' }}>
-                <Text style={font.body}>{b.passengerName}{" · "}{b.seats}{" "}{t("seat(s)")}</Text>
+                <Text style={font.body}>{b.passengerName}{" · "}{b.goodsType || `${b.seats} ${t("seat(s)")}`}</Text>
                 <Badge status={b.status} />
               </Row>
             </Card>
@@ -115,13 +126,13 @@ export default function TripDetailScreen({ navigation, route }) {
       <PromptModal
         visible={cancelOpen}
         title={t("Cancel this trip?")}
-        message={t("All passengers will be notified that the trip is cancelled.")}
+        message={goods ? t("Customers will be notified that the trip is cancelled.") : t("All passengers will be notified that the trip is cancelled.")}
         placeholder={t("Reason")}
         presets={['Vehicle problem', 'Personal emergency', 'Bad weather / road closed']}
         danger
         confirmText={t("Cancel trip")}
         onClose={() => setCancelOpen(false)}
-        onConfirm={(reason) => run('cancel', () => tripApi.cancel(trip.id, reason), 'Trip cancelled')}
+        onConfirm={(reason) => run('cancel', () => tripApi.cancel(trip.id, reason), t('Trip cancelled'))}
       />
     </Screen>
   );

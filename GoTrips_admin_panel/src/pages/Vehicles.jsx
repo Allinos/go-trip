@@ -74,7 +74,11 @@ export function VehicleDetail() {
   if (isLoading || !v) return <Spinner />;
   const canManage = can(admin, 'manage');
   const docs = Object.entries(decisions).map(([docId, d]) => ({ id: Number(docId), status: d.status, reason: d.reason || undefined }));
-  const approve = () => review.mutate({ decision: 'approve', documents: docs });
+  const missing = v.missingDocuments || [];
+  const approve = () => {
+    if (missing.length && !window.confirm(`Required documents are missing: ${missing.join(', ')}.\n\nApprove anyway? Only do this if you checked them another way.`)) return;
+    review.mutate({ decision: 'approve', documents: docs, ignoreMissingDocuments: missing.length > 0 });
+  };
   const reject = async (reason) => {
     if (docs.some((d) => d.status === 'rejected' && !d.reason?.trim())) {
       toast('Add a reason for each rejected document', 'error');
@@ -119,22 +123,36 @@ export function VehicleDetail() {
           </div>
         )}
       </div>
+      {missing.length > 0 && v.verificationStatus !== 'approved' && <div className="alert amber">Required documents missing: {missing.join(', ')}</div>}
       {v.rejectionReason && v.verificationStatus !== 'approved' && <div className="alert red">{label(v.verificationStatus)}: {v.rejectionReason}</div>}
       <div className="grid grid-2" style={{ marginBottom: 16 }}>
         <Card title="Vehicle details">
           <dl className="kv">
+            <dt>Category</dt>
+            <dd>{v.category === 'commercial' ? 'Goods vehicle' : 'Passenger vehicle'}</dd>
             <dt>Type</dt>
             <dd>{label(v.vehicleClass)}</dd>
             <dt>Year / colour</dt>
             <dd>{[v.year, v.color].filter(Boolean).join(' · ') || '—'}</dd>
-            <dt>Seats</dt>
-            <dd>{v.seats ?? '—'}</dd>
-            <dt>Load capacity</dt>
-            <dd>{v.loadCapacityKg ? `${v.loadCapacityKg} kg` : '—'}</dd>
-            <dt>Fuel / AC</dt>
-            <dd>
-              {label(v.fuelType)} · {v.hasAc ? 'AC' : 'Non-AC'}
-            </dd>
+            {v.category === 'commercial' ? (
+              <>
+                <dt>Load capacity</dt>
+                <dd>{v.loadCapacityKg ? `${v.loadCapacityKg.toLocaleString('en-IN')} kg` : '—'}</dd>
+                <dt>Body / length</dt>
+                <dd>{[v.bodyType && label(v.bodyType), v.cargoLengthFt && `${v.cargoLengthFt} ft`].filter(Boolean).join(' · ') || '—'}</dd>
+                <dt>Fuel</dt>
+                <dd>{label(v.fuelType)}</dd>
+              </>
+            ) : (
+              <>
+                <dt>Seats</dt>
+                <dd>{v.seats ?? '—'}</dd>
+                <dt>Fuel / AC</dt>
+                <dd>
+                  {label(v.fuelType)} · {v.hasAc ? 'AC' : 'Non-AC'}
+                </dd>
+              </>
+            )}
             <dt>Used for</dt>
             <dd>{usage(v)}</dd>
             <dt>Features</dt>

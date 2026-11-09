@@ -59,13 +59,13 @@ export default function EarningsScreen({ navigation }) {
             <Stat label={t("Seats sold")} value={e.summary.seatsSold} icon="people" tone="blue" />
             <Stat label={t("Bookings")} value={e.summary.completedBookings + e.summary.acceptedBookings} icon="receipt" />
           </Row>
-          <Section title={t("Trend")} icon="bar-chart">
+          <Section plain title={t("Trend")} icon="bar-chart">
             <Card>
               <Bars series={e.series} bucket={period === 'year' || period === 'all' ? 'month' : 'day'} />
             </Card>
           </Section>
           {e.byVehicle?.length > 0 && (
-            <Section title={t("By vehicle")} icon="car">
+            <Section plain title={t("By vehicle")} icon="car">
               <Card>
                 {e.byVehicle.map((v) => (
                   <Row key={v.id} style={{ justifyContent: 'space-between', paddingVertical: 6 }}>
@@ -79,7 +79,7 @@ export default function EarningsScreen({ navigation }) {
               </Card>
             </Section>
           )}
-          <Section title={t("Booking history")} icon="list">
+          <Section plain title={t("Booking history")} icon="list">
             {e.history.length ? (
               e.history.map((b) => (
                 <Card key={b.id} style={{ marginBottom: 8 }} onPress={() => navigation.navigate('BookingDetail', { id: b.id })}>

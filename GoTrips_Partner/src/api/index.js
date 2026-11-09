@@ -32,6 +32,7 @@ export const meApi = {
 export const partnerApi = {
   onboarding: () => get('/partner/onboarding'),
   register: (body) => post('/partner/register', body),
+  submit: () => post('/partner/onboarding/submit'),
   profile: () => get('/partner/me'),
   updateProfile: (body) => patch('/partner/me', body),
   documents: () => get('/partner/documents'),

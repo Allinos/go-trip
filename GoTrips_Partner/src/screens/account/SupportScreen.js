@@ -40,7 +40,7 @@ export default function SupportScreen() {
 
   return (
     <Screen title={t("Help & support")}>
-      <Section title={t("Need help?")} icon="chatbubbles">
+      <Section plain title={t("Need help?")} icon="chatbubbles">
         {form ? (
           <Card>
             <Chips label={t("Topic")} options={CATS} value={f.category} onChange={(category) => setF({ ...f, category })} />
@@ -55,7 +55,7 @@ export default function SupportScreen() {
           <Button icon="create" title={t("Create a support ticket")} onPress={() => setForm(true)} />
         )}
       </Section>
-      <Section title={t("My tickets")} icon="file-tray-full">
+      <Section plain title={t("My tickets")} icon="file-tray-full">
         {tickets.loading ? (
           <Loading />
         ) : tickets.data?.length ? (
@@ -78,7 +78,7 @@ export default function SupportScreen() {
           <Text style={font.sub}>{t("No tickets yet.")}</Text>
         )}
       </Section>
-      <Section title={t("Frequently asked questions")} icon="help-circle">
+      <Section plain title={t("Frequently asked questions")} icon="help-circle">
         {(faqs.data || []).map((q) => (
           <Card key={q.id} style={{ marginBottom: 8 }} onPress={() => setOpen(open === q.id ? null : q.id)}>
             <Row>
