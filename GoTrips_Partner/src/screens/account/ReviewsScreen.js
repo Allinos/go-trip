@@ -7,6 +7,7 @@ import { useApi } from '../../hooks/useApi';
 import { colors, font } from '../../theme';
 import { ago } from '../../utils/format';
 import { t } from '../../i18n';
+import { useCaps } from '../../context/AuthContext';
 
 const GOLD = '#F59E0B';
 export const Stars = ({ value = 0, size = 14 }) => (
@@ -19,6 +20,7 @@ export const Stars = ({ value = 0, size = 14 }) => (
 
 /** What passengers said after completed trips. Ratings show on your trips in search. */
 export default function ReviewsScreen() {
+  const caps = useCaps();
   const { data, meta, error, loading, reload, refresh, refreshing } = useApi(() => partnerApi.reviews(), [], { cacheKey: 'reviews' });
   const header = meta?.count ? (
     <Card style={{ marginBottom: 16 }}>
@@ -62,12 +64,12 @@ export default function ReviewsScreen() {
               </Row>
               {r.comment ? <Text style={[font.body, { marginTop: 6 }]}>{r.comment}</Text> : null}
               <Text style={[font.small, { marginTop: 6 }]}>
-                {r.by || t("Passenger")}
+                {r.by || (r.kind === 'driver' ? t("Customer") : t("Passenger"))}
                 {r.route ? ` · ${r.route}` : ''}
               </Text>
             </Card>
           )}
-          ListEmptyComponent={<Empty icon="star-outline" text={t("No ratings yet. Passengers can rate you after a completed trip.")} />}
+          ListEmptyComponent={<Empty icon="star-outline" text={caps.driver ? t("No ratings yet. Customers who call or message you through GoTrip can rate you.") : t("No ratings yet. Passengers can rate you after a completed trip.")} />}
         />
       )}
     </Screen>

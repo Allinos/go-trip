@@ -138,6 +138,7 @@ export const rentalAPI = {
 export const marketplaceAPI = {
   drivers: (params) => http.get('/marketplace/drivers', { params }),
   driver: (id) => http.get(`/marketplace/drivers/${id}`),
+  review: (id, body) => http.put(`/marketplace/drivers/${id}/review`, body),
   contact: (targetType, targetId, channel = 'call') => http.post('/marketplace/contact', { targetType, targetId, channel }),
 };
 

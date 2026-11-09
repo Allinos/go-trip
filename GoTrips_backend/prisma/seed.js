@@ -8,6 +8,12 @@ require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
+// A Prisma client generated from an older schema has no partnerCategory model ("Cannot read properties of
+// undefined (reading 'findUnique')"). Say how to fix it instead of crashing.
+if (!prisma.partnerCategory || !prisma.review) {
+  console.error('The Prisma client is out of date. Run:  npx prisma generate  &&  npx prisma migrate deploy  then seed again.');
+  process.exit(1);
+}
 const overwrite = process.env.SEED_OVERWRITE === '1';
 const key = (s) => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
 

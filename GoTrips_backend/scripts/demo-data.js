@@ -11,6 +11,10 @@ if (process.env.NODE_ENV === 'production') {
 }
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+if (!prisma.partnerCategory || !prisma.review) {
+  console.error('The Prisma client is out of date. Run:  npx prisma generate  &&  npx prisma migrate deploy  then try again.');
+  process.exit(1);
+}
 const key = (s) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
 const hours = (h) => new Date(Date.now() + h * 3600_000);
 const DEMO_FILE = 'demo/placeholder.jpg';

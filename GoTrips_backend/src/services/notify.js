@@ -61,6 +61,9 @@ const N = {
   vehicleSuspended(vehicle, partnerUserId, reason) {
     queue({ userId: partnerUserId, app: 'partner', key: 'vehicle_suspended', vars: { vehicle: `${vehicle.make} ${vehicle.model} (${vehicle.registrationNumber})`, reg: vehicle.registrationNumber, reason }, data: { vehicleId: vehicle.id, screen: 'VehicleDetail' }, channels: { sms: true } });
   },
+  newReview(partnerUserId, rating) {
+    queue({ userId: partnerUserId, app: 'partner', key: 'new_review', vars: { rating }, data: { screen: 'Reviews' } });
+  },
   tripStarted(booking) {
     queue({ userId: booking.userId, app: 'user', key: 'trip_started', vars: seg(booking), data: { bookingId: booking.id, screen: 'booking' } });
   },

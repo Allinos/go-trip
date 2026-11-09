@@ -7,12 +7,13 @@ The Node.js + Express 5 + Prisma + PostgreSQL backend for the **User app**, the 
 ```bash
 cp .env.example .env            # fill in DATABASE_URL and the secrets
 npm install
-npx prisma migrate deploy       # create tables + indexes
-npm run seed                    # partner types, required documents, Assam districts, FAQs
+npm run db:setup                # prisma generate + migrate deploy + seed (partner types, documents, districts, FAQs)
 npm run admin:create -- --email you@company.com --name "Your Name" --role super_admin
 npm run dev                     # http://localhost:3000/health
 npm test                        # integration tests (needs a local Postgres; uses database gotrip_test)
 ```
+
+**After pulling new code** run `npx prisma generate` and `npx prisma migrate deploy` (stop the dev server first on Windows, it locks the Prisma engine file). If the client is stale, `npm run seed` prints this instead of `Cannot read properties of undefined (reading 'findUnique')`.
 
 In development (`SMS_PROVIDER=console`), `POST /auth/otp/send` includes the OTP in the response as `devOtp`, and the server log prints it too.
 

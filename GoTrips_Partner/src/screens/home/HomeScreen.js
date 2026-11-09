@@ -91,6 +91,7 @@ export default function HomeScreen({ navigation }) {
                 <Row style={{ marginTop: 8 }}>
                   <Stat style={{ padding: 12 }} label={t("Profile views")} value={d.driverProfile.viewCount} icon="eye" tone="blue" />
                   <Stat style={{ padding: 12 }} label={t("Calls")} value={d.contacts.callsLast30Days} sub={t("last 30 days")} icon="call" tone="green" />
+                  <Stat style={{ padding: 12 }} label={t("Rating")} value={d.rating?.count ? `★ ${d.rating.average.toFixed(1)}` : '—'} sub={d.rating?.count ? t("{0} rating(s)", [d.rating.count]) : t("No ratings yet")} icon="star" tone="amber" onPress={() => navigation.navigate('Reviews')} />
                 </Row>
                 {d.driverProfile.completeness < 100 && (
                   <Pressable onPress={() => navigation.navigate('EditDriverProfile', { edit: true })} style={{ marginTop: 12 }}>

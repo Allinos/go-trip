@@ -885,10 +885,12 @@ enum AdminRole {
   support
 }
 
-/// Passenger rating of a completed trip (one per booking). Partner.ratingAvg/ratingCount hold the totals.
+/// A rating of a partner. Trip review: bookingId is set (one per completed booking).
+/// Driver review: bookingId is null, one per user per driver (only after contacting the driver through GoTrip).
+/// Partner.ratingAvg/ratingCount hold the totals.
 model Review {
   id        Int      @id @default(autoincrement())
-  bookingId Int      @unique @map("booking_id")
+  bookingId Int?     @unique @map("booking_id")
   partnerId Int      @map("partner_id")
   userId    Int      @map("user_id")
   rating    Int      @db.SmallInt
@@ -897,10 +899,11 @@ model Review {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  partner Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([partnerId, createdAt])
+  @@index([partnerId, userId])
   @@map("reviews")
 }

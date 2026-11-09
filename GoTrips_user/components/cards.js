@@ -62,6 +62,7 @@ export function DriverCard({ driver: d, onPress }) {
           <Row gap={6}>
             <Text style={TYPOGRAPHY.bodyBold}>{d.name}</Text>
             {d.isVerified && <MaterialIcons name="verified" size={18} color={COLORS.success} />}
+            <RatingPill rating={d.rating} />
           </Row>
           {d.headline ? <Text style={[TYPOGRAPHY.caption, { color: COLORS.text.secondary }]} numberOfLines={1}>{d.headline}</Text> : null}
           <Row gap={6} style={{ marginTop: 6, flexWrap: 'wrap' }}>

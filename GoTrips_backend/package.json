@@ -19,7 +19,9 @@
     "admin:create": "node scripts/create-admin.js",
     "test": "jest --runInBand",
     "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\"",
-    "seed:demo": "node scripts/demo-data.js"
+    "seed:demo": "node scripts/demo-data.js",
+    "postinstall": "prisma generate",
+    "db:setup": "prisma generate && prisma migrate deploy && node prisma/seed.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

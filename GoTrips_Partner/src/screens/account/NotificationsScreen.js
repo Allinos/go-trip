@@ -8,7 +8,7 @@ import { colors, font } from '../../theme';
 import { ago } from '../../utils/format';
 import { t } from '../../i18n';
 
-const ICON = { booking_request: 'person-add', booking_cancelled: 'close-circle', vehicle_approved: 'checkmark-circle', vehicle_rejected: 'alert-circle', vehicle_suspended: 'ban', documents_approved: 'shield-checkmark', documents_rejected: 'alert-circle', payment_success: 'card', registration_complete: 'ribbon', listing_expiring: 'time', support_reply: 'chatbubbles' };
+const ICON = { booking_request: 'person-add', booking_cancelled: 'close-circle', vehicle_approved: 'checkmark-circle', vehicle_rejected: 'alert-circle', vehicle_suspended: 'ban', new_review: 'star', documents_approved: 'shield-checkmark', documents_rejected: 'alert-circle', payment_success: 'card', registration_complete: 'ribbon', listing_expiring: 'time', support_reply: 'chatbubbles' };
 
 export default function NotificationsScreen({ navigation }) {
   const { data, error, loading, reload, refresh, refreshing } = useApi(() => meApi.notifications(), [], { cacheKey: 'notifications' });
@@ -22,6 +22,7 @@ export default function NotificationsScreen({ navigation }) {
     else if (d.screen === 'Documents') navigation.navigate('Documents', { edit: true });
     else if (d.screen === 'Payments') navigation.navigate('Payments');
     else if (d.screen === 'Support') navigation.navigate('Support');
+    else if (d.screen === 'Reviews') navigation.navigate('Reviews');
   };
   return (
     <Screen title={t("Notifications")} scroll={false} padded={false}>

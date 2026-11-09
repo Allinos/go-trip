@@ -52,6 +52,10 @@ const T = {
     en: (v) => ({ title: 'Vehicle suspended', body: `${v.vehicle} was suspended: ${v.reason}. Its upcoming trips no longer take bookings. Contact support for help.`, sms: `GoTrip: Your vehicle ${v.reg} was suspended (${v.reason}). Contact support.` }),
     as: (v) => ({ title: 'বাহন স্থগিত', body: `${v.vehicle} স্থগিত কৰা হৈছে: ${v.reason}। ইয়াৰ আগন্তুক যাত্ৰাত আৰু বুকিং লোৱা নহ’ব। সহায়ৰ বাবে চাপোৰ্টৰ সৈতে যোগাযোগ কৰক।`, sms: `GoTrip: আপোনাৰ বাহন ${v.reg} স্থগিত কৰা হৈছে (${v.reason})। চাপোৰ্টৰ সৈতে যোগাযোগ কৰক।` }),
   },
+  new_review: {
+    en: (v) => ({ title: `New rating: ${'★'.repeat(v.rating)}`, body: `A customer rated you ${v.rating} out of 5. Open Ratings & reviews to read it.` }),
+    as: (v) => ({ title: `নতুন মূল্যায়ন: ${'★'.repeat(v.rating)}`, body: `এজন গ্ৰাহকে আপোনাক ৫ ৰ ভিতৰত ${asNum(v.rating)} দিছে। পঢ়িবলৈ মূল্যায়ন আৰু মতামত খোলক।` }),
+  },
   registration_complete: {
     en: (v) => ({
       title: 'Registration complete',

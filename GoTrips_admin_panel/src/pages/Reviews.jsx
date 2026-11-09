@@ -18,7 +18,7 @@ export default function Reviews() {
       <div className="page-head">
         <div>
           <h1>Reviews</h1>
-          <p>Ratings passengers gave after completed trips. Hidden reviews are not shown in the apps and do not count towards the rating.</p>
+          <p>Ratings from passengers after completed trips, and from customers who contacted a marketplace driver. Hidden reviews are not shown in the apps and do not count towards the rating.</p>
         </div>
       </div>
       <Tabs
@@ -37,7 +37,11 @@ export default function Reviews() {
             { title: 'Comment', render: (r) => r.comment || <span className="muted">—</span> },
             { title: 'Partner', render: (r) => <Link to={`/partners/${r.partner.id}`}>{r.partner.businessName || r.partner.user.fullName}</Link> },
             { title: 'Passenger', render: (r) => (<div><div>{r.user.fullName || '—'}</div><div className="mono small muted">{r.user.phone}</div></div>) },
-            { title: 'Booking', render: (r) => (<div><div className="mono small">{r.booking.code}</div><div className="muted small">{r.booking.pickupName} → {r.booking.dropName}</div></div>) },
+            {
+              title: 'For',
+              render: (r) =>
+                r.booking ? (<div><div className="mono small">Trip · {r.booking.code}</div><div className="muted small">{r.booking.pickupName} → {r.booking.dropName}</div></div>) : <span className="small">Driver (marketplace)</span>,
+            },
             { title: 'Status', render: (r) => <Badge status={r.isHidden ? 'rejected' : 'approved'}>{r.isHidden ? 'Hidden' : 'Visible'}</Badge> },
             { title: 'Date', render: (r) => dateTime(r.createdAt) },
             {

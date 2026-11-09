@@ -831,5 +831,12 @@
  "{0} → {1}, {2} at {3}. {4} per seat. Find it in the GoTrip app.": "{0} → {1}, {2}, {3}ত। প্ৰতি আসন {4}। GoTrip এপত বিচাৰক।",
  "Share": "শ্বেয়াৰ কৰক",
  "New on GoTrip": "GoTrip ত নতুন",
- "WHAT PASSENGERS SAY": "যাত্ৰীসকলে কি কয়"
+ "WHAT PASSENGERS SAY": "যাত্ৰীসকলে কি কয়",
+ "Ratings": "মূল্যায়ন",
+ "No ratings yet": "এতিয়ালৈকে মূল্যায়ন নাই",
+ "Customer": "গ্ৰাহক",
+ "Did you hire {0}? Rate them": "আপুনি {0}ক কামত লৈছিল নেকি? মূল্যায়ন কৰক",
+ "How was the driver? (optional)": "চালকজন কেনে আছিল? (ঐচ্ছিক)",
+ "You can rate this driver after you call or message them through GoTrip.": "GoTrip ৰ জৰিয়তে ফোন বা মেছেজ কৰাৰ পিছত আপুনি এই চালকক মূল্যায়ন কৰিব পাৰিব।",
+ "★ 4+ rated": "★ ৪+ মূল্যায়িত"
 }

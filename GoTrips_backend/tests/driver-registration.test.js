@@ -156,4 +156,52 @@ describe('Driver registration with Razorpay fee', () => {
     const wrongDoc = await api().post('/api/v1/partner/documents/vehicle_rc').set(auth(s.token)).attach('front', Buffer.from('%PDF-1.4'), 'x.pdf');
     expect(wrongDoc.status).toBe(400);
   });
+
+  test('customers rate a driver after contacting them; ratings show in the marketplace', async () => {
+    mockRazorpay();
+    const s = await startDriver();
+    await api().put('/api/v1/partner/driver-profile').set(auth(s.token)).send(driverDetails).expect(200);
+    await uploadRequiredDocs(s.token);
+    const order = await api().post('/api/v1/partner/payments/registration-order').set(auth(s.token));
+    const orderId = order.body.data.orderId;
+    const paymentId = `pay_${orderId.slice(6)}`;
+    await api().post('/api/v1/partner/payments/verify').set(auth(s.token)).send({ razorpayOrderId: orderId, razorpayPaymentId: paymentId, razorpaySignature: sign(`${orderId}|${paymentId}`, 'rzp_test_secret') }).expect(200);
+    const profileId = (await prisma.driverProfile.findFirst({ where: { partner: { userId: s.user.id } } })).id;
+
+    const customer = await login('user');
+    const rate = (who, body) => api().put(`/api/v1/marketplace/drivers/${profileId}/review`).set(auth(who.token)).send(body);
+    // Must contact the driver through GoTrip first
+    let d = (await api().get(`/api/v1/marketplace/drivers/${profileId}`).set(auth(customer.token))).body.data;
+    expect(d).toMatchObject({ canReview: false, myReview: null, rating: null });
+    expect(d.partnerId).toBeUndefined();
+    const early = await rate(customer, { rating: 5 });
+    expect(early.status).toBe(400);
+    expect(early.body.error.code).toBe('CONTACT_FIRST');
+    expect((await rate(s, { rating: 5 })).status).toBe(400); // drivers cannot rate themselves
+
+    await api().post('/api/v1/marketplace/contact').set(auth(customer.token)).send({ targetType: 'driver_profile', targetId: profileId }).expect(200);
+    expect((await api().get(`/api/v1/marketplace/drivers/${profileId}`).set(auth(customer.token))).body.data.canReview).toBe(true);
+    await rate(customer, { rating: 3 }).expect(200);
+    await rate(customer, { rating: 4, comment: 'Careful driver, knew the hill roads' }).expect(200); // edit, not a second review
+    expect(await prisma.review.count({ where: { userId: customer.user.id, bookingId: null } })).toBe(1);
+
+    const second = await login('user');
+    await api().post('/api/v1/marketplace/contact').set(auth(second.token)).send({ targetType: 'driver_profile', targetId: profileId, channel: 'whatsapp' }).expect(200);
+    await rate(second, { rating: 5 }).expect(200);
+
+    d = (await api().get(`/api/v1/marketplace/drivers/${profileId}`).set(auth(customer.token))).body.data;
+    expect(d.rating).toEqual({ average: 4.5, count: 2 });
+    expect(d.myReview).toMatchObject({ rating: 4, comment: 'Careful driver, knew the hill roads' });
+    expect(d.reviews).toHaveLength(2);
+    const list = (await api().get('/api/v1/marketplace/drivers').query({ sort: 'rating', minRating: 4 })).body.data;
+    expect(list.find((x) => x.id === profileId).rating).toEqual({ average: 4.5, count: 2 });
+    const all = await api().get(`/api/v1/marketplace/drivers/${profileId}/reviews`);
+    expect(all.body.meta.total).toBe(2);
+    expect(all.body.data[0].kind).toBe('driver');
+    // The driver sees them in the partner app
+    const mine = await api().get('/api/v1/partner/reviews').set(auth(s.token));
+    expect(mine.body.meta).toMatchObject({ average: 4.5, count: 2 });
+    await new Promise((ok) => setTimeout(ok, 300));
+    expect(await prisma.notification.count({ where: { userId: s.user.id, type: 'new_review' } })).toBe(2);
+  });
 });

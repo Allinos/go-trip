@@ -10,12 +10,16 @@ import { COLORS, SPACING, TYPOGRAPHY } from '../../constants';
 import { fullDate, rupees, titleCase } from '../../utils/format';
 import { t } from '../../i18n';
 import CachedImage from '../../components/CachedImage';
+import DriverReviews from '../../components/DriverReviews';
+import { Stars } from '../../components/Stars';
+import useAuthStore from '../../store/authStore';
 
 const DOC_LABEL = { driving_license: 'Driving licence', aadhaar: 'Aadhaar', pan: 'PAN', police_verification: 'Police verification' };
 
 export default function DriverProfile() {
   const { id } = useLocalSearchParams();
   const requireLogin = useRequireLogin();
+  const loggedIn = useAuthStore((s) => s.isAuthenticated);
   const { data: d, error, errorStatus, loading, reload } = useFetch(() => marketplaceAPI.driver(id), [id], { cacheKey: `driver:${id}` });
   if (loading) return (<><Header title={t("Driver")} /><Loading /></>);
   if (error) return (<><Header title={t("Driver")} /><ErrorView message={error} status={errorStatus} onRetry={reload} /></>);
@@ -29,6 +33,7 @@ export default function DriverProfile() {
             <Text style={TYPOGRAPHY.h3}>{d.name}</Text>
             {d.isVerified && <MaterialIcons name="verified" size={22} color={COLORS.success} />}
           </Row>
+          {d.rating ? <Stars value={d.rating.average} count={d.rating.count} size={16} style={{ marginTop: 4 }} /> : null}
           {d.headline ? <Text style={[TYPOGRAPHY.caption, { color: COLORS.text.secondary, textAlign: 'center' }]}>{d.headline}</Text> : null}
           <Row style={{ marginTop: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
             <Pill text={d.hasPriorExperience ? t("{0} years experience", [d.experienceYears]) : t("New driver")} icon="work" />
@@ -57,6 +62,7 @@ export default function DriverProfile() {
           <KV label={t("Own vehicle")} value={d.hasOwnVehicle ? 'Yes' : 'No'} />
           <KV label={t("On GoTrip since")} value={fullDate(d.memberSince)} />
         </Card>
+        <DriverReviews driver={d} loggedIn={loggedIn} onSaved={reload} />
         <Card>
           <Text style={TYPOGRAPHY.bodyBold}>{t("Verification")}</Text>
           {d.verifiedDocuments.length ? (
@@ -72,8 +78,8 @@ export default function DriverProfile() {
         </Card>
       </ScrollView>
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: SPACING.md, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: COLORS.border, flexDirection: 'row', gap: 10 }}>
-        <Button style={{ flex: 1 }} icon="call" title={t("Call driver")} onPress={() => requireLogin(() => contactPartner('driver_profile', d.id), 'to call the driver')} />
-        <Button style={{ flex: 1 }} variant="outline" icon="chat" title={t("WhatsApp")} onPress={() => requireLogin(() => contactPartner('driver_profile', d.id, 'whatsapp'), 'to message the driver')} />
+        <Button style={{ flex: 1 }} icon="call" title={t("Call driver")} onPress={() => requireLogin(() => contactPartner('driver_profile', d.id).finally(reload), 'to call the driver')} />
+        <Button style={{ flex: 1 }} variant="outline" icon="chat" title={t("WhatsApp")} onPress={() => requireLogin(() => contactPartner('driver_profile', d.id, 'whatsapp').finally(reload), 'to message the driver')} />
       </View>
     </View>
   );

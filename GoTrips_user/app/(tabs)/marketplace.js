@@ -27,8 +27,9 @@ export default function MarketplaceScreen() {
   const [workType, setWorkType] = useState('');
   const [vehicleType, setVehicleType] = useState('');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [topRated, setTopRated] = useState(false);
   const [pick, setPick] = useState(false);
-  const params = { q: query || undefined, district: district || undefined, workType: workType || undefined, vehicleType: vehicleType || undefined, verifiedOnly: verifiedOnly || undefined, limit: 30 };
+  const params = { q: query || undefined, district: district || undefined, workType: workType || undefined, vehicleType: vehicleType || undefined, verifiedOnly: verifiedOnly || undefined, ...(topRated ? { sort: 'rating', minRating: 4 } : {}), limit: 30 };
   const { data, meta, error, errorStatus, loading, refreshing, reload, refresh } = useFetch(() => marketplaceAPI.drivers(params), [JSON.stringify(params)], { cacheKey: `drivers:${JSON.stringify(params)}` });
 
   return (
@@ -51,6 +52,7 @@ export default function MarketplaceScreen() {
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingHorizontal: SPACING.md, paddingVertical: 8 }}>
         <Chip label={t("✓ Verified only")} active={verifiedOnly} onPress={() => setVerifiedOnly(!verifiedOnly)} />
+        <Chip label={t("★ 4+ rated")} active={topRated} onPress={() => setTopRated(!topRated)} />
         {WORK.map(([v, l]) => (
           <Chip key={`w${v}`} label={l} active={workType === v} onPress={() => setWorkType(v)} />
         ))}

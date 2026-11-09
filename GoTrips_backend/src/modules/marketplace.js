@@ -11,6 +11,8 @@ const { validate, z, idParam, boolish, pageQuery } = require('../lib/validate');
 const { authenticate, optionalAuth } = require('../middleware/auth');
 const { notFound, badRequest } = require('../lib/errors');
 const { paginate, pageMeta } = require('../lib/util');
+const { writeLimiter } = require('../middleware/rateLimit');
+const reviews = require('./reviews');
 
 const router = express.Router();
 
@@ -42,7 +44,7 @@ const driverSelect = {
   viewCount: true,
   listedAt: true,
   updatedAt: true,
-  partner: { select: { id: true, verificationStatus: true, whatsappPhone: true, createdAt: true, documents: { select: { docType: true, status: true } }, user: { select: { fullName: true, phone: true, photoKey: true, gender: true, dateOfBirth: true } } } },
+  partner: { select: { id: true, userId: true, ratingAvg: true, ratingCount: true, verificationStatus: true, whatsappPhone: true, createdAt: true, documents: { select: { docType: true, status: true } }, user: { select: { fullName: true, phone: true, photoKey: true, gender: true, dateOfBirth: true } } } },
 };
 
 const age = (dob) => (dob ? Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 86400_000)) : null);
@@ -69,6 +71,7 @@ async function serializeDriver(d, { loggedIn, full = false }) {
     isAvailable: d.isAvailable,
     isVerified: d.partner.verificationStatus === 'approved',
     memberSince: d.partner.createdAt,
+    rating: d.partner.ratingCount ? { average: d.partner.ratingAvg, count: d.partner.ratingCount } : null,
   };
   if (full) {
     Object.assign(out, {
@@ -103,7 +106,8 @@ router.get(
       availability: z.enum(['full_time', 'part_time', 'on_call']).optional(),
       minExperience: z.coerce.number().int().min(0).max(60).optional(),
       verifiedOnly: boolish.optional(),
-      sort: z.enum(['recent', 'experience', 'verified']).default('verified'),
+      sort: z.enum(['recent', 'experience', 'verified', 'rating']).default('verified'),
+      minRating: z.coerce.number().min(1).max(5).optional(),
       ...pageQuery,
     }),
   }),
@@ -118,10 +122,10 @@ router.get(
       ...(q.language ? { languages: { has: q.language } } : {}),
       ...(q.availability ? { availability: q.availability } : {}),
       ...(q.minExperience ? { experienceYears: { gte: q.minExperience } } : {}),
-      ...(q.verifiedOnly ? { partner: { verificationStatus: 'approved' } } : {}),
+      ...(q.verifiedOnly || q.minRating ? { partner: { ...(q.verifiedOnly ? { verificationStatus: 'approved' } : {}), ...(q.minRating ? { ratingAvg: { gte: q.minRating }, ratingCount: { gt: 0 } } : {}) } } : {}),
       ...(q.q ? { AND: [{ OR: [{ headline: { contains: q.q, mode: 'insensitive' } }, { city: { contains: q.q, mode: 'insensitive' } }, { partner: { user: { fullName: { contains: q.q, mode: 'insensitive' } } } }] }] } : {}),
     };
-    const orderBy = q.sort === 'experience' ? [{ experienceYears: 'desc' }, { listedAt: 'desc' }] : q.sort === 'recent' ? [{ listedAt: 'desc' }] : [{ partner: { verificationStatus: 'asc' } }, { completeness: 'desc' }, { listedAt: 'desc' }];
+    const orderBy = q.sort === 'rating' ? [{ partner: { ratingAvg: 'desc' } }, { partner: { ratingCount: 'desc' } }, { listedAt: 'desc' }] : q.sort === 'experience' ? [{ experienceYears: 'desc' }, { listedAt: 'desc' }] : q.sort === 'recent' ? [{ listedAt: 'desc' }] : [{ partner: { verificationStatus: 'asc' } }, { completeness: 'desc' }, { listedAt: 'desc' }];
     const loggedIn = !!req.user;
     await cache.sendCached(req, res, `mkt:${loggedIn ? 1 : 0}:${JSON.stringify(q)}`, 30, async () => {
       const [rows, total] = await Promise.all([prisma.driverProfile.findMany({ where, select: driverSelect, orderBy, skip, take }), prisma.driverProfile.count({ where })]);
@@ -134,11 +138,29 @@ router.get('/drivers/:id', optionalAuth, validate({ params: idParam }), async (r
   const loggedIn = !!req.user;
   const data = await cache.wrap(`mkt:detail:${req.params.id}:${loggedIn ? 1 : 0}`, 30, async () => {
     const d = await prisma.driverProfile.findFirst({ where: { id: req.params.id, isListed: true }, select: driverSelect });
-    return d ? serializeDriver(d, { loggedIn, full: true }) : null;
+    if (!d) return null;
+    const recent = d.partner.ratingCount ? await reviews.recentReviews(d.partnerId, 3) : [];
+    return { ...(await serializeDriver(d, { loggedIn, full: true })), reviews: recent, partnerId: d.partnerId };
   });
   if (!data) throw notFound('Driver');
   cache.bump('driverViews', data.id); // flushed to the DB in batches by the scheduler
-  res.json({ success: true, data });
+  // The shared cached copy has no per-user data; whether *this* user may rate is added here.
+  const mine = req.user ? await reviews.driverReviewState(data.partnerId, req.user.id) : { canReview: false, myReview: null };
+  const { partnerId, ...pub } = data;
+  res.json({ success: true, data: { ...pub, ...mine } });
+});
+
+router.get('/drivers/:id/reviews', validate({ params: idParam, query: z.object(pageQuery) }), async (req, res) => {
+  const d = await prisma.driverProfile.findFirst({ where: { id: req.params.id, isListed: true }, select: { partnerId: true } });
+  if (!d) throw notFound('Driver');
+  res.json({ success: true, ...(await reviews.listReviews(d.partnerId, req.query)) });
+});
+
+/** Rate a driver the user contacted through GoTrip. One review per user per driver; sending again edits it. */
+router.put('/drivers/:id/review', authenticate, writeLimiter, validate({ params: idParam, body: reviews.reviewBody }), async (req, res) => {
+  const d = await prisma.driverProfile.findFirst({ where: { id: req.params.id }, select: { partnerId: true, partner: { select: { userId: true } } } });
+  if (!d) throw notFound('Driver');
+  res.json({ success: true, data: await reviews.saveDriverReview(d.partnerId, d.partner.userId, req.user.id, req.body) });
 });
 
 /**

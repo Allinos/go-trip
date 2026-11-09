@@ -24,6 +24,7 @@ const tr = (row, lang, field) => (lang !== 'en' && row?.translations?.[lang]?.[f
 // Assamese text for the most common user-facing errors (by error code, then by English message).
 const AS_BY_CODE = {
   TRIP_STARTED: 'যাত্ৰা ইতিমধ্যে আৰম্ভ হৈছে। অনুগ্ৰহ কৰি চালকক ফোন কৰক।',
+  CONTACT_FIRST: 'GoTrip ৰ জৰিয়তে ফোন বা মেছেজ কৰাৰ পিছতহে চালকক মূল্যায়ন কৰিব পাৰিব',
   NOT_COMPLETED: 'যাত্ৰা সম্পূৰ্ণ হোৱাৰ পিছতহে মূল্যায়ন কৰিব পাৰিব',
   INVALID_PHONE: 'সঠিক ১০ সংখ্যাৰ মোবাইল নম্বৰ দিয়ক',
   OTP_EXPIRED: 'ক’ডটোৰ ম্যাদ উকলিছে। অনুগ্ৰহ কৰি নতুন ক’ড বিচাৰক।',
