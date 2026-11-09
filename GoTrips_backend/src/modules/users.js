@@ -9,6 +9,8 @@ const { notFound, badRequest } = require('../lib/errors');
 const { paginate, pageMeta } = require('../lib/util');
 const { writeLimiter } = require('../middleware/rateLimit');
 const { langOf } = require('../lib/i18n');
+const notify = require('../services/notify');
+const cache = require('../lib/cache');
 const messages = require('../services/messages');
 
 /** Show stored notifications in the language the user reads the app in now, not the one at send time. */
@@ -82,6 +84,7 @@ router.post('/photo', writeLimiter, imageUpload.single('photo'), async (req, res
 /** Account deletion (required by Play Store / App Store). Personal data is anonymised, records kept for accounting. */
 router.delete('/', async (req, res) => {
   const id = req.user.id;
+  let affected = [];
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id }, data: { phone: `+0${String(id).padStart(13, '0')}`.slice(0, 15), fullName: 'Deleted user', email: null, photoKey: null, status: 'blocked', blockReason: 'Account deleted by user' } });
     await tx.session.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
@@ -93,9 +96,14 @@ router.delete('/', async (req, res) => {
       await tx.partner.update({ where: { id: partner.id }, data: { accountStatus: 'suspended', suspendedReason: 'Account deleted by user' } });
       await tx.driverProfile.updateMany({ where: { partnerId: partner.id }, data: { isListed: false } });
       await tx.vehicle.updateMany({ where: { partnerId: partner.id }, data: { isAvailable: false, rentalAvailable: false } });
-      await tx.trip.updateMany({ where: { partnerId: partner.id, status: 'scheduled' }, data: { status: 'cancelled', cancelReason: 'Partner account closed' } });
+      // Passengers holding or waiting for seats on this partner's upcoming trips must be told.
+      affected = await tx.booking.findMany({ where: { partnerId: partner.id, status: { in: ['pending', 'accepted'] }, trip: { status: 'scheduled' } } });
+      await tx.booking.updateMany({ where: { id: { in: affected.map((b) => b.id) } }, data: { status: 'cancelled', cancelledBy: 'partner', statusReason: 'Partner account closed' } });
+      await tx.trip.updateMany({ where: { partnerId: partner.id, status: 'scheduled' }, data: { status: 'cancelled', cancelReason: 'Partner account closed', bookingOpen: false } });
     }
   });
+  affected.forEach((b) => notify.bookingCancelledByPartner(b, 'Partner account closed'));
+  if (affected.length) await cache.delPrefix('trips:search:');
   await invalidateAuthCache(id);
   res.json({ success: true, data: { deleted: true } });
 });

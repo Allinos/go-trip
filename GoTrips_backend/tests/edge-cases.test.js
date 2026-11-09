@@ -200,4 +200,17 @@ describe('Edge cases: bookings, trips and vehicles', () => {
     await api().post(`/api/v1/admin/reviews/${id}/visibility`).set(auth(admin)).send({ hidden: true }).expect(200);
     expect((await api().get(`/api/v1/trips/${next.id}`)).body.data.driver.rating).toBeNull();
   });
+
+  test('a partner deleting their account cancels and notifies confirmed passengers', async () => {
+    const leaving = await activePartner('taxi', { fullName: 'Leaving Partner' });
+    const v = await approvedVehicle(leaving.token, admin, { seats: 4 });
+    const r = await api().post('/api/v1/partner/trips').set(auth(leaving.token)).send({ vehicleId: v.id, departureAt: inHours(30), stops: route, totalSeats: 2, pricePerSeat: 400 });
+    const b = await book(user2, r.body.data);
+    await api().post(`/api/v1/partner/bookings/${b.body.data.id}/accept`).set(auth(leaving.token)).expect(200);
+    await api().delete('/api/v1/me').set(auth(leaving.token)).expect(200);
+    const after = await api().get(`/api/v1/bookings/${b.body.data.id}`).set(auth(user2.token));
+    expect(after.body.data.status).toBe('cancelled');
+    await new Promise((ok) => setTimeout(ok, 300));
+    expect(await prisma.notification.findFirst({ where: { userId: user2.user.id, type: 'booking_cancelled', data: { path: ['bookingId'], equals: b.body.data.id } } })).toBeTruthy();
+  });
 });

@@ -19,7 +19,8 @@ const notify = require('../services/notify');
 
 const reviewBody = z.object({ rating: z.coerce.number().int().min(1).max(5), comment: optText(500) });
 
-const firstName = (n) => (n || '').trim().split(/\s+/)[0] || null;
+// Deleted accounts are anonymised to 'Deleted user'; show them as an unnamed customer.
+const firstName = (n) => (n && n !== 'Deleted user' ? n.trim().split(/\s+/)[0] : null);
 const serialize = (r) => ({
   id: r.id,
   rating: r.rating,

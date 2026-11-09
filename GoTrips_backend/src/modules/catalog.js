@@ -70,5 +70,23 @@ router.get('/faqs', vary, publicCache(600), validate({ query: z.object({ audienc
   res.json({ success: true, data });
 });
 
+/** Headline numbers for the public website (cached 10 minutes). */
+router.get('/stats/public', publicCache(600), async (_req, res) => {
+  const data = await cache.wrap('catalog:stats', 600, async () => {
+    const now = new Date();
+    const [drivers, rentals, upcomingTrips, partners, districts, rating, completedTrips] = await Promise.all([
+      prisma.driverProfile.count({ where: { isListed: true } }),
+      prisma.vehicle.count({ where: { forRental: true, verificationStatus: 'approved', partner: { accountStatus: 'active' } } }),
+      prisma.trip.count({ where: { status: 'scheduled', bookingOpen: true, departureAt: { gte: now } } }),
+      prisma.partner.count({ where: { accountStatus: 'active' } }),
+      prisma.district.count({ where: { isActive: true } }),
+      prisma.review.aggregate({ where: { isHidden: false }, _avg: { rating: true }, _count: { _all: true } }),
+      prisma.trip.count({ where: { status: 'completed' } }),
+    ]);
+    return { drivers, rentals, upcomingTrips, partners, districts, completedTrips, averageRating: rating._count._all ? Math.round(rating._avg.rating * 10) / 10 : null, ratings: rating._count._all };
+  });
+  res.json({ success: true, data });
+});
+
 module.exports = router;
 module.exports.serializeCategory = serializeCategory;

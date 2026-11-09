@@ -8,6 +8,7 @@ GoTrip is a ride-sharing, vehicle-rental and driver-marketplace platform for Ass
 | [`GoTrips_Partner`](GoTrips_Partner) | **Partner app**: drivers, taxi/passenger vehicle owners, rental providers, fleet owners | Expo SDK 55 (React Native) |
 | [`GoTrips_user`](GoTrips_user) | **User app**: customers search trips, request seats, rent vehicles, hire drivers | Expo SDK 55 + expo-router |
 | [`GoTrips_admin_panel`](GoTrips_admin_panel) | **Admin panel**: verification, users, partners, payments, settings | React 18 + Vite |
+| [`GoTrips_website`](GoTrips_website) | **Public website**: trip/rental/driver search with live data, partner info and fees, FAQs, legal and account-deletion pages, English + Assamese | React 18 + Vite |
 
 Each folder has its own README with setup steps and the feature list.
 
@@ -56,8 +57,9 @@ npm run admin:create -- --email you@example.com --name "You"
 npm run dev                                       # http://localhost:3000/health
 npm test                                          # needs database gotrip_test
 
-# 3. Admin panel
+# 3. Admin panel and website
 cd ../GoTrips_admin_panel && cp .env.example .env && npm install && npm run dev   # http://localhost:5173
+cd ../GoTrips_website && cp .env.example .env && npm install && npm run dev       # http://localhost:5174
 
 # 4. Apps (set EXPO_PUBLIC_API_URL to http://<your-PC-LAN-IP>:3000/api/v1)
 cd ../GoTrips_Partner && npm install && npx expo start
