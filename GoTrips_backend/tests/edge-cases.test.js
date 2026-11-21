@@ -7,7 +7,7 @@ const inHours = (h) => new Date(Date.now() + h * 3600_000).toISOString();
 const route = [
   { placeName: 'Tezpur', district: 'Sonitpur' },
   { placeName: 'Nagaon', district: 'Nagaon', fareFromStart: 200 },
-  { placeName: 'Guwahati ISBT', district: 'Kamrup Metropolitan' },
+  { placeName: 'Guwahati', district: 'Kamrup Metropolitan' },
 ];
 const search = (q) => api().get('/api/v1/trips/search').query(q);
 
@@ -43,17 +43,18 @@ describe('Edge cases: bookings, trips and vehicles', () => {
     expect((await book(user, trip)).status).toBe(201);
   });
 
-  test('a full trip leaves search and comes back when a seat frees up', async () => {
+  test('a full trip is marked full in search and becomes bookable again when a seat frees up', async () => {
     const trip = await newTrip(40);
     const a = await book(user, trip, 1);
     const b = await book(user2, trip, 1);
     await search({ from: 'tezpur', to: 'guwahati' }); // warm the cache
     await api().post(`/api/v1/partner/bookings/${a.body.data.id}/accept`).set(auth(partner.token)).expect(200);
     await api().post(`/api/v1/partner/bookings/${b.body.data.id}/accept`).set(auth(partner.token)).expect(200);
-    expect((await search({ from: 'tezpur', to: 'guwahati' })).body.data.map((t) => t.id)).not.toContain(trip.id);
+    expect((await search({ from: 'tezpur', to: 'guwahati' })).body.data.find((t) => t.id === trip.id).isFull).toBe(true);
     await api().post(`/api/v1/bookings/${a.body.data.id}/cancel`).set(auth(user.token)).send({}).expect(200);
     const back = (await search({ from: 'tezpur', to: 'guwahati' })).body.data.find((t) => t.id === trip.id);
     expect(back?.availableSeats).toBe(1);
+    expect(back.isFull).toBe(false);
   });
 
   test('accepting more seats than are left is refused and nothing is overbooked', async () => {

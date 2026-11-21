@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { Platform } from 'react-native';
 import { authAPI, catalogAPI, setSessionExpiredHandler, tokens } from '../services/api';
 import { clearCache, readCache, setCacheScope, writeCache } from '../services/cache';
+import { clearSession, loadSession, saveSession } from '../services/session';
+import { onReconnect } from '../services/net';
 
 /**
  * Customers can browse without an account. Logging in is required to book, call, or see bookings.
@@ -28,19 +30,38 @@ const useAuthStore = create((set, get) => ({
     }
   },
 
+  /**
+   * Start-up: with tokens on the phone the user is signed in straight away from the saved profile (works
+   * offline); the server copy is fetched in the background and the access token refreshed when expired.
+   * Only the server rejecting the session (services/api.js) signs the user out.
+   */
   initialize: async () => {
-    setSessionExpiredHandler(() => set({ user: null, isAuthenticated: false }));
+    setSessionExpiredHandler(() => {
+      clearSession();
+      set({ user: null, isAuthenticated: false });
+    });
     get().reloadCatalog();
-    try {
-      if (await tokens.load()) {
-        const r = await authAPI.me();
-        setCacheScope(r.data.user.id);
-        set({ user: r.data.user, isAuthenticated: true });
+    if (await tokens.load()) {
+      const saved = await loadSession();
+      if (saved?.user) {
+        setCacheScope(saved.user.id);
+        set({ user: saved.user, isAuthenticated: true, isLoading: false });
       }
-    } catch (e) {
-      if (e?.response?.status === 401 || e?.response?.status === 403) await tokens.clear();
-    } finally {
-      set({ isLoading: false });
+      await get().syncUser();
+    }
+    set({ isLoading: false });
+    if (!get()._net) set({ _net: onReconnect(() => get().isAuthenticated && (get().syncUser(), get().reloadCatalog())) });
+  },
+
+  /** Refresh the profile from the server; offline keeps the saved copy. */
+  syncUser: async () => {
+    try {
+      const r = await authAPI.me();
+      setCacheScope(r.data.user.id);
+      set({ user: r.data.user, isAuthenticated: true });
+      saveSession({ user: r.data.user });
+    } catch {
+      /* offline or server trouble: stay signed in with the saved profile */
     }
   },
 
@@ -51,10 +72,14 @@ const useAuthStore = create((set, get) => ({
     await tokens.save(r.data);
     setCacheScope(r.data.user.id);
     set({ user: r.data.user, isAuthenticated: true });
+    saveSession({ user: r.data.user });
     return r.data;
   },
 
-  setUser: (user) => set({ user }),
+  setUser: (user) => {
+    set({ user });
+    if (user) saveSession({ user });
+  },
 
   logout: async () => {
     try {
@@ -64,6 +89,7 @@ const useAuthStore = create((set, get) => ({
       /* ignore */
     }
     await tokens.clear();
+    await clearSession();
     await clearCache();
     setCacheScope(null);
     set({ user: null, isAuthenticated: false });

@@ -24,6 +24,8 @@ const clearTripCache = (tripId, { all = false } = {}) =>
   all ? clearSearchCache() : cache.del(`trips:search:detail:${tripId}:0`, `trips:search:detail:${tripId}:1`);
 
 const stopSchema = z.object({
+  /** A place from GET /locations/districts. placeName alone is accepted when it matches a listed place. */
+  placeId: z.coerce.number().int().positive().optional().nullable(),
   placeName: trimmed(120, 2),
   district: optText(80),
   lat: lat.optional().nullable(),
@@ -78,9 +80,28 @@ function validateStops(stops) {
   });
 }
 
+/**
+ * Trips may only use the predefined places (the same list customers search), so names are always spelled
+ * the same way. Each stop is matched to a place and takes its official name, district and coordinates.
+ */
+async function resolveStops(stops) {
+  const out = [];
+  for (const s of stops) {
+    let place = s.placeId ? await prisma.place.findFirst({ where: { id: s.placeId, isActive: true }, include: { district: true } }) : null;
+    if (!place) {
+      const matches = await prisma.place.findMany({ where: { nameKey: placeKey(s.placeName), isActive: true, district: { isActive: true } }, include: { district: true }, orderBy: { id: 'asc' } });
+      place = matches.find((m) => s.district && m.district.name === s.district) || matches[0];
+    }
+    if (!place) throw badRequest(`"${s.placeName}" is not in the list of places. Choose each stop from the list.`, undefined, 'UNKNOWN_PLACE');
+    out.push({ ...s, placeId: place.id, placeName: place.name, district: place.district.name, lat: place.lat ?? s.lat ?? null, lng: place.lng ?? s.lng ?? null });
+  }
+  return out;
+}
+
 const stopRows = (stops) => stops.map((s, i) => ({ seq: i, placeName: s.placeName, placeKey: placeKey(s.placeName), district: s.district || null, lat: s.lat ?? null, lng: s.lng ?? null, fareFromStart: i === 0 ? 0 : (s.fareFromStart ?? null), etaMinutes: i === 0 ? 0 : (s.etaMinutes ?? null) }));
 
-async function serializeTrip(t, { loggedIn = false, owner = false } = {}) {
+/** showContact: the customer has a booking request on this trip, so the driver's numbers may be shown. */
+async function serializeTrip(t, { loggedIn = false, owner = false, showContact = false } = {}) {
   const stops = (t.stops || []).sort((a, b) => a.seq - b.seq);
   return {
     id: t.id,
@@ -106,7 +127,7 @@ async function serializeTrip(t, { loggedIn = false, owner = false } = {}) {
     vehicle: t.vehicle
       ? { id: t.vehicle.id, category: t.vehicle.category, vehicleClass: t.vehicle.vehicleClass, loadCapacityKg: t.vehicle.loadCapacityKg, bodyType: t.vehicle.bodyType, make: t.vehicle.make, model: t.vehicle.model, color: t.vehicle.color, hasAc: t.vehicle.hasAc, seats: t.vehicle.seats, photo: await storage.url(t.vehicle.photoKeys?.[0]), registrationNumber: owner ? t.vehicle.registrationNumber : t.vehicle.registrationNumber.replace(/^(.{4}).*(.{4})$/, '$1••$2') }
       : undefined,
-    driver: t.partner && !owner ? await partnerContact(t.partner, loggedIn) : undefined,
+    driver: t.partner && !owner ? await partnerContact(t.partner, loggedIn, { hidePhone: !showContact }) : undefined,
     createdAt: t.createdAt,
   };
 }
@@ -187,6 +208,7 @@ partnerRouter.get(
 partnerRouter.post('/', validate({ body: tripBody }), async (req, res) => {
   const b = req.body;
   validateTiming(b.departureAt, b.arrivalAt);
+  b.stops = await resolveStops(b.stops);
   validateStops(b.stops);
   const vehicle = await usableVehicle(req.partner.id, b.vehicleId, b.totalSeats);
   const kf = kindFields(vehicle, b);
@@ -302,6 +324,7 @@ partnerRouter.patch(
     if (b.notes !== undefined) data.notes = b.notes;
     if (b.stops) {
       if (t.bookings.length) throw badRequest('The route cannot be changed after booking requests arrive. Cancel and create a new trip instead.');
+      b.stops = await resolveStops(b.stops);
       validateStops(b.stops);
       Object.assign(data, { originName: b.stops[0].placeName, destinationName: b.stops[b.stops.length - 1].placeName, stops: { deleteMany: {}, create: stopRows(b.stops) } });
     }
@@ -392,7 +415,8 @@ publicRouter.get(
       date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').optional(),
       seats: z.coerce.number().int().min(1).max(20).default(1),
       type: z.enum(['start', 'return']).optional(),
-      kind: z.enum(['passenger', 'goods']).default('passenger'),
+      // No kind = every trip (passenger and goods vehicles); customers narrow it down with a filter.
+      kind: z.enum(['passenger', 'goods']).optional(),
       ...pageQuery,
     }),
   }),
@@ -412,6 +436,10 @@ publicRouter.get(
     const fromCond = fromKey ? Prisma.sql`AND (a.place_key LIKE ${starts(fromKey)} OR a.place_key LIKE ${words(fromKey)} OR lower(a.district) = ${fromKey})` : Prisma.empty;
     const toCond = toKey ? Prisma.sql`AND (b.place_key LIKE ${starts(toKey)} OR b.place_key LIKE ${words(toKey)} OR lower(b.district) = ${toKey})` : Prisma.empty;
     const typeCond = q.type ? Prisma.sql`AND t.trip_type = ${q.type}::"TripType"` : Prisma.empty;
+    const kindCond = q.kind ? Prisma.sql`AND t.kind = ${q.kind}::"TripKind"` : Prisma.empty;
+    // Fully booked trips stay in the results (shown faded, after the ones with room). A goods vehicle is
+    // hired whole, so it is "full" only once hired, whatever seat count was asked for.
+    const fullExpr = Prisma.sql`(CASE WHEN t.kind = 'goods' THEN t.available_seats < 1 ELSE t.available_seats < ${q.seats} END)`;
 
     // For each trip pick the earliest matching pickup stop and the first matching drop stop after it.
     const base = Prisma.sql`
@@ -421,25 +449,25 @@ publicRouter.get(
       JOIN partners p ON p.id = t.partner_id
       JOIN users u ON u.id = p.user_id
       JOIN vehicles v ON v.id = t.vehicle_id AND v.verification_status = 'approved'
-      WHERE t.status = 'scheduled' AND t.booking_open = true AND t.available_seats >= ${q.seats}
+      WHERE t.status = 'scheduled' AND t.booking_open = true
         AND t.departure_at >= ${winStart} AND t.departure_at < ${winEnd}
         AND p.account_status = 'active' AND u.status = 'active'
-        AND t.kind = ${q.kind}::"TripKind"
+        ${kindCond}
         ${typeCond}
         ${fromKey ? fromCond : Prisma.sql`AND a.seq = 0`}
         ${toKey ? toCond : Prisma.sql`AND b.seq = (SELECT max(seq) FROM trip_stops s WHERE s.trip_id = t.id)`}`;
 
     // Popular routes are searched again and again. Results never contain phone numbers (those are on the
     // trip page), so every user shares one cached page per normalised query. Any trip or seat change clears it.
-    const searchKey = `trips:search:${JSON.stringify([fromKey, toKey, q.date || '', q.seats, q.type || '', q.kind, page, limit])}`;
+    const searchKey = `trips:search:${JSON.stringify([fromKey, toKey, q.date || '', q.seats, q.type || '', q.kind || 'all', page, limit])}`;
     await cache.sendCached(req, res, searchKey, 30, async () => {
       // One query: DISTINCT ON picks the best stop pair per trip, COUNT(*) OVER() gives the total for paging.
       const rows = await prisma.$queryRaw`
         SELECT m.*, COUNT(*) OVER()::int AS total FROM (
-          SELECT DISTINCT ON (t.id) t.id, t.departure_at, a.seq AS pickup_seq, b.seq AS drop_seq
+          SELECT DISTINCT ON (t.id) t.id, t.departure_at, a.seq AS pickup_seq, b.seq AS drop_seq, ${fullExpr} AS is_full
           ${base}
           ORDER BY t.id, a.seq, b.seq
-        ) m ORDER BY m.departure_at ASC LIMIT ${take} OFFSET ${skip}`;
+        ) m ORDER BY m.is_full ASC, m.departure_at ASC LIMIT ${take} OFFSET ${skip}`;
       let total = rows[0]?.total || 0;
       if (!rows.length && skip > 0) total = Number((await prisma.$queryRaw`SELECT COUNT(DISTINCT t.id)::int AS total ${base}`)[0]?.total || 0);
 
@@ -451,6 +479,7 @@ publicRouter.get(
           const stops = [...t.stops].sort((x, y) => x.seq - y.seq);
           return {
             ...(await serializeTrip(t, { loggedIn: false })),
+            isFull: !!r.is_full,
             match: { pickupSeq: r.pickup_seq, dropSeq: r.drop_seq, pickupName: stops[r.pickup_seq].placeName, dropName: stops[r.drop_seq].placeName, farePerSeat: estimateFare(t, stops, r.pickup_seq, r.drop_seq, 1) },
           };
         })
@@ -472,7 +501,13 @@ publicRouter.get('/:id', optionalAuth, validate({ params: idParam }), async (req
   });
   if (!trip) throw notFound('Trip');
   const myBooking = req.user ? await prisma.booking.findFirst({ where: { tripId: trip.id, userId: req.user.id }, orderBy: { createdAt: 'desc' }, select: { id: true, code: true, status: true, seats: true } }) : null;
-  res.json({ success: true, data: { ...trip, myBooking } });
+  // Numbers are shared once the customer has asked for a seat (the cached page never contains them).
+  let driver = trip.driver;
+  if (myBooking && ['pending', 'accepted', 'completed'].includes(myBooking.status)) {
+    const p = await prisma.partner.findUnique({ where: { id: trip.driver.partnerId }, select: contactSelect });
+    driver = await partnerContact(p, true);
+  }
+  res.json({ success: true, data: { ...trip, driver, myBooking } });
 });
 
 module.exports = { partnerRouter, publicRouter, serializeTrip, estimateFare, tripInclude, clearSearchCache, clearTripCache };

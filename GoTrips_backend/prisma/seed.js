@@ -42,7 +42,6 @@ const CATEGORIES = [
     requirements: [
       { scope: 'partner', docType: 'driving_license', label: 'Driving licence', hint: 'Clear photo of front and back', requiresNumber: true, requiresExpiry: true, requiresBack: true, sortOrder: 0 },
       ...ID_DOCS,
-      { scope: 'partner', docType: 'police_verification', label: 'Police verification certificate', hint: 'Optional, earns more trust from customers', isRequired: false, sortOrder: 6 },
     ],
   },
   {
@@ -120,6 +119,68 @@ const DISTRICTS = [
   { name: 'West Karbi Anglong', points: ['Hamren', 'Baithalangso', 'Kheroni'] },
 ];
 
+
+/**
+ * Towns and cities added to every district's pick-up points. Trips can only use places from this list,
+ * and customers search the same list, so both sides always use the same names.
+ */
+const TOWNS = {
+  Bajali: ['Pathsala', 'Bhabanipur', 'Sarupeta'],
+  Baksa: ['Mushalpur', 'Salbari', 'Jalah', 'Barama'],
+  Barpeta: ['Barpeta', 'Barpeta Road', 'Sorbhog', 'Kalgachia', 'Sarthebari', 'Howly'],
+  Biswanath: ['Biswanath Chariali', 'Gohpur', 'Behali', 'Sootea'],
+  Bongaigaon: ['Bongaigaon', 'Abhayapuri', 'Boitamari', 'Manikpur'],
+  Cachar: ['Silchar', 'Lakhipur', 'Sonai', 'Udharbond', 'Katigorah', 'Dholai'],
+  Charaideo: ['Sonari', 'Sapekhati', 'Moranhat'],
+  Chirang: ['Kajalgaon', 'Bijni', 'Basugaon', 'Sidli'],
+  Darrang: ['Mangaldai', 'Sipajhar', 'Kharupetia', 'Dalgaon', 'Pathorighat'],
+  Dhemaji: ['Dhemaji', 'Silapathar', 'Jonai', 'Gogamukh'],
+  Dhubri: ['Dhubri', 'Gauripur', 'Bilasipara', 'Golakganj', 'Agomani', 'Chapar'],
+  Dibrugarh: ['Dibrugarh', 'Naharkatia', 'Duliajan', 'Chabua', 'Moran', 'Namrup', 'Tengakhat'],
+  'Dima Hasao': ['Haflong', 'Maibang', 'Umrangso', 'Mahur'],
+  Goalpara: ['Goalpara', 'Dudhnoi', 'Krishnai', 'Agia', 'Matia', 'Lakhipur'],
+  Golaghat: ['Golaghat', 'Bokakhat', 'Dergaon', 'Sarupathar', 'Numaligarh', 'Kamargaon', 'Merapani'],
+  Hailakandi: ['Hailakandi', 'Lala', 'Algapur', 'Katlicherra'],
+  Hojai: ['Hojai', 'Lanka', 'Lumding', 'Doboka', 'Murajhar'],
+  Jorhat: ['Jorhat', 'Mariani', 'Teok', 'Titabor', 'Pulibor'],
+  'Kamrup Metropolitan': ['Guwahati', 'Dispur', 'Six Mile', 'Beltola', 'Narengi', 'Maligaon', 'Lokhra', 'Sonapur', 'Basistha'],
+  'Kamrup Rural': ['Rangia', 'Boko', 'Palasbari', 'Mirza', 'Sualkuchi', 'Guwahati Airport (Borjhar)', 'Kamalpur'],
+  'Karbi Anglong': ['Diphu', 'Bokajan', 'Howraghat', 'Dokmoka'],
+  Karimganj: ['Karimganj', 'Badarpur', 'Patharkandi', 'Nilambazar'],
+  Kokrajhar: ['Kokrajhar', 'Gossaigaon', 'Kachugaon', 'Fakiragram'],
+  Lakhimpur: ['North Lakhimpur', 'Narayanpur', 'Bihpuria', 'Dhakuakhana', 'Laluk'],
+  Majuli: ['Garamur', 'Kamalabari', 'Jengraimukh'],
+  Morigaon: ['Morigaon', 'Jagiroad', 'Mayong', 'Laharighat'],
+  Nagaon: ['Nagaon', 'Raha', 'Kampur', 'Kaliabor', 'Samaguri', 'Dhing', 'Puranigudam', 'Jakhalabandha', 'Rupahi'],
+  Nalbari: ['Nalbari', 'Tihu', 'Ghograpar', 'Belsor'],
+  Sivasagar: ['Sivasagar', 'Nazira', 'Demow', 'Amguri', 'Simaluguri', 'Gaurisagar'],
+  Sonitpur: ['Tezpur', 'Dhekiajuli', 'Jamugurihat', 'Rangapara', 'Balipara', 'Thelamara'],
+  'South Salmara-Mankachar': ['Hatsingimari', 'Mankachar', 'South Salmara'],
+  Tamulpur: ['Tamulpur', 'Kumarikata', 'Nagrijuli'],
+  Tinsukia: ['Tinsukia', 'Digboi', 'Margherita', 'Doomdooma', 'Makum', 'Ledo', 'Sadiya', 'Kakopathar'],
+  Udalguri: ['Udalguri', 'Tangla', 'Kalaigaon', 'Bhergaon'],
+  'West Karbi Anglong': ['Hamren', 'Donkamokam', 'Baithalangso'],
+};
+
+/** Main cities in neighbouring states that trips from Assam often go to. */
+const OTHER_STATES = [
+  { name: 'East Khasi Hills', state: 'Meghalaya', points: ['Shillong', 'Police Bazar'] },
+  { name: 'Ri-Bhoi', state: 'Meghalaya', points: ['Nongpoh', 'Byrnihat'] },
+  { name: 'West Garo Hills', state: 'Meghalaya', points: ['Tura'] },
+  { name: 'West Jaintia Hills', state: 'Meghalaya', points: ['Jowai'] },
+  { name: 'Papum Pare', state: 'Arunachal Pradesh', points: ['Itanagar', 'Naharlagun'] },
+  { name: 'East Siang', state: 'Arunachal Pradesh', points: ['Pasighat'] },
+  { name: 'West Kameng', state: 'Arunachal Pradesh', points: ['Bomdila'] },
+  { name: 'Tawang', state: 'Arunachal Pradesh', points: ['Tawang'] },
+  { name: 'Dimapur', state: 'Nagaland', points: ['Dimapur'] },
+  { name: 'Kohima', state: 'Nagaland', points: ['Kohima'] },
+  { name: 'Imphal West', state: 'Manipur', points: ['Imphal'] },
+  { name: 'West Tripura', state: 'Tripura', points: ['Agartala'] },
+  { name: 'Aizawl', state: 'Mizoram', points: ['Aizawl'] },
+  { name: 'Darjeeling', state: 'West Bengal', points: ['Siliguri'] },
+  { name: 'Cooch Behar', state: 'West Bengal', points: ['Cooch Behar'] },
+];
+
 const FAQS = [
   { audience: 'user', question: 'How do I book a seat?', answer: 'Search your route, open a trip and tap "Request seats". The driver gets a notification and accepts or declines. You will be notified either way.' },
   { audience: 'user', question: 'How do I pay for a trip?', answer: 'Trips are paid directly to the driver (cash or UPI) as agreed. GoTrip does not charge customers.' },
@@ -143,7 +204,6 @@ const DOC_AS = {
   driving_license: { label: 'ড্ৰাইভিং লাইচেন্স', hint: 'আগ আৰু পিছফালৰ স্পষ্ট ফটো' },
   aadhaar: { label: 'আধাৰ কাৰ্ড', hint: 'আগ আৰু পিছফাল। প্ৰথম ৮টা সংখ্যা ঢাকি দিব পাৰে।' },
   pan: { label: 'পেন কাৰ্ড' },
-  police_verification: { label: 'আৰক্ষী পৰীক্ষণ প্ৰমাণপত্ৰ', hint: 'বৈকল্পিক, গ্ৰাহকৰ অধিক বিশ্বাস পায়' },
   business_proof: { label: 'ব্যৱসায়ৰ প্ৰমাণ (GST / ট্ৰেড লাইচেন্স)' },
   rc: { label: 'পঞ্জীয়ন প্ৰমাণপত্ৰ (RC)' },
   insurance: { label: 'বীমা' },
@@ -176,8 +236,9 @@ async function main() {
     }
   }
 
-  for (const d of DISTRICTS) {
-    const district = await prisma.district.upsert({ where: { name: d.name }, create: { name: d.name }, update: {} });
+  const all = [...DISTRICTS.map((d) => ({ ...d, points: [...new Set([...(TOWNS[d.name] || []), ...d.points])] })), ...OTHER_STATES];
+  for (const d of all) {
+    const district = await prisma.district.upsert({ where: { name: d.name }, create: { name: d.name, ...(d.state ? { state: d.state } : {}) }, update: {} });
     for (const p of d.points) {
       await prisma.place.upsert({ where: { districtId_nameKey: { districtId: district.id, nameKey: key(p) } }, create: { districtId: district.id, name: p, nameKey: key(p) }, update: {} });
     }
@@ -197,10 +258,22 @@ async function main() {
     if (!f.translations && FAQ_AS[f.question]) await prisma.faq.update({ where: { id: f.id }, data: { translations: { as: FAQ_AS[f.question] } } });
   }
 
-  console.log(`Seeded ${CATEGORIES.length} partner categories, ${DISTRICTS.length} districts, FAQs.`);
+  console.log(`Seeded ${CATEGORIES.length} partner categories, ${all.length} districts with their towns, FAQs.`);
+}
+
+/** Apps read districts/places and partner types through the API cache: drop it so new data shows at once. */
+async function clearCatalogCache() {
+  try {
+    const cache = require('../src/lib/cache');
+    await Promise.race([cache.delPrefix('catalog:'), new Promise((r) => setTimeout(r, 3000))]);
+    cache.redis?.disconnect?.();
+  } catch {
+    /* no Redis: the cache expires within an hour */
+  }
 }
 
 main()
+  .then(clearCatalogCache)
   .catch((e) => {
     console.error(e);
     process.exit(1);

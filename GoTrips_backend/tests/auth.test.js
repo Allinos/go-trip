@@ -41,15 +41,33 @@ describe('OTP auth', () => {
     expect(r.status).toBe(429);
   });
 
-  test('refresh tokens rotate and a replayed token revokes all sessions', async () => {
+  test('refresh tokens rotate; a lost response is forgiven, a late replay revokes all sessions', async () => {
     const s = await login();
     const r1 = await api().post('/api/v1/auth/refresh').send({ refreshToken: s.refreshToken });
     expect(r1.status).toBe(200);
+    // The phone never got r1 (network dropped) and retries with the old token: still logged in.
+    const retry = await api().post('/api/v1/auth/refresh').send({ refreshToken: s.refreshToken });
+    expect(retry.status).toBe(200);
+    expect((await api().get('/api/v1/me').set(auth(retry.body.data.accessToken))).status).toBe(200);
+    // Long after rotation the old token is a replay: every session is revoked.
+    await prisma.session.updateMany({ where: { userId: s.user.id, revokedAt: { not: null } }, data: { rotatedAt: new Date(Date.now() - 10 * 60_000) } });
     const replay = await api().post('/api/v1/auth/refresh').send({ refreshToken: s.refreshToken });
     expect(replay.status).toBe(401);
     expect(replay.body.error.code).toBe('REFRESH_REUSED');
-    const r2 = await api().post('/api/v1/auth/refresh').send({ refreshToken: r1.body.data.refreshToken });
+    const r2 = await api().post('/api/v1/auth/refresh').send({ refreshToken: retry.body.data.refreshToken });
     expect(r2.status).toBe(401);
+  });
+
+  test('a logged-out token cannot be reused, even right away', async () => {
+    const s = await login();
+    await api().post('/api/v1/auth/logout').send({ refreshToken: s.refreshToken }).expect(200);
+    expect((await api().post('/api/v1/auth/refresh').send({ refreshToken: s.refreshToken })).status).toBe(401);
+  });
+
+  test('sessions last a year and renew on every refresh', async () => {
+    const s = await login();
+    const sess = await prisma.session.findFirst({ where: { userId: s.user.id }, orderBy: { id: 'desc' } });
+    expect(sess.expiresAt.getTime() - Date.now()).toBeGreaterThan(360 * 86400_000);
   });
 
   test('protected routes need a token; blocked users are refused', async () => {

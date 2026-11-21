@@ -334,7 +334,8 @@ const publicWhere = {
 
 const contactSelect = { id: true, ratingAvg: true, ratingCount: true, businessName: true, whatsappPhone: true, alternatePhone: true, verificationStatus: true, district: true, city: true, user: { select: { fullName: true, phone: true, photoKey: true } } };
 
-async function partnerContact(p, loggedIn) {
+async function partnerContact(p, loggedIn, { hidePhone = false } = {}) {
+  if (hidePhone) loggedIn = false;
   return {
     partnerId: p.id,
     name: p.businessName || p.user.fullName,
@@ -345,7 +346,9 @@ async function partnerContact(p, loggedIn) {
     // Phone numbers are shown to logged-in users only (protects partners from scraping).
     phone: loggedIn ? p.user.phone : null,
     whatsappPhone: loggedIn ? p.whatsappPhone || p.user.phone : null,
-    loginRequired: !loggedIn,
+    loginRequired: !loggedIn && !hidePhone,
+    // Trips: the driver's number is shared only after the customer sends a booking request.
+    contactAfterBooking: hidePhone || undefined,
     rating: p.ratingCount ? { average: p.ratingAvg, count: p.ratingCount } : null,
   };
 }

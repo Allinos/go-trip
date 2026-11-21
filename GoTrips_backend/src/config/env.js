@@ -25,7 +25,8 @@ const schema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32),
   JWT_ADMIN_SECRET: z.string().min(32),
   ACCESS_TOKEN_TTL: z.string().default('30m'),
-  REFRESH_TOKEN_DAYS: z.coerce.number().default(60),
+  // Sliding: every refresh starts a new period, so an app that is opened now and then stays logged in until logout.
+  REFRESH_TOKEN_DAYS: z.coerce.number().default(365),
   ADMIN_TOKEN_TTL: z.string().default('8h'),
   OTP_SECRET: z.string().min(16),
   OTP_TTL_SECONDS: z.coerce.number().default(300),

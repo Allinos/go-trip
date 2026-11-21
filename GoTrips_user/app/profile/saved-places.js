@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import PlacePicker from '../../components/PlacePicker';
+import PlacePicker from '../../components/AddressPicker';
 import { Button, Card, Chip, Empty, Header, Loading, LoginPrompt, Row } from '../../components/ui';
 import useAuthStore from '../../store/authStore';
 import useFetch from '../../hooks/useFetch';

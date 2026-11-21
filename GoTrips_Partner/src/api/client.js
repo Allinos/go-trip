@@ -43,26 +43,36 @@ http.interceptors.request.use((config) => {
 let refreshing = null;
 async function refresh() {
   const rt = await getRefreshToken();
-  if (!rt) throw new Error('no refresh token');
+  if (!rt) throw Object.assign(new Error('no refresh token'), { definitive: true });
   const { data } = await axios.post(`${API_URL}/auth/refresh`, { refreshToken: rt }, { timeout: 15000 });
   await saveTokens(data.data);
   return data.data.accessToken;
 }
+
+/**
+ * Only the server saying "this session is over" (401/403 from /auth/refresh) may sign the partner out.
+ * No internet, a timeout or a server error keeps the tokens: the request fails and is retried later.
+ */
+const sessionRejected = (e) => e?.definitive || e?.response?.status === 401 || e?.response?.status === 403;
+// Login, refresh and logout calls handle their own 401s; everything else (including /auth/me) refreshes first.
+const NO_REFRESH = ['/auth/otp', '/auth/refresh', '/auth/logout'];
 
 http.interceptors.response.use(
   (r) => r,
   async (error) => {
     const cfg = error.config;
     const code = error.response?.data?.error?.code;
-    if (error.response?.status === 401 && cfg && !cfg._retried && !cfg.url.includes('/auth/')) {
+    if (error.response?.status === 401 && cfg && !cfg._retried && !NO_REFRESH.some((p) => cfg.url.includes(p))) {
       cfg._retried = true;
       try {
         refreshing ||= refresh().finally(() => (refreshing = null));
         await refreshing;
         return http(cfg);
-      } catch {
-        await clearTokens();
-        onSessionExpired();
+      } catch (e) {
+        if (sessionRejected(e)) {
+          await clearTokens();
+          onSessionExpired();
+        }
       }
     } else if (error.response?.status === 403 && ['ACCOUNT_BLOCKED', 'PARTNER_SUSPENDED'].includes(code)) {
       onSessionExpired(error.response.data.error.message);

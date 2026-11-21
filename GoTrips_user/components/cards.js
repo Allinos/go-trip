@@ -8,10 +8,22 @@ import { t } from '../i18n';
 import CachedImage from './CachedImage';
 import { RatingPill } from './Stars';
 
-export function TripCard({ trip, onPress }) {
+/**
+ * Trip in search results. Fully booked trips and trips the user already booked are faded with a label;
+ * they stay tappable so the details can still be seen.
+ */
+export function TripCard({ trip, onPress, booked }) {
   const m = trip.match;
+  const full = trip.isFull || trip.availableSeats < 1;
+  const faded = booked || full;
   return (
-    <Card style={{ marginBottom: 12 }} onPress={onPress}>
+    <Card style={[{ marginBottom: 12 }, faded && { opacity: 0.55 }]} onPress={onPress}>
+      {faded && (
+        <Row gap={6} style={{ marginBottom: 8 }}>
+          <MaterialIcons name={booked ? 'event-available' : 'block'} size={16} color={COLORS.text.secondary} />
+          <Text style={[TYPOGRAPHY.captionBold, { color: COLORS.text.secondary }]}>{booked ? t("Already booked by you") : trip.kind === 'goods' ? t("Already hired") : t("Fully booked")}</Text>
+        </Row>
+      )}
       <Row style={{ justifyContent: 'space-between' }}>
         <Row gap={6}>
           <Pill text={trip.tripType === 'return' ? t("Return trip") : t("Trip")} color={trip.tripType === 'return' ? COLORS.info : COLORS.primary} bg={trip.tripType === 'return' ? '#EFF6FF' : COLORS.primaryLight} />
@@ -50,7 +62,7 @@ export function TripCard({ trip, onPress }) {
         {trip.kind === 'goods' ? (
           <Text style={[TYPOGRAPHY.captionBold, { color: COLORS.success, marginLeft: 8 }]}>{t("Goods · up to {0} kg", [trip.capacityKg])}</Text>
         ) : (
-          <Text style={[TYPOGRAPHY.captionBold, { color: trip.availableSeats <= 1 ? COLORS.primary : COLORS.success, marginLeft: 8 }]}>{trip.availableSeats === 1 ? t("1 seat left") : t("{0} seats left", [trip.availableSeats])}</Text>
+          <Text style={[TYPOGRAPHY.captionBold, { color: trip.availableSeats <= 1 ? COLORS.primary : COLORS.success, marginLeft: 8 }]}>{trip.availableSeats === 0 ? t("No seats left") : trip.availableSeats === 1 ? t("1 seat left") : t("{0} seats left", [trip.availableSeats])}</Text>
         )}
       </Row>
     </Card>

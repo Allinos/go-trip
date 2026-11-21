@@ -7,7 +7,7 @@ const route = [
   { placeName: 'Nagaon', district: 'Nagaon', lat: 26.35, lng: 92.68 },
   { placeName: 'Jagiroad', district: 'Morigaon', fareFromStart: 150 },
   { placeName: 'Sonapur', fareFromStart: 250 },
-  { placeName: 'Guwahati ISBT', district: 'Kamrup Metropolitan', lat: 26.12, lng: 91.73 },
+  { placeName: 'Guwahati', district: 'Kamrup Metropolitan', lat: 26.12, lng: 91.73 },
 ];
 
 describe('Vehicles, start/return trips, booking requests', () => {
@@ -48,7 +48,7 @@ describe('Vehicles, start/return trips, booking requests', () => {
     const t = await api().post('/api/v1/partner/trips').set(auth(partner.token)).send({ vehicleId: vehicle.id, tripType: 'start', departureAt: inHours(6), stops: route, totalSeats: 4, pricePerSeat: 350, notes: 'AC car' });
     expect(t.status).toBe(201);
     trip = t.body.data;
-    expect(trip.stops.map((s) => s.placeName)).toEqual(['Nagaon', 'Jagiroad', 'Sonapur', 'Guwahati ISBT']);
+    expect(trip.stops.map((s) => s.placeName)).toEqual(['Nagaon', 'Jagiroad', 'Sonapur', 'Guwahati']);
     expect(trip.availableSeats).toBe(4);
 
     const clash = await api().post('/api/v1/partner/trips').set(auth(partner.token)).send({ vehicleId: vehicle.id, departureAt: inHours(6.5), stops: route, totalSeats: 4, pricePerSeat: 350 });
@@ -61,7 +61,7 @@ describe('Vehicles, start/return trips, booking requests', () => {
     returnTrip = r.body.data;
     expect(returnTrip.tripType).toBe('return');
     expect(returnTrip.parentTripId).toBe(trip.id);
-    expect(returnTrip.originName).toBe('Guwahati ISBT');
+    expect(returnTrip.originName).toBe('Guwahati');
     expect(returnTrip.destinationName).toBe('Nagaon');
     expect(returnTrip.stops.find((s) => s.placeName === 'Jagiroad').fareFromStart).toBe(200);
   });
@@ -83,8 +83,11 @@ describe('Vehicles, start/return trips, booking requests', () => {
     const s3 = await api().get('/api/v1/trips/search').query({ from: 'Nagaon', to: 'Guwahati', type: 'return' });
     expect(s3.body.data.map((t) => t.id)).not.toContain(trip.id);
 
+    // Not enough seats: still listed (faded in the app), after trips with room
     const s4 = await api().get('/api/v1/trips/search').query({ from: 'Nagaon', to: 'Guwahati', seats: 5 });
-    expect(s4.body.data.map((t) => t.id)).not.toContain(trip.id);
+    expect(s4.body.data.find((t) => t.id === trip.id).isFull).toBe(true);
+    const s5 = await api().get('/api/v1/trips/search').query({ from: 'Nagaon', to: 'Guwahati' });
+    expect(s5.body.data.find((t) => t.id === trip.id).isFull).toBe(false);
   });
 
   test('booking request → partner accepts → seats reserved atomically → user cancels → seats released', async () => {
@@ -120,9 +123,9 @@ describe('Vehicles, start/return trips, booking requests', () => {
     const t = await prisma.trip.findUnique({ where: { id: trip.id } });
     expect(t.availableSeats).toBe(0);
 
-    // Full trip is no longer searchable
+    // A full trip stays visible but is marked as fully booked
     const s = await api().get('/api/v1/trips/search').query({ from: 'Nagaon', to: 'Guwahati' });
-    expect(s.body.data.map((x) => x.id)).not.toContain(trip.id);
+    expect(s.body.data.find((x) => x.id === trip.id).isFull).toBe(true);
 
     const accepted = results.findIndex((r) => r.status === 200);
     const users = [u1, u2, u3];

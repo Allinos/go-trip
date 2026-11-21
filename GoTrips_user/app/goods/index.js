@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
-import PlacePicker from '../../components/PlacePicker';
+import PlacePicker from '../../components/AddressPicker';
 import { Button, Card, Empty, Header, Input, KV, Notice } from '../../components/ui';
 import useAuthStore from '../../store/authStore';
 import useFetch from '../../hooks/useFetch';

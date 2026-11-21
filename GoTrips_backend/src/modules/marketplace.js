@@ -9,7 +9,7 @@ const cache = require('../lib/cache');
 const storage = require('../services/storage');
 const { validate, z, idParam, boolish, pageQuery } = require('../lib/validate');
 const { authenticate, optionalAuth } = require('../middleware/auth');
-const { notFound, badRequest } = require('../lib/errors');
+const { notFound, badRequest, forbidden } = require('../lib/errors');
 const { paginate, pageMeta } = require('../lib/util');
 const { writeLimiter } = require('../middleware/rateLimit');
 const reviews = require('./reviews');
@@ -184,6 +184,11 @@ router.post(
     } else if (targetType === 'trip') {
       const t = await prisma.trip.findFirst({ where: { id: targetId }, select: { partner: { select: { id: true, whatsappPhone: true, user: { select: { phone: true } } } } } });
       partner = t?.partner;
+      // A trip driver's number is shared only after the customer sends a booking request for that trip.
+      if (partner) {
+        const booked = await prisma.booking.count({ where: { tripId: targetId, userId: req.user.id, status: { in: ['pending', 'accepted', 'completed'] } } });
+        if (!booked) throw forbidden('Send a booking request to see the driver’s contact options', 'BOOK_FIRST');
+      }
     } else {
       throw badRequest('Use the goods order contact endpoint');
     }

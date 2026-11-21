@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { errorMessage } from '../services/api';
 import { readCache, writeCache } from '../services/cache';
+import { onReconnect } from '../services/net';
 
 /**
  * Load data on mount + when the screen regains focus.
@@ -27,6 +28,8 @@ export default function useFetch(fn, deps = [], { refocus = true, enabled = true
     },
     [cacheKey]
   );
+  // Connection restored: refresh what is on screen (cached data stays visible meanwhile).
+  useEffect(() => (enabled ? onReconnect(() => load()) : undefined), [enabled, load]);
   useEffect(() => {
     if (!enabled) return undefined;
     let cancelled = false;

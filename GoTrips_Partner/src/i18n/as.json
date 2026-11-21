@@ -1012,5 +1012,12 @@
  "Green": "সেউজীয়া",
  "Orange": "কমলা",
  "Hire the whole vehicle": "গোটেই বাহন ভাড়া লওক",
- "Mfg. year": "নিৰ্মাণৰ বছৰ"
+ "Mfg. year": "নিৰ্মাণৰ বছৰ",
+ "Loading places…": "ঠাইৰ তালিকা লোড হৈ আছে…",
+ "Already hired": "ইতিমধ্যে ভাড়া লোৱা হৈছে",
+ "Fully booked": "সকলো আসন বুক হৈছে",
+ "No place with this name. Choose the nearest town.": "এই নামৰ ঠাই নাই। ওচৰৰ চহৰখন বাছক।",
+ "Choose each place from the list": "প্ৰতিটো ঠাই তালিকাৰ পৰা বাছক",
+ "Not in the list. Choose a place from the list.": "তালিকাত নাই। তালিকাৰ পৰা এটা ঠাই বাছক।",
+ "Choose a place": "এটা ঠাই বাছক"
 }

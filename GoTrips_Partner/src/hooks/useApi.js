@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { errorMessage } from '../api/client';
 import { readCache, writeCache } from '../api/cache';
+import { onReconnect } from '../api/net';
 
 /**
  * Data-fetching hook: loads on mount and when the screen regains focus.
@@ -62,6 +63,9 @@ export function useApi(fn, deps = [], { focus = true, cacheKey } = {}) {
       cancelled = true;
     };
   }, deps); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Connection restored: refresh what is on screen (cached data stays visible meanwhile).
+  useEffect(() => onReconnect(() => load()), [load]);
 
   useFocusEffect(
     useCallback(() => {

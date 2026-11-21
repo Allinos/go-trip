@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Platform, Pressable, Text, View } from 'react-native';
+import { Alert, FlatList, Platform, Pressable, Text, View } from 'react-native';
 import { TextInput, TouchableRipple } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
@@ -156,6 +156,60 @@ const fieldStyles = {
 export function DistrictSelect({ label = 'District', value, onChange, required, hint, error }) {
   const { districts } = useCatalog();
   return <Select label={label} required={required} hint={hint} error={error} value={value} onChange={onChange} searchable icon="map-outline" placeholder={t('Choose district')} options={(districts || []).map((d) => ({ value: d.name, label: d.name }))} />;
+}
+
+const placeNorm = (x) => String(x || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+/** All predefined places (from the catalog) as { placeId, name, district, lat, lng }. */
+export function usePlaces() {
+  const { districts } = useCatalog();
+  return React.useMemo(() => (districts || []).flatMap((d) => (d.places || []).map((p) => ({ placeId: p.id, name: p.name, district: d.name, lat: p.lat, lng: p.lng, key: placeNorm(p.name) }))), [districts]);
+}
+
+/**
+ * Place picker for trip stops: only the predefined towns and points can be chosen (customers search the
+ * same list). onChange(name, { placeId, district, lat, lng }). Works offline (the list comes with the catalog).
+ */
+export function PlaceSelect({ label, value, district, onChange, placeholder = 'Choose a place', icon = 'location', iconColor = colors.primary, error, disabled }) {
+  const places = usePlaces();
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const list = React.useMemo(() => {
+    const k = placeNorm(q);
+    if (k.length < 2) return places;
+    // Exact name, then names starting with the text, then word starts, then places in a matching district.
+    const rank = (p) => (p.key === k ? 0 : p.key.startsWith(k) ? 1 : p.key.includes(` ${k}`) ? 2 : p.key.includes(k) ? 3 : placeNorm(p.district).startsWith(k) ? 4 : 9);
+    return places.map((p) => [rank(p), p]).filter(([r]) => r < 9).sort((a, b) => a[0] - b[0]).map(([, p]) => p);
+  }, [q, places]);
+  const close = () => (setOpen(false), setQ(''));
+  return (
+    <>
+      <FieldButton label={label} value={value ? `${value}${district ? ` · ${district}` : ''}` : ''} placeholder={t(placeholder)} icon={icon} onPress={() => setOpen(true)} error={error} disabled={disabled} />
+      <Sheet visible={open} onClose={close} title={label || t(placeholder)} full>
+        <View style={{ paddingHorizontal: space.lg }}>
+          <Input placeholder={t('Search town or place')} value={q} onChangeText={setQ} icon="search" autoFocus />
+        </View>
+        <FlatList
+          data={list.slice(0, 80)}
+          keyExtractor={(p) => String(p.placeId)}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => (
+            <TouchableRipple onPress={() => (onChange(item.name, { placeId: item.placeId, district: item.district, lat: item.lat, lng: item.lng }), close())}>
+              <Row style={{ paddingHorizontal: space.lg, minHeight: 54, borderBottomWidth: 1, borderBottomColor: colors.divider }} gap={12}>
+                <Ionicons name="location-outline" size={20} color={iconColor} />
+                <View style={{ flex: 1 }}>
+                  <Text style={font.body}>{item.name}</Text>
+                  <Text style={font.small}>{item.district}</Text>
+                </View>
+                {item.name === value && item.district === district && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
+              </Row>
+            </TouchableRipple>
+          )}
+          ListEmptyComponent={<Text style={[font.sub, { padding: space.lg }]}>{places.length ? t('No place with this name. Choose the nearest town.') : t('Loading places…')}</Text>}
+        />
+      </Sheet>
+    </>
+  );
 }
 
 /**

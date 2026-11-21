@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Badge, Button, Input, Loading, Notice, Row, Screen, Section, Segmented, Stepper, ToggleRow } from '../../components/ui';
-import { DateField, PlaceInput } from '../../components/fields';
+import { DateField, PlaceSelect, usePlaces } from '../../components/fields';
 import { tripApi, vehicleApi } from '../../api';
 import { errorMessage } from '../../api/client';
 import { useToast } from '../../context/ToastContext';
@@ -10,7 +10,7 @@ import { colors, font } from '../../theme';
 import { capacityText, categoryOf, CLASS_ICON, loadText, rupees, VEHICLE_LABELS } from '../../utils/format';
 import { t } from '../../i18n';
 
-const emptyStop = () => ({ placeName: '', district: null, lat: null, lng: null, fareFromStart: '' });
+const emptyStop = () => ({ placeId: null, placeName: '', district: null, lat: null, lng: null, fareFromStart: '' });
 const nextHour = () => {
   const d = new Date(Date.now() + 2 * 3600_000);
   d.setMinutes(0, 0, 0);
@@ -107,6 +107,10 @@ export default function TripFormScreen({ navigation, route }) {
     if (goods && vehicle?.loadCapacityKg && !capacity) setCapacity(String(vehicle.loadCapacityKg));
   }, [vehicle]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Stops must be predefined places. Copied or older trips are matched to the list by name.
+  const places = usePlaces();
+  const placeOf = (st) => (st.placeId && places.find((p) => p.placeId === st.placeId)) || places.find((p) => p.name === st.placeName && (!st.district || p.district === st.district)) || null;
+  const [showErrors, setShowErrors] = useState(false);
   const setStop = (i, patch) => setStops(stops.map((s, j) => (j === i ? { ...s, ...patch } : s)));
   const addStop = () => setStops([...stops.slice(0, -1), emptyStop(), stops[stops.length - 1]]);
   const removeStop = (i) => setStops(stops.filter((_, j) => j !== i));
@@ -116,14 +120,16 @@ export default function TripFormScreen({ navigation, route }) {
     const p = [];
     if (!vehicleId) p.push(t('Choose a vehicle'));
     if (stops.some((s) => s.placeName.trim().length < 2)) p.push(t('Fill in all places'));
+    else if (places.length && stops.some((s) => !placeOf(s))) p.push(t('Choose each place from the list'));
     if (!price || Number(price) < 0) p.push(goods ? t('Enter the hire price') : t('Enter price per seat'));
     if (goods && (!Number(capacity) || Number(capacity) < 50)) p.push(t('Enter the load capacity (at least 50 kg)'));
     if (goods && vehicle?.loadCapacityKg && Number(capacity) > vehicle.loadCapacityKg) p.push(t('This vehicle can carry up to {0}', [loadText(vehicle.loadCapacityKg)]));
     if (departure < new Date()) p.push(t('Departure must be in the future'));
     return p;
-  }, [vehicleId, stops, price, departure, goods, capacity, vehicle]);
+  }, [vehicleId, stops, price, departure, goods, capacity, vehicle, places]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
+    setShowErrors(true);
     if (problems.length) return toast(problems[0], 'error');
     setBusy(true);
     const body = {
@@ -135,6 +141,7 @@ export default function TripFormScreen({ navigation, route }) {
         ? {}
         : {
             stops: stops.map((s, i) => ({
+              placeId: placeOf(s)?.placeId ?? null,
               placeName: s.placeName.trim(),
               district: s.district || null,
               lat: s.lat ?? null,
@@ -250,11 +257,14 @@ export default function TripFormScreen({ navigation, route }) {
               <View key={i}>
                 <Row style={{ alignItems: 'flex-start' }}>
                   <View style={{ flex: 1 }}>
-                    <PlaceInput
+                    <PlaceSelect
                       label={first ? t("Starting from") : last ? t("Going to") : t("Stop {0}", [i])}
                       icon={first ? 'radio-button-on' : last ? 'location' : 'ellipse-outline'}
                       value={s.placeName}
-                      onChange={(trip, meta) => !routeLocked && setStop(i, { placeName: trip, ...(meta || { district: null, lat: null, lng: null }) })}
+                      district={s.district}
+                      disabled={routeLocked}
+                      error={showErrors && !placeOf(s) ? (s.placeName ? t("Not in the list. Choose a place from the list.") : t("Choose a place")) : undefined}
+                      onChange={(name, meta) => setStop(i, { placeName: name, ...meta })}
                       placeholder={first ? t("e.g. Nagaon") : last ? t("e.g. Guwahati") : t("Town on the way")}
                     />
                   </View>

@@ -102,7 +102,7 @@ export default function TripDetail() {
             </div>
             {seats > 1 && <div className="kv"><span>{t('{0} seats', [num(seats)])}</span><span>{rupees(fare * seats)}</span></div>}
             <p className="small muted" style={{ marginTop: 10 }}>{t('No booking fee. Pay cash or UPI to the driver.')}</p>
-            <div className="notice small"><Car size={18} style={{ flexShrink: 0 }} /> {t('Phone numbers are shown in the app after you log in, to protect drivers from spam.')}</div>
+            <div className="notice small"><Car size={18} style={{ flexShrink: 0 }} /> {t('The driver’s call and WhatsApp options appear in the app after you send a booking request.')}</div>
           </div>
           <AppCta title={closed ? t('Find another trip in the app') : t('Request your seat in the GoTrip app')} text={t('Open this route in the app, log in with your mobile number and send the request. You get a notification when the driver accepts.')} />
         </div>

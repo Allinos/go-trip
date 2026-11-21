@@ -100,20 +100,28 @@ router.post(
   }
 );
 
+const REUSE_GRACE_MS = 2 * 60_000;
+
 // POST /auth/refresh  (rotating refresh tokens with reuse detection)
 router.post('/refresh', validate({ body: z.object({ refreshToken: z.string().min(20).max(200) }) }), async (req, res) => {
   const tokenHash = sha256(req.body.refreshToken);
   const session = await prisma.session.findUnique({ where: { tokenHash }, include: { user: true } });
   if (!session) throw unauthorized('Session not found', 'INVALID_REFRESH');
+  if (session.rotatedAt && session.revokedAt && Date.now() - session.rotatedAt.getTime() < REUSE_GRACE_MS && session.user.status !== 'blocked') {
+    // The phone sent this token a moment ago but never received the new one (network dropped, app closed
+    // mid-request, two refreshes at once). Not theft: give it a fresh session instead of logging the user out.
+    return res.json({ success: true, data: await issueSession(session.user, session.app, session.deviceInfo) });
+  }
   if (session.revokedAt) {
-    // A rotated token was replayed: possible theft. Revoke every session of this user.
+    // A rotated token was replayed long after rotation: possible theft. Revoke every session of this user.
     await prisma.session.updateMany({ where: { userId: session.userId, revokedAt: null }, data: { revokedAt: new Date() } });
     throw unauthorized('Session expired, please log in again', 'REFRESH_REUSED');
   }
   if (session.expiresAt < new Date()) throw unauthorized('Session expired, please log in again', 'REFRESH_EXPIRED');
   if (session.user.status === 'blocked') throw forbidden('This account is blocked', 'ACCOUNT_BLOCKED');
 
-  const revoked = await prisma.session.updateMany({ where: { id: session.id, revokedAt: null }, data: { revokedAt: new Date() } });
+  const now = new Date();
+  const revoked = await prisma.session.updateMany({ where: { id: session.id, revokedAt: null }, data: { revokedAt: now, rotatedAt: now } });
   if (revoked.count !== 1) throw unauthorized('Session expired, please log in again', 'REFRESH_REUSED');
   const tokens = await issueSession(session.user, session.app, session.deviceInfo);
   res.json({ success: true, data: tokens });

@@ -53,7 +53,10 @@ export default function TripScreen() {
   if (error) return (<><Header title={t("Trip")} /><ErrorView message={error} status={errorStatus} onRetry={reload} /></>);
 
   const goods = trip.kind === 'goods';
-  const closed = trip.status !== 'scheduled' || !trip.bookingOpen || new Date(trip.departureAt) < new Date();
+  const full = trip.availableSeats < 1;
+  // Call / WhatsApp appear once the customer has sent a booking request for this trip.
+  const requested = trip.myBooking && ['pending', 'accepted', 'completed'].includes(trip.myBooking.status);
+  const closed = full || trip.status !== 'scheduled' || !trip.bookingOpen || new Date(trip.departureAt) < new Date();
   const request = () =>
     requireLogin(async () => {
       setBusy(true);
@@ -137,10 +140,17 @@ export default function TripScreen() {
               ))}
             </View>
           )}
-          <Row style={{ marginTop: 12 }}>
-            <Button style={{ flex: 1 }} small variant="outline" icon="call" title={t("Call driver")} onPress={() => requireLogin(() => contactPartner('trip', trip.id), 'to call the driver')} />
-            <Button style={{ flex: 1 }} small variant="outline" icon="chat" title={t("WhatsApp")} onPress={() => requireLogin(() => contactPartner('trip', trip.id, 'whatsapp'), 'to message the driver')} />
-          </Row>
+          {requested ? (
+            <Row style={{ marginTop: 12 }}>
+              <Button style={{ flex: 1 }} small variant="outline" icon="call" title={t("Call driver")} onPress={() => contactPartner('trip', trip.id)} />
+              <Button style={{ flex: 1 }} small variant="outline" icon="chat" title={t("WhatsApp")} onPress={() => contactPartner('trip', trip.id, 'whatsapp')} />
+            </Row>
+          ) : (
+            <Row gap={6} style={{ marginTop: 12 }}>
+              <MaterialIcons name="lock-outline" size={16} color={COLORS.text.tertiary} />
+              <Text style={[TYPOGRAPHY.small, { color: COLORS.text.secondary, flex: 1 }]}>{t("Call and WhatsApp options appear after you send a booking request.")}</Text>
+            </Row>
+          )}
         </Card>
 
         {trip.myBooking && ['pending', 'accepted'].includes(trip.myBooking.status) ? (
@@ -149,7 +159,11 @@ export default function TripScreen() {
             [trip.myBooking.status === 'accepted' ? 'Confirmed' : 'Waiting for driver']
           )} />
         ) : closed ? (
-          <Notice title={t("Bookings closed")} text={t("This trip is no longer taking requests.")} color={COLORS.text.secondary} bg={COLORS.divider} />
+          full ? (
+            <Notice title={goods ? t("Already hired") : t("Fully booked")} text={goods ? t("This vehicle is already hired for this trip.") : t("All seats on this trip are booked.")} color={COLORS.text.secondary} bg={COLORS.divider} />
+          ) : (
+            <Notice title={t("Bookings closed")} text={t("This trip is no longer taking requests.")} color={COLORS.text.secondary} bg={COLORS.divider} />
+          )
         ) : (
           goods ? (
             <Card>

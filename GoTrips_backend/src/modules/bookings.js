@@ -136,7 +136,7 @@ userRouter.get('/', validate({ query: z.object({ status: z.enum(STATUSES).option
     prisma.booking.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take, include: { trip: { include: { ...tripInclude, partner: { select: contactSelect } } } } }),
     prisma.booking.count({ where }),
   ]);
-  const data = await Promise.all(items.map(async (b) => ({ ...serializeBooking(b), trip: await serializeTrip(b.trip, { loggedIn: true }) })));
+  const data = await Promise.all(items.map(async (b) => ({ ...serializeBooking(b), trip: await serializeTrip(b.trip, { loggedIn: true, showContact: true }) })));
   res.json({ success: true, data, meta: pageMeta(page, limit, total) });
 });
 
@@ -144,7 +144,7 @@ userRouter.get('/:id', validate({ params: idParam }), async (req, res) => {
   const b = await prisma.booking.findFirst({ where: { id: req.params.id, userId: req.user.id }, include: { review: true, trip: { include: { ...tripInclude, partner: { select: contactSelect } } } } });
   if (!b) throw notFound('Booking');
   const live = ['accepted'].includes(b.status) && ['scheduled', 'ongoing'].includes(b.trip.status) ? await sharedLocation(b.partnerId, b.tripId) : null;
-  const trip = await serializeTrip(b.trip, { loggedIn: true });
+  const trip = await serializeTrip(b.trip, { loggedIn: true, showContact: true });
   // Confirmed passengers see the full number plate so they can check the vehicle before boarding.
   if (['accepted', 'completed'].includes(b.status)) trip.vehicle.registrationNumber = b.trip.vehicle.registrationNumber;
   const review = b.review ? { rating: b.review.rating, comment: b.review.comment, updatedAt: b.review.updatedAt } : null;

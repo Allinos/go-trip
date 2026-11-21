@@ -856,5 +856,17 @@
  "e.g. Loading help needed": "যেনে: বোজা তোলাত সহায় লাগিব",
  "Hire price (pay the driver directly)": "ভাড়াৰ দাম (চালকক পোনপটীয়াকৈ দিয়ক)",
  "No booking fee. Confirm the details with the driver on call.": "বুকিং মাচুল নাই। ফোনত চালকৰ সৈতে বিৱৰণ নিশ্চিত কৰক।",
- "Request this vehicle · {0}": "এই বাহনখন বিচাৰক · {0}"
+ "Request this vehicle · {0}": "এই বাহনখন বিচাৰক · {0}",
+ "Loading places…": "ঠাইৰ তালিকা লোড হৈ আছে…",
+ "Already hired": "ইতিমধ্যে ভাড়া লোৱা হৈছে",
+ "Fully booked": "সকলো আসন বুক হৈছে",
+ "All vehicles": "সকলো বাহন",
+ "Commercial (goods)": "বাণিজ্যিক (সামগ্ৰী)",
+ "Call and WhatsApp options appear after you send a booking request.": "বুকিং অনুৰোধ পঠিওৱাৰ পিছত ফোন আৰু হোৱাটছএপৰ বিকল্প দেখা পাব।",
+ "This vehicle is already hired for this trip.": "এই যাত্ৰাৰ বাবে বাহনখন ইতিমধ্যে ভাড়া লোৱা হৈছে।",
+ "All seats on this trip are booked.": "এই যাত্ৰাৰ সকলো আসন বুক হৈ গৈছে।",
+ "Whole district": "গোটেই জিলা",
+ "No place with this name. Try a nearby town.": "এই নামৰ ঠাই নাই। ওচৰৰ চহৰ এখন চেষ্টা কৰক।",
+ "Already booked by you": "আপুনি ইতিমধ্যে বুক কৰিছে",
+ "No seats left": "আসন নাই"
 }

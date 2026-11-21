@@ -5,6 +5,8 @@ import { authApi, catalogApi } from '../api';
 import { clearTokens, getRefreshToken, loadTokens, saveTokens, setSessionExpiredHandler } from '../api/client';
 import { clearCache, readCache, setCacheScope, writeCache } from '../api/cache';
 import { onLangChange } from '../i18n';
+import { clearSession, loadSession, saveSession } from '../api/session';
+import { onReconnect } from '../api/net';
 import { t } from '../i18n';
 
 /**
@@ -28,6 +30,11 @@ export function AuthProvider({ children }) {
     setOnboarding(data.onboarding);
     setStatus(data.onboarding?.completed ? 'ready' : 'onboarding');
   }, []);
+
+  // Keep the saved session in step with every profile / onboarding change (used to open the app offline).
+  useEffect(() => {
+    if (user && onboarding) saveSession({ user, onboarding });
+  }, [user, onboarding]);
 
   const loadCatalog = useCallback(async () => {
     // Show the saved copy immediately (fast start, works offline), then refresh.
@@ -57,6 +64,7 @@ export function AuthProvider({ children }) {
       /* ignore */
     }
     await clearTokens();
+    await clearSession();
     await clearCache();
     setCacheScope(null);
     setUser(null);
@@ -75,19 +83,37 @@ export function AuthProvider({ children }) {
     [loadCatalog, refresh]
   );
 
+  /**
+   * Start-up: a saved session opens the app immediately (also offline). The server copy is fetched in the
+   * background; the access token is refreshed automatically when it has expired. Only the server rejecting
+   * the session (handled in client.js → logout) signs the partner out.
+   */
   useEffect(() => {
     setSessionExpiredHandler((msg) => logout(msg));
     (async () => {
       loadCatalog();
       if (!(await loadTokens())) return setStatus('loggedOut');
+      const saved = await loadSession();
+      if (saved?.user) applyMe(saved);
       try {
         await refresh();
-      } catch (e) {
-        if (e?.response?.status === 401 || e?.response?.status === 403) await clearTokens();
-        setStatus(e?.response ? 'loggedOut' : 'offline');
+      } catch {
+        // Offline or server trouble: keep the saved session; with none saved yet, show the retry screen.
+        if (!saved?.user) setStatus((st) => (st === 'loggedOut' ? st : 'offline'));
       }
     })();
-  }, [loadCatalog, logout, refresh]);
+  }, [applyMe, loadCatalog, logout, refresh]);
+
+  // Back online / back in the foreground: sync the profile and catalog without asking to log in again.
+  useEffect(
+    () =>
+      onReconnect(() => {
+        if (!user) return;
+        refresh().catch(() => {});
+        loadCatalog();
+      }),
+    [user, refresh, loadCatalog]
+  );
 
   const login = useCallback(
     async (phone, otp) => {
@@ -108,7 +134,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ status, user, setUser, onboarding, setOnboardingState, refresh, login, logout, retry: () => (setStatus('loading'), refresh().catch(() => setStatus('offline'))) }),
+    () => ({ status, user, setUser, onboarding, setOnboardingState, refresh, login, logout, retry: () => (setStatus('loading'), refresh().catch(() => setStatus((st) => (st === 'loggedOut' ? st : 'offline')))) }),
     [status, user, onboarding, setOnboardingState, refresh, login, logout]
   );
   return (

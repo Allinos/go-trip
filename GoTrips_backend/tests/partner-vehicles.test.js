@@ -83,8 +83,10 @@ describe('Vehicle categories', () => {
     expect(trip.body.data).toMatchObject({ kind: 'goods', capacityKg: 900, totalSeats: 1, availableSeats: 1, acceptsParcels: false });
     expect(trip.body.data.stops[1].fareFromStart).toBeNull();
 
-    // Passenger search doesn't show it, goods search does
-    const ps = await api().get('/api/v1/trips/search').query({ from: 'Nagaon', to: 'Jorhat' });
+    // Default search shows every vehicle type; the passenger filter leaves it out, the goods filter keeps it
+    const all = await api().get('/api/v1/trips/search').query({ from: 'Nagaon', to: 'Jorhat', seats: 3 });
+    expect(all.body.data.find((t) => t.id === trip.body.data.id).isFull).toBe(false);
+    const ps = await api().get('/api/v1/trips/search').query({ from: 'Nagaon', to: 'Jorhat', kind: 'passenger' });
     expect(ps.body.data.map((t) => t.id)).not.toContain(trip.body.data.id);
     const gs = await api().get('/api/v1/trips/search').query({ from: 'Nagaon', to: 'Jorhat', kind: 'goods' });
     expect(gs.body.data.map((t) => t.id)).toContain(trip.body.data.id);
@@ -131,5 +133,54 @@ describe('Admin vehicle approval', () => {
     await api().post(`${P}/vehicles/${v.id}/documents/rc`).set(auth(s.token)).attach('front', await image(), 'f.png').attach('back', await image(), 'b.png').field('docNumber', 'RC1').expect(200);
     await api().post(`${P}/vehicles/${v.id}/documents/insurance`).set(auth(s.token)).attach('front', await image(), 'f.png').field('docNumber', 'IN1').field('expiryDate', '2031-01-01').expect(200);
     await api().post(`/api/v1/admin/vehicles/${v.id}/review`).set(auth(admin)).send({ decision: 'approve' }).expect(200);
+  });
+});
+
+describe('Predefined places', () => {
+  test('trips can only use places from the list; names come from the list', async () => {
+    const admin = await adminToken();
+    const s = await activePartner('taxi');
+    const v = (await api().post(`${P}/vehicles`).set(auth(s.token)).send({ category: 'passenger', vehicleClass: 'suv', make: 'Toyota', model: 'Innova', registrationNumber: reg(), seats: 6, forTrips: true })).body.data;
+    await api().post(`/api/v1/admin/vehicles/${v.id}/review`).set(auth(admin)).send({ decision: 'approve', ignoreMissingDocuments: true }).expect(200);
+    const base = { vehicleId: v.id, departureAt: new Date(Date.now() + 5 * 86400_000).toISOString(), totalSeats: 4, pricePerSeat: 500 };
+    const bad = await api().post(`${P}/trips`).set(auth(s.token)).send({ ...base, stops: [{ placeName: 'Nagaon' }, { placeName: 'My Village Road' }] });
+    expect(bad.body.error.code).toBe('UNKNOWN_PLACE');
+    const districts = (await api().get('/api/v1/locations/districts')).body.data;
+    const shillong = districts.find((d) => d.name === 'East Khasi Hills').places.find((p) => p.name === 'Shillong');
+    const ok = await api().post(`${P}/trips`).set(auth(s.token)).send({ ...base, stops: [{ placeName: 'guwahati' }, { placeId: shillong.id, placeName: 'Typed differently' }] });
+    expect(ok.status).toBe(201);
+    expect(ok.body.data.stops.map((x) => [x.placeName, x.district])).toEqual([['Guwahati', 'Kamrup Metropolitan'], ['Shillong', 'East Khasi Hills']]);
+  });
+
+  test('drivers are not asked for police verification', async () => {
+    const cats = (await api().get('/api/v1/config')).body.data.categories;
+    const driver = cats.find((c) => c.code === 'driver');
+    expect(JSON.stringify(driver)).not.toContain('police');
+  });
+});
+
+describe('Driver contact on trips', () => {
+  test('number and WhatsApp are hidden until the customer sends a booking request', async () => {
+    const admin = await adminToken();
+    const s = await activePartner('taxi');
+    const v = (await api().post(`${P}/vehicles`).set(auth(s.token)).send({ category: 'passenger', vehicleClass: 'sedan', make: 'Maruti Suzuki', model: 'Dzire', registrationNumber: reg(), seats: 4, forTrips: true })).body.data;
+    await api().post(`/api/v1/admin/vehicles/${v.id}/review`).set(auth(admin)).send({ decision: 'approve', ignoreMissingDocuments: true }).expect(200);
+    const trip = (await api().post(`${P}/trips`).set(auth(s.token)).send({ vehicleId: v.id, departureAt: new Date(Date.now() + 3 * 86400_000).toISOString(), stops: [{ placeName: 'Tezpur' }, { placeName: 'Guwahati' }], totalSeats: 4, pricePerSeat: 400 })).body.data;
+    const u = await login('user');
+    const before = (await api().get(`/api/v1/trips/${trip.id}`).set(auth(u.token))).body.data;
+    expect(before.driver.name).toBeTruthy();
+    expect(before.vehicle.model).toBe('Dzire');
+    expect(before.driver.phone).toBeNull();
+    expect(before.driver.whatsappPhone).toBeNull();
+    const denied = await api().post('/api/v1/marketplace/contact').set(auth(u.token)).send({ targetType: 'trip', targetId: trip.id });
+    expect(denied.body.error.code).toBe('BOOK_FIRST');
+
+    const b = await api().post('/api/v1/bookings').set(auth(u.token)).send({ tripId: trip.id, seats: 1, pickupSeq: 0, dropSeq: 1 });
+    expect(b.status).toBe(201);
+    const after = (await api().get(`/api/v1/trips/${trip.id}`).set(auth(u.token))).body.data;
+    expect(after.driver.phone).toBe(s.phone);
+    expect((await api().get(`/api/v1/bookings/${b.body.data.id}`).set(auth(u.token))).body.data.trip.driver.phone).toBe(s.phone);
+    const ok = await api().post('/api/v1/marketplace/contact').set(auth(u.token)).send({ targetType: 'trip', targetId: trip.id, channel: 'whatsapp' });
+    expect(ok.body.data.whatsappUrl).toContain('wa.me');
   });
 });
